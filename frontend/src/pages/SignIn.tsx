@@ -8,11 +8,21 @@ import { Hotel } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 const SignIn = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const mutation = useMutation({ mutationFn: () => apiPost("/api/auth/signin", { email, password }) })
+  const navigate = useNavigate()
+  const mutation = useMutation({ mutationFn: () => apiPost<{ token: string; user: { id: number; email: string; role: "admin" | "user" | "owner" } }>("/api/auth/signin", { email, password }) ,
+    onSuccess: (data) => {
+      localStorage.setItem("auth", JSON.stringify(data))
+      const role = data.user.role
+      if (role === "admin") navigate("/dashboard/admin")
+      else if (role === "owner") navigate("/dashboard/owner")
+      else navigate("/dashboard/user")
+    }
+  })
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
