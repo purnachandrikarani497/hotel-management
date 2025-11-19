@@ -86,7 +86,32 @@
       "lastName": "kommula",
       "phone": "9390146850",
       "createdAt": "2025-11-19T06:21:53.199Z"
+    },
+    {
+      "id": 2,
+      "email": "s@gmail.com",
+      "password": "samu",
+      "firstName": "purnachandrika",
+      "lastName": "rani",
+      "phone": "9390146850",
+      "role": "owner",
+      "isApproved": true,
+      "createdAt": "2025-11-19T08:50:23.245Z"
+    },
+    {
+      "id": 3,
+      "email": "admin@staybook.com",
+      "password": "admin123",
+      "role": "admin",
+      "isApproved": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "createdAt": "2025-11-19T08:51:30.353Z"
     }
   ],
-  "contacts": []
+  "contacts": [],
+  "settings": {
+    "taxRate": 10,
+    "commissionRate": 15
+  }
 }

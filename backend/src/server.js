@@ -110,7 +110,7 @@ app.post('/api/bookings', (req, res) => {
   const hotel = db.hotels.find(h => h.id === Number(hotelId))
   if (!hotel) return res.status(404).json({ error: 'Hotel not found' })
   const id = nextId(db.bookings)
-  db.bookings.push({ id, hotelId: Number(hotelId), checkIn, checkOut, guests: Number(guests), total: Number(total) || 0, createdAt: new Date().toISOString() })
+  db.bookings.push({ id, hotelId: Number(hotelId), checkIn, checkOut, guests: Number(guests), total: Number(total) || 0, status: 'confirmed', refundIssued: false, createdAt: new Date().toISOString() })
   write(db)
   res.json({ status: 'reserved', id })
 })
@@ -118,4 +118,187 @@ app.post('/api/bookings', (req, res) => {
 const port = process.env.PORT || 5000
 app.listen(port, () => {
   console.log(`Backend running on http://localhost:${port}`)
+})
+
+app.get('/api/admin/stats', (req, res) => {
+  try {
+    const db = read()
+    const hotels = Array.isArray(db.hotels) ? db.hotels : []
+    const bookings = Array.isArray(db.bookings) ? db.bookings : []
+    const totalHotels = hotels.length
+    const totalBookings = bookings.length
+    const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b?.total) || 0), 0)
+    const byMonth = {}
+    bookings.forEach(b => {
+      const d = b?.createdAt ? new Date(b.createdAt) : new Date()
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+      byMonth[key] = (byMonth[key] || 0) + (Number(b?.total) || 0)
+    })
+    const cityCounts = {}
+    hotels.forEach(h => {
+      const city = String(h?.location || '').split(',')[0].trim()
+      if (!city) return
+      cityCounts[city] = (cityCounts[city] || 0) + 1
+    })
+    res.json({ totalHotels, totalBookings, totalRevenue, monthlySales: byMonth, cityGrowth: cityCounts })
+  } catch (e) {
+    console.error('admin/stats error', e)
+    res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+app.get('/api/admin/users', (req, res) => {
+  const db = read()
+  res.json({ users: db.users })
+})
+
+app.post('/api/admin/users/:id/block', (req, res) => {
+  const id = Number(req.params.id)
+  const { blocked } = req.body || {}
+  const db = read()
+  const user = db.users.find(u => u.id === id)
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  user.blocked = !!blocked
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.get('/api/admin/hotels', (req, res) => {
+  const db = read()
+  res.json({ hotels: db.hotels })
+})
+
+app.post('/api/admin/hotels/:id/status', (req, res) => {
+  const id = Number(req.params.id)
+  const { status } = req.body || {}
+  const allowed = ['approved','rejected','suspended','pending']
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' })
+  const db = read()
+  const h = db.hotels.find(x => x.id === id)
+  if (!h) return res.status(404).json({ error: 'Hotel not found' })
+  h.status = status
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.post('/api/admin/hotels/:id/feature', (req, res) => {
+  const id = Number(req.params.id)
+  const { featured } = req.body || {}
+  const db = read()
+  const h = db.hotels.find(x => x.id === id)
+  if (!h) return res.status(404).json({ error: 'Hotel not found' })
+  h.featured = !!featured
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.get('/api/admin/bookings', (req, res) => {
+  try {
+    const db = read()
+    const bookings = Array.isArray(db.bookings) ? db.bookings : []
+    const hotels = Array.isArray(db.hotels) ? db.hotels : []
+    const items = bookings.map(b => ({ ...b, hotel: hotels.find(h => h.id === b.hotelId) }))
+    res.json({ bookings: items })
+  } catch (e) {
+    console.error('admin/bookings error', e)
+    res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+app.post('/api/admin/bookings/:id/cancel', (req, res) => {
+  const id = Number(req.params.id)
+  const db = read()
+  const b = db.bookings.find(x => x.id === id)
+  if (!b) return res.status(404).json({ error: 'Booking not found' })
+  b.status = 'cancelled'
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.post('/api/admin/bookings/:id/refund', (req, res) => {
+  const id = Number(req.params.id)
+  const db = read()
+  const b = db.bookings.find(x => x.id === id)
+  if (!b) return res.status(404).json({ error: 'Booking not found' })
+  b.refundIssued = true
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.get('/api/admin/coupons', (req, res) => {
+  const db = read()
+  res.json({ coupons: db.coupons })
+})
+
+app.post('/api/admin/coupons', (req, res) => {
+  const { code, discount, expiry, usageLimit, enabled } = req.body || {}
+  if (!code || !discount) return res.status(400).json({ error: 'Missing fields' })
+  const db = read()
+  const id = nextId(db.coupons)
+  db.coupons.push({ id, code, discount: Number(discount), expiry: expiry || null, usageLimit: Number(usageLimit) || 0, used: 0, enabled: enabled !== false })
+  write(db)
+  res.json({ status: 'created', id })
+})
+
+app.post('/api/admin/coupons/:id/status', (req, res) => {
+  const id = Number(req.params.id)
+  const { enabled } = req.body || {}
+  const db = read()
+  const c = db.coupons.find(x => x.id === id)
+  if (!c) return res.status(404).json({ error: 'Coupon not found' })
+  c.enabled = !!enabled
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.post('/api/admin/coupons/:id', (req, res) => {
+  const id = Number(req.params.id)
+  const { discount, expiry, usageLimit } = req.body || {}
+  const db = read()
+  const c = db.coupons.find(x => x.id === id)
+  if (!c) return res.status(404).json({ error: 'Coupon not found' })
+  if (discount !== undefined) c.discount = Number(discount)
+  if (expiry !== undefined) c.expiry = expiry
+  if (usageLimit !== undefined) c.usageLimit = Number(usageLimit)
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.get('/api/admin/settings', (req, res) => {
+  const db = read()
+  if (!db.settings) {
+    db.settings = { taxRate: 10, commissionRate: 15 }
+    write(db)
+  }
+  res.json({ settings: db.settings })
+})
+
+app.post('/api/admin/settings', (req, res) => {
+  const { taxRate, commissionRate } = req.body || {}
+  const db = read()
+  if (taxRate !== undefined) db.settings.taxRate = Number(taxRate)
+  if (commissionRate !== undefined) db.settings.commissionRate = Number(commissionRate)
+  write(db)
+  res.json({ status: 'updated' })
+})
+
+app.get('/api/admin/owners/pending', (req, res) => {
+  const db = read()
+  const owners = db.users.filter(u => u.role === 'owner' && u.isApproved === false)
+  res.json({ owners })
+})
+
+app.post('/api/admin/owners/:id/approve', (req, res) => {
+  const id = Number(req.params.id)
+  const db = read()
+  const u = db.users.find(x => x.id === id && x.role === 'owner')
+  if (!u) return res.status(404).json({ error: 'Owner not found' })
+  u.isApproved = true
+  write(db)
+  res.json({ status: 'approved' })
+})
+
+app.get('/api/admin/support', (req, res) => {
+  const db = read()
+  res.json({ inbox: db.contacts })
 })
