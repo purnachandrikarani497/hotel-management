@@ -8,10 +8,13 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-resort.jpg";
 import GuestSelector from "./GuestSelector";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
+  const [query, setQuery] = useState("");
+  const navigate = useNavigate();
 
   return (
     <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
@@ -39,8 +42,10 @@ const Hero = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search destinations"
+                  placeholder="Search by hotel or place"
                   className="pl-10 h-12 border-2 focus-visible:ring-primary"
+                  value={query}
+                  onChange={(e)=>setQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -113,7 +118,13 @@ const Hero = () => {
             </div>
           </div>
           
-          <Button className="w-full md:w-auto mt-6 h-12 px-8">
+          <Button className="w-full md:w-auto mt-6 h-12 px-8" onClick={()=>{
+            const params = new URLSearchParams()
+            if (query) params.set('q', query)
+            if (checkIn) params.set('checkIn', checkIn.toISOString().slice(0,10))
+            if (checkOut) params.set('checkOut', checkOut.toISOString().slice(0,10))
+            navigate(`/hotels?${params.toString()}`)
+          }}>
             <Search className="mr-2 h-5 w-5" />
             Search Hotels
           </Button>

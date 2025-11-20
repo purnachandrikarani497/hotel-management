@@ -10,6 +10,10 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const HotelDetail = () => {
   type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[]; description?: string }
@@ -20,9 +24,31 @@ const HotelDetail = () => {
   const [checkIn, setCheckIn] = useState("")
   const [checkOut, setCheckOut] = useState("")
   const [guests, setGuests] = useState(1)
+  const [checkInTime, setCheckInTime] = useState("")
+  const [checkOutTime, setCheckOutTime] = useState("")
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
   const auth = raw ? JSON.parse(raw) as { user?: { id?: number } } : null
-  const reserve = useMutation({ mutationFn: () => apiPost<{ status: string; id: number }, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number }>("/api/bookings", { userId: auth?.user?.id || 0, hotelId: Number(id), checkIn, checkOut, guests, total: (hotel?.price || 0) * 3 }) })
+  
+
+  const price = hotel?.price ?? 0
+  const hasDateTime = !!checkIn && !!checkOut && !!checkInTime && !!checkOutTime
+  const ci = hasDateTime ? new Date(`${checkIn}T${checkInTime}:00`) : null
+  const co = hasDateTime ? new Date(`${checkOut}T${checkOutTime}:00`) : null
+  const diffMs = ci && co ? Math.max(0, co.getTime() - ci.getTime()) : 0
+  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+  const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)
+  const extraHours = diffHours > 24 ? (diffHours - stayDays * 24) : 0
+  const baseAmount = stayDays * price
+  const extraAmount = Math.round((price / 24) * extraHours)
+  const subtotal = baseAmount + extraAmount
+  const grandTotal = subtotal
+
+  const reserve = useMutation({ mutationFn: () => apiPost<{ status: string; id: number }, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number }>("/api/bookings", { userId: auth?.user?.id || 0, hotelId: Number(id), checkIn: hasDateTime ? ci!.toISOString() : checkIn, checkOut: hasDateTime ? co!.toISOString() : checkOut, guests, total: subtotal }) })
+
+  const [open, setOpen] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'upi'|'cod'|''>('')
+  const [upiId, setUpiId] = useState("")
+  const [paid, setPaid] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -116,7 +142,7 @@ const HotelDetail = () => {
               <div className="sticky top-24 p-6 rounded-2xl border bg-card shadow-card">
                 <div className="mb-6">
                   <div className="text-3xl font-bold text-primary mb-1">${hotel?.price ?? 0}</div>
-                  <p className="text-muted-foreground">per night</p>
+                  <p className="text-muted-foreground">per 24h</p>
                 </div>
 
                 <div className="space-y-4 mb-6">
@@ -128,6 +154,12 @@ const HotelDetail = () => {
                     value={checkIn}
                     onChange={(e) => setCheckIn(e.target.value)}
                   />
+                  <input
+                    type="time"
+                    className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
+                    value={checkInTime}
+                    onChange={(e) => setCheckInTime(e.target.value)}
+                  />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Check-out</label>
@@ -136,6 +168,12 @@ const HotelDetail = () => {
                     className="w-full px-4 py-2 rounded-lg border bg-background"
                     value={checkOut}
                     onChange={(e) => setCheckOut(e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
+                    value={checkOutTime}
+                    onChange={(e) => setCheckOutTime(e.target.value)}
                   />
                   </div>
                   <div>
@@ -149,34 +187,75 @@ const HotelDetail = () => {
                   </div>
                 </div>
 
-                <Button className="w-full h-12 bg-accent hover:bg-accent/90 text-white mb-4" disabled={reserve.isPending || !checkIn || !checkOut} onClick={() => reserve.mutate()}>
+                <Button className="w-full h-12 bg-accent hover:bg-accent/90 text-white mb-4" disabled={reserve.isPending || !hasDateTime} onClick={() => { setOpen(true); reserve.mutate(); }}>
                   {reserve.isPending ? "Reserving..." : "Reserve Now"}
                 </Button>
                 {reserve.isError && <div className="text-red-600 text-sm">Reservation failed</div>}
-                {reserve.isSuccess && <div className="text-green-600 text-sm">Reserved successfully</div>}
 
                 <div className="space-y-2 pt-4 border-t">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">${hotel?.price ?? 0} × {checkIn && checkOut ? Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000*60*60*24))) : 0} nights</span>
-                    <span className="font-medium">${(hotel?.price ?? 0) * (checkIn && checkOut ? Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000*60*60*24))) : 0)}</span>
+                    <span className="text-muted-foreground">${price} × {stayDays} days</span>
+                    <span className="font-medium">${baseAmount}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Service fee</span>
-                    <span className="font-medium">$45</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Taxes</span>
-                    <span className="font-medium">$89</span>
-                  </div>
+                  {extraHours>0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Extra hours {extraHours}h</span>
+                      <span className="font-medium">${extraAmount}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total</span>
-                    <span>$1,031</span>
+                    <span>${grandTotal}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        <Dialog open={open} onOpenChange={(v)=>{ setOpen(v); if (!v) { setPaymentMethod(''); setUpiId(''); setPaid(false) } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{reserve.isPending ? "Processing reservation" : reserve.isSuccess ? "Reservation successful" : reserve.isError ? "Reservation failed" : "Reserve"}</DialogTitle>
+              <DialogDescription>{reserve.isSuccess ? "Choose a payment method to complete your booking." : reserve.isPending ? "Please wait while we reserve your room." : reserve.isError ? "Please try again." : ""}</DialogDescription>
+            </DialogHeader>
+            {reserve.isSuccess && !paid && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Payment method</Label>
+                  <RadioGroup value={paymentMethod} onValueChange={(v)=>setPaymentMethod(v as 'upi'|'cod')}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="upi" id="pm-upi" />
+                      <Label htmlFor="pm-upi">UPI</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cod" id="pm-cod" />
+                      <Label htmlFor="pm-cod">Cash on Delivery</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                {paymentMethod === 'upi' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="upi-id">UPI ID</Label>
+                    <Input id="upi-id" placeholder="name@bank" value={upiId} onChange={(e)=>setUpiId(e.target.value)} />
+                  </div>
+                )}
+            <DialogFooter>
+              <Button variant="secondary" onClick={()=>setOpen(false)}>Close</Button>
+              <Button disabled={paymentMethod==='' || (paymentMethod==='upi' && !upiId)} onClick={()=>setPaid(true)}>Pay Now</Button>
+            </DialogFooter>
+              </div>
+            )}
+            {reserve.isSuccess && paid && (
+              <div className="space-y-4">
+                <div className="text-green-600 font-medium">Payment confirmed</div>
+                <div className="text-sm text-muted-foreground">Booking completed. Thank you!</div>
+                <DialogFooter>
+                  <Button onClick={()=>setOpen(false)}>Done</Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>
