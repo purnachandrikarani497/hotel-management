@@ -123,8 +123,10 @@ async function rooms(req, res) {
 async function createRoom(req, res) {
   await connect(); await ensureSeed();
   const { ownerId, hotelId, type, price, amenities, photos, availability, members } = req.body || {}
-  const h = await Hotel.findOne({ id: Number(hotelId), ownerId: Number(ownerId) })
+  const h = await Hotel.findOne({ id: Number(hotelId) })
   if (!h) return res.status(404).json({ error: 'Hotel not found' })
+  if (h.ownerId == null && ownerId) { h.ownerId = Number(ownerId); await h.save() }
+  if (Number(h.ownerId) !== Number(ownerId)) return res.status(403).json({ error: 'Not authorized' })
   const id = await nextIdFor('Room')
   const savedUrls = saveImagesFromDataUrls('room', id, Array.isArray(photos)?photos:[])
   await Room.create({ id, hotelId: Number(hotelId), type: String(type||'Standard'), price: Number(price)||0, members: Number(members)||1, amenities: Array.isArray(amenities)?amenities:[], photos: savedUrls.length ? savedUrls : (Array.isArray(photos)?photos:[]), availability: availability!==false, blocked:false })
