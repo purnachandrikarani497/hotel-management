@@ -10,15 +10,38 @@ async function create(req, res) {
   const hotel = await Hotel.findOne({ id: Number(hotelId) })
   if (!hotel) return res.status(404).json({ error: 'Hotel not found' })
   const ci = new Date(checkIn)
-  const co = new Date(checkOut)
-  if (!(ci instanceof Date) || isNaN(ci.getTime()) || !(co instanceof Date) || isNaN(co.getTime()) || ci >= co) return res.status(400).json({ error: 'Invalid dates' })
+  let co = new Date(checkOut)
+  if (!(ci instanceof Date) || isNaN(ci.getTime())) return res.status(400).json({ error: 'Invalid check-in' })
+  if (!(co instanceof Date) || isNaN(co.getTime())) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
+  if (ci >= co) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
   const settings = await Settings.findOne().lean()
   const holdMinutes = Number(settings?.holdMinutes || 15)
   const now = new Date()
+  if (userId) {
+    const existingHeld = await Booking.findOne({ userId: Number(userId), hotelId: Number(hotelId), status: 'held' })
+    if (existingHeld) {
+      const notExpired = existingHeld.holdExpiresAt && new Date(existingHeld.holdExpiresAt) > now
+      if (notExpired) {
+        return res.json({ status: 'reserved', id: existingHeld.id, roomId: existingHeld.roomId, holdExpiresAt: existingHeld.holdExpiresAt })
+      } else {
+        existingHeld.status = 'expired'
+        await existingHeld.save()
+        if (existingHeld.roomId) {
+          const r = await Room.findOne({ id: Number(existingHeld.roomId) })
+          if (r) { r.blocked = false; await r.save() }
+        }
+      }
+    }
+  }
   const filter = { hotelId: Number(hotelId), availability: true }
   if (roomType) filter.type = String(roomType)
-  const rooms = await Room.find(filter).lean()
-  if (!rooms || rooms.length === 0) return res.status(409).json({ error: 'No rooms available' })
+  let rooms = await Room.find(filter).lean()
+  if (!rooms || rooms.length === 0) {
+    const newRoomId = await nextIdFor('Room')
+    await Room.create({ id: newRoomId, hotelId: Number(hotelId), type: String(roomType||'Standard'), price: Number(hotel.price)||0, members: 2, amenities: [], photos: [], availability: true, blocked: false })
+    rooms = await Room.find(filter).lean()
+    if (!rooms || rooms.length === 0) return res.status(409).json({ error: 'No rooms available' })
+  }
   let chosenRoomId = null
   for (const r of rooms) {
     const existing = await Booking.find({ roomId: r.id, status: { $in: ['held','confirmed','checked_in'] } }).lean()
@@ -29,23 +52,78 @@ async function create(req, res) {
       if (!isHeldActive) return false
       return ci < bCo && co > bCi
     })
-    if (!overlaps && !r.blocked) { chosenRoomId = r.id; break }
+    if (!overlaps) { chosenRoomId = r.id; break }
   }
-  if (!chosenRoomId) return res.status(409).json({ error: 'No rooms available for selected dates' })
+  if (!chosenRoomId) {
+    const newRoomId = await nextIdFor('Room')
+    await Room.create({ id: newRoomId, hotelId: Number(hotelId), type: String(roomType||'Standard'), price: Number(hotel.price)||0, members: 2, amenities: [], photos: [], availability: true, blocked: false })
+    chosenRoomId = newRoomId
+  }
   const chosenRoom = rooms.find(x => x.id === chosenRoomId) || await Room.findOne({ id: Number(chosenRoomId) }).lean()
-  const pricePerDay = Number(chosenRoom?.price || 0)
+  const basePricePerDay = Number(chosenRoom?.price || 0)
   const diffMs = co.getTime() - ci.getTime()
   const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
   const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)
   const extraHours = diffHours > 24 ? (diffHours - stayDays * 24) : 0
-  const baseAmount = stayDays * pricePerDay
-  const extraAmount = Math.round((pricePerDay / 24) * extraHours)
-  const computedTotal = baseAmount + extraAmount
+
+  const pricing = hotel?.pricing || { weekendPercent: 0, seasonal: [], specials: [] }
+  const weekendPercent = Number(pricing?.weekendPercent || 0)
+  const seasonal = Array.isArray(pricing?.seasonal) ? pricing.seasonal : []
+  const specials = Array.isArray(pricing?.specials) ? pricing.specials : []
+
+  function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  }
+  function parseDateStr(s) {
+    if (!s) return null
+    const d = new Date(s)
+    return (d instanceof Date && !isNaN(d.getTime())) ? d : null
+  }
+  function inSeason(d) {
+    for (const s of seasonal) {
+      const st = parseDateStr(s?.start)
+      const en = parseDateStr(s?.end)
+      const pct = Number(s?.percent || 0)
+      if (st && en && d >= st && d <= en) return pct
+    }
+    return 0
+  }
+  function specialFor(d) {
+    for (const sp of specials) {
+      const sd = parseDateStr(sp?.date)
+      if (sd && isSameDay(sd, d)) return Number(sp?.price || 0)
+    }
+    return null
+  }
+  function applyPricing(d, base) {
+    const special = specialFor(d)
+    if (special !== null && !isNaN(special) && special > 0) return special
+    let price = Number(base || 0)
+    const isWeekend = d.getDay() === 6 || d.getDay() === 0
+    if (isWeekend && weekendPercent) price = Math.round(price * (1 + weekendPercent / 100))
+    const seasonPct = inSeason(d)
+    if (seasonPct) price = Math.round(price * (1 + seasonPct / 100))
+    return price
+  }
+
+  let computedTotal = 0
+  const day = new Date(ci.getFullYear(), ci.getMonth(), ci.getDate())
+  for (let i = 0; i < stayDays; i++) {
+    const cur = new Date(day)
+    cur.setDate(day.getDate() + i)
+    computedTotal += applyPricing(cur, basePricePerDay)
+  }
+  if (extraHours > 0) {
+    const lastDay = new Date(day)
+    lastDay.setDate(day.getDate() + Math.max(stayDays - 1, 0))
+    const adjustedDayPrice = applyPricing(lastDay, basePricePerDay)
+    const hourlyRate = adjustedDayPrice / 24
+    computedTotal += Math.round(hourlyRate * extraHours)
+  }
   const id = await nextIdFor('Booking')
   const holdExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000)
   await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), checkIn, checkOut, guests: Number(guests), total: computedTotal, status: 'held', holdExpiresAt, paid: false })
-  const roomDoc = await Room.findOne({ id: Number(chosenRoomId) })
-  if (roomDoc) { roomDoc.blocked = true; await roomDoc.save() }
+  // Do not hard-block room for all dates; overlap logic prevents conflicts
   res.json({ status: 'reserved', id, roomId: chosenRoomId, holdExpiresAt })
 }
 

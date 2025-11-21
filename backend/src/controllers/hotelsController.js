@@ -2,6 +2,15 @@ const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { Hotel, Booking, Review, Room } = require('../models')
 
+function toPublicUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  if (/^https?:\/\//.test(url)) return url
+  if (/^data:/.test(url)) return url
+  if (url.startsWith('/uploads/')) return `http://localhost:5000${url}`
+  if (url.startsWith('uploads/')) return `http://localhost:5000/${url}`
+  return ''
+}
+
 async function list(req, res) {
   try {
     await connect(); await ensureSeed();
@@ -13,10 +22,11 @@ async function list(req, res) {
     if (maxPrice) filter.price.$lte = Number(maxPrice)
     if (minRating) filter.rating = { $gte: Number(minRating) }
     const items = await Hotel.find(filter).lean()
-    const hotels = items.map(h => ({
-      ...h,
-      image: h.image || (Array.isArray(h.images) && h.images.length > 0 ? h.images[0] : '/src/assets/hotel-1.jpg')
-    }))
+    const hotels = items.map(h => {
+      const primary = h.image || (Array.isArray(h.images) && h.images.length > 0 ? h.images[0] : '')
+      const resolved = toPublicUrl(primary)
+      return { ...h, image: resolved || 'https://placehold.co/800x600?text=Hotel' }
+    })
     res.json({ hotels })
   } catch (e) {
     res.status(503).json({ error: 'Database unavailable' })
@@ -29,7 +39,9 @@ async function getById(req, res) {
     const id = Number(req.params.id)
     const hotelRaw = await Hotel.findOne({ id }).lean()
     if (!hotelRaw) return res.status(404).json({ error: 'Not found' })
-    const hotel = { ...hotelRaw, image: hotelRaw.image || (Array.isArray(hotelRaw.images) && hotelRaw.images.length > 0 ? hotelRaw.images[0] : '/src/assets/hotel-1.jpg') }
+    const primary = hotelRaw.image || (Array.isArray(hotelRaw.images) && hotelRaw.images.length > 0 ? hotelRaw.images[0] : '')
+    const resolved = toPublicUrl(primary)
+    const hotel = { ...hotelRaw, image: resolved || 'https://placehold.co/800x600?text=Hotel' }
     res.json({ hotel })
   } catch (e) {
     res.status(503).json({ error: 'Database unavailable' })
@@ -54,7 +66,12 @@ async function featured(req, res) {
   try {
     await connect(); await ensureSeed();
     const items = await Hotel.find({ ownerId: { $ne: null }, status: 'approved' }).limit(4).lean()
-    res.json({ hotels: items })
+    const hotels = items.map(h => {
+      const primary = h.image || (Array.isArray(h.images) && h.images.length > 0 ? h.images[0] : '')
+      const resolved = toPublicUrl(primary)
+      return { ...h, image: resolved || 'https://placehold.co/800x600?text=Hotel' }
+    })
+    res.json({ hotels })
   } catch (e) {
     res.status(503).json({ error: 'Database unavailable' })
   }

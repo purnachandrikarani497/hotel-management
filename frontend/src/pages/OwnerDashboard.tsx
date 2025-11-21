@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api"
 
 type OwnerStats = { totalBookings:number; totalRevenue:number; dailyStats:number; roomOccupancy:number; upcomingArrivals: { id:number; hotelId:number; checkIn:string; guests:number }[] }
-type Hotel = { id:number; name:string; location:string; status:string; price:number; amenities:string[]; images:string[]; docs:string[] }
+type Hotel = { id:number; name:string; location:string; status:string; price:number; amenities:string[]; images:string[]; docs:string[]; pricing?: { weekendPercent?: number; seasonal?: { start:string; end:string; percent:number }[]; specials?: { date:string; price:number }[] } }
 type Room = { id:number; hotelId:number; type:string; price:number; members:number; availability:boolean; blocked:boolean; amenities:string[]; photos:string[] }
 type Booking = { id:number; hotelId:number; roomId?:number; checkIn:string; checkOut:string; guests:number; total:number; status:string }
 type Review = { id:number; hotelId:number; rating:number; comment:string; createdAt:string; response?:string }
@@ -73,6 +73,26 @@ const OwnerDashboard = () => {
   const [uploadInfo, setUploadInfo] = React.useState<{ type: 'images' | 'documents' | 'photos' | null; names: string[] }>({ type: null, names: [] })
   const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { weekendPercent:string; seasonalStart:string; seasonalEnd:string; seasonalPercent:string; specialDate:string; specialPrice:string } }>({})
   const [reviewReply, setReviewReply] = React.useState<{ [id:number]: string }>({})
+
+  React.useEffect(() => {
+    const hs = hotelsQ.data?.hotels || []
+    const next: { [id:number]: { weekendPercent:string; seasonalStart:string; seasonalEnd:string; seasonalPercent:string; specialDate:string; specialPrice:string } } = {}
+    hs.forEach((h: Hotel) => {
+      const p = h?.pricing || {}
+      const weekendPercent = String(p?.weekendPercent ?? '')
+      const s0 = Array.isArray(p?.seasonal) && p.seasonal.length > 0 ? p.seasonal[0] : null
+      const sp0 = Array.isArray(p?.specials) && p.specials.length > 0 ? p.specials[0] : null
+      next[h.id] = {
+        weekendPercent: weekendPercent || '',
+        seasonalStart: String(s0?.start ?? ''),
+        seasonalEnd: String(s0?.end ?? ''),
+        seasonalPercent: s0?.percent !== undefined ? String(s0.percent) : '',
+        specialDate: String(sp0?.date ?? ''),
+        specialPrice: sp0?.price !== undefined ? String(sp0.price) : ''
+      }
+    })
+    setPricingForm(next)
+  }, [hotelsQ.data])
 
   return (
     <div className="min-h-screen flex flex-col">

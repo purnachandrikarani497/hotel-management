@@ -58,6 +58,7 @@ const HotelDetail = () => {
   const confirm = useMutation({ mutationFn: (id:number) => apiPost(`/api/bookings/confirm/${id}`, {}) })
   const [remaining, setRemaining] = useState(0)
   const holdUntil = reserve.data?.holdExpiresAt
+  const invoice = useQuery({ queryKey: ["booking","invoice", reserve.data?.id], queryFn: () => apiGet<{ invoice: { id:number; subtotal:number; taxRate:number; tax:number; total:number } }>(`/api/bookings/invoice/${reserve.data?.id}`), enabled: !!reserve.data?.id })
   useEffect(() => {
     if (reserve.isSuccess && holdUntil) {
       const end = new Date(holdUntil).getTime()
@@ -261,6 +262,13 @@ const HotelDetail = () => {
                   <div className="space-y-2">
                     <Label htmlFor="upi-id">UPI ID</Label>
                     <Input id="upi-id" placeholder="name@bank" value={upiId} onChange={(e)=>setUpiId(e.target.value)} />
+                  </div>
+                )}
+                {invoice.data?.invoice && (
+                  <div className="space-y-2 border-t pt-3">
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">₹{invoice.data.invoice.subtotal}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax ({invoice.data.invoice.taxRate}%)</span><span className="font-medium">₹{invoice.data.invoice.tax}</span></div>
+                    <div className="flex justify-between font-bold text-lg"><span>Total</span><span>₹{invoice.data.invoice.total}</span></div>
                   </div>
                 )}
             <DialogFooter>
