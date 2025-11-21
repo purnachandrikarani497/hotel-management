@@ -70,10 +70,10 @@ async function hotels(req, res) {
 
 async function submitHotel(req, res) {
   await connect(); await ensureSeed();
-  const { ownerId, name, location, price, amenities } = req.body || {}
+  const { ownerId, name, location, price, amenities, description } = req.body || {}
   if (!ownerId || !name || !location) return res.status(400).json({ error: 'Missing fields' })
   const id = await nextIdFor('Hotel')
-  await Hotel.create({ id, ownerId: Number(ownerId), name, location, price: Number(price)||0, image: '', amenities: Array.isArray(amenities)?amenities:[], description: '', status: 'approved', featured: false, images: [], docs: [], pricing: { weekendPercent: 0, seasonal: [], specials: [] } })
+  await Hotel.create({ id, ownerId: Number(ownerId), name, location, price: Number(price)||0, image: '', amenities: Array.isArray(amenities)?amenities:[], description: String(description||''), status: 'approved', featured: false, images: [], docs: [], pricing: { normalPrice: Number(price)||0, weekendPrice: Number(price)||0, seasonal: [], specials: [] } })
   res.json({ status: 'submitted', id })
 }
 
@@ -84,6 +84,17 @@ async function updateAmenities(req, res) {
   const h = await Hotel.findOne({ id })
   if (!h) return res.status(404).json({ error: 'Hotel not found' })
   h.amenities = Array.isArray(amenities)?amenities:[]
+  await h.save()
+  res.json({ status: 'updated' })
+}
+
+async function updateDescription(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const { description } = req.body || {}
+  const h = await Hotel.findOne({ id })
+  if (!h) return res.status(404).json({ error: 'Hotel not found' })
+  h.description = String(description||'')
   await h.save()
   res.json({ status: 'updated' })
 }
@@ -213,13 +224,14 @@ async function cancelBooking(req, res) {
 async function pricing(req, res) {
   await connect(); await ensureSeed();
   const hotelId = Number(req.params.hotelId)
-  const { weekendPercent, seasonal, specials } = req.body || {}
+  const { normalPrice, weekendPrice, seasonal, specials } = req.body || {}
   const h = await Hotel.findOne({ id: hotelId })
   if (!h) return res.status(404).json({ error: 'Hotel not found' })
-  if (!h.pricing) h.pricing = { weekendPercent: 0, seasonal: [], specials: [] }
-  if (weekendPercent!==undefined) h.pricing.weekendPercent = Number(weekendPercent)
-  if (Array.isArray(seasonal)) h.pricing.seasonal = seasonal
-  if (Array.isArray(specials)) h.pricing.specials = specials
+  if (!h.pricing) h.pricing = { normalPrice: Number(h.price)||0, weekendPrice: Number(h.price)||0, seasonal: [], specials: [] }
+  if (normalPrice!==undefined) h.pricing.normalPrice = Number(normalPrice)
+  if (weekendPrice!==undefined) h.pricing.weekendPrice = Number(weekendPrice)
+  if (Array.isArray(seasonal)) h.pricing.seasonal = seasonal.map(s=>({ start:String(s.start), end:String(s.end), price:Number(s.price)||0 }))
+  if (Array.isArray(specials)) h.pricing.specials = specials.map(sp=>({ date:String(sp.date), price:Number(sp.price)||0 }))
   await h.save()
   res.json({ status: 'updated' })
 }
@@ -248,6 +260,7 @@ module.exports = {
   hotels,
   submitHotel,
   updateAmenities,
+  updateDescription,
   updateImages,
   updateDocs,
   rooms,

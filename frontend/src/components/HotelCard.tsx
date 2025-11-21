@@ -7,14 +7,19 @@ interface HotelCardProps {
   id: number;
   name: string;
   location: string;
-  rating: number;
-  reviews: number;
   price: number;
   image: string;
   amenities?: string[];
 }
 
-const HotelCard = ({ id, name, location, rating, reviews, price, image, amenities = [] }: HotelCardProps) => {
+const HotelCard = ({ id, name, location, price, image, amenities = [] }: HotelCardProps) => {
+  const resolveImage = (src?: string) => {
+    const s = String(src||'')
+    if (!s) return 'https://placehold.co/800x600?text=Hotel'
+    if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
+    if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+    return s
+  }
   const getAmenityIcon = (amenity: string) => {
     switch (amenity.toLowerCase()) {
       case 'wifi':
@@ -32,13 +37,11 @@ const HotelCard = ({ id, name, location, rating, reviews, price, image, amenitie
     <div className="group rounded-2xl overflow-hidden bg-card shadow-card hover:shadow-card-hover transition-all duration-300">
       <div className="relative h-64 overflow-hidden">
         <img
-          src={image}
+          src={resolveImage(image)}
           alt={name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          onError={(e)=>{ e.currentTarget.src='https://placehold.co/800x600?text=Hotel' }}
         />
-        <Badge className="absolute top-4 right-4 bg-accent text-white">
-          Featured
-        </Badge>
       </div>
       
       <div className="p-6">
@@ -46,18 +49,13 @@ const HotelCard = ({ id, name, location, rating, reviews, price, image, amenitie
           <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
             {name}
           </h3>
-          <div className="flex items-center space-x-1 text-accent">
-            <Star className="h-5 w-5 fill-current" />
-            <span className="font-bold">{rating}</span>
-          </div>
+          <div />
         </div>
         
         <div className="flex items-center text-muted-foreground mb-4">
           <MapPin className="h-4 w-4 mr-1" />
           <span className="text-sm">{location}</span>
-          <span className="mx-2">•</span>
-          <span className="text-sm">{reviews} reviews</span>
-        </div>
+      </div>
 
         {amenities.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">

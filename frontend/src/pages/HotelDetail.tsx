@@ -16,10 +16,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
 const HotelDetail = () => {
-  type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[]; description?: string }
+  type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; images?: string[]; amenities?: string[]; description?: string }
   const { id } = useParams();
   const { data, isLoading, isError } = useQuery({ queryKey: ["hotel", id], queryFn: () => apiGet<{ hotel: Hotel }>(`/api/hotels/${id}`), enabled: !!id })
-  type RoomInfo = { id:number; hotelId:number; type:string; price:number; members:number; availability:boolean; blocked:boolean }
+  type RoomInfo = { id:number; hotelId:number; type:string; price:number; members:number; availability:boolean; blocked:boolean; amenities?: string[]; photos?: string[] }
   const roomsQuery = useQuery({ queryKey: ["hotel","rooms",id], queryFn: () => apiGet<{ rooms: RoomInfo[] }>(`/api/hotels/${id}/rooms`), enabled: !!id })
   const hotel: Hotel | undefined = data?.hotel
   const reviews = useQuery({ queryKey: ["hotel","reviews",id], queryFn: () => apiGet<{ reviews: { id:number; userId:number; hotelId:number; rating:number; comment:string; createdAt:string }[] }>(`/api/hotels/${id}/reviews`), enabled: !!id })
@@ -34,6 +34,10 @@ const HotelDetail = () => {
 
   const availableRooms = roomsQuery.data?.rooms || []
   const [roomType, setRoomType] = useState<string>(availableRooms[0]?.type || 'Standard')
+  useEffect(() => {
+    const rs = roomsQuery.data?.rooms || []
+    if (rs.length && !rs.find(r => r.type === roomType)) setRoomType(rs[0].type)
+  }, [roomsQuery.data, roomType])
   const selectedRoom = availableRooms.find(r => r.type === roomType) || availableRooms[0]
   const price = Number(selectedRoom?.price ?? hotel?.price ?? 0)
   const hasDateTime = !!checkIn && !!checkOut && !!checkInTime && !!checkOutTime
@@ -77,15 +81,29 @@ const HotelDetail = () => {
           {/* Hero Image Gallery */}
           {isLoading && <div>Loading...</div>}
           {isError && <div>Failed to load</div>}
-          {!isLoading && !isError && hotel && (
+          {!isLoading && !isError && hotel && (()=>{
+            const resolve = (src?: string) => {
+              const s = String(src||'')
+              if (!s) return 'https://placehold.co/800x600?text=Hotel'
+              if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
+              if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+              return s
+            }
+            const imgs = (hotel.images||[])
+            const gallery = imgs.length ? imgs : [hotel.image].filter(Boolean)
+            const g0 = resolve(gallery[0])
+            const g1 = resolve(gallery[1]||gallery[0])
+            const g2 = resolve(gallery[2]||gallery[0])
+            return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 rounded-2xl overflow-hidden">
               <div className="md:row-span-2">
-                <img src={hotel.image} alt="Hotel" className="w-full h-full object-cover" />
+                <img src={g0} alt="Hotel" className="w-full h-full object-cover" onError={(e)=>{ e.currentTarget.src='https://placehold.co/800x600?text=Hotel' }} />
               </div>
-              <img src={hotel.image} alt="Hotel" className="w-full h-64 object-cover" />
-              <img src={hotel.image} alt="Hotel" className="w-full h-64 object-cover" />
+              <img src={g1} alt="Hotel" className="w-full h-64 object-cover" onError={(e)=>{ e.currentTarget.src='https://placehold.co/800x600?text=Hotel' }} />
+              <img src={g2} alt="Hotel" className="w-full h-64 object-cover" onError={(e)=>{ e.currentTarget.src='https://placehold.co/800x600?text=Hotel' }} />
             </div>
-          )}
+            )
+          })()}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
@@ -93,27 +111,18 @@ const HotelDetail = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h1 className="text-4xl font-bold">{hotel?.name || "Hotel"}</h1>
-                  <div className="flex items-center space-x-1 text-accent">
-                    <Star className="h-6 w-6 fill-current" />
-                    <span className="text-2xl font-bold">4.8</span>
-                  </div>
+                  
                 </div>
                 <div className="flex items-center text-muted-foreground mb-4">
                   <MapPin className="h-5 w-5 mr-2" />
                   <span>{hotel?.location || ""}</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">Free WiFi</Badge>
-                  <Badge variant="secondary">Free Parking</Badge>
-                  <Badge variant="secondary">Breakfast Included</Badge>
-                  <Badge variant="secondary">Pool</Badge>
-                  <Badge variant="secondary">Gym</Badge>
-                </div>
+                
               </div>
 
-              {/* About Section */}
+              {/* Description */}
               <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">About this hotel</h2>
+                <h2 className="text-2xl font-bold mb-4">Description</h2>
                 <p className="text-muted-foreground leading-relaxed">{hotel?.description}</p>
               </div>
 
@@ -127,6 +136,51 @@ const HotelDetail = () => {
                       <span className="font-medium">{label}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold mb-4">Rooms</h2>
+                <div className="rounded-xl border overflow-hidden">
+                  {availableRooms.map((r, idx) => {
+                    const resolve = (src?: string) => {
+                      const s = String(src||'')
+                      if (!s) return 'https://placehold.co/160x120?text=Room'
+                      if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
+                      if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+                      return s
+                    }
+                    const p0 = resolve(r.photos?.[0])
+                    return (
+                      <div key={r.id} className={`grid grid-cols-12 gap-4 items-center p-4 ${idx>0?'border-t':''} bg-card`}>
+                        <div className="col-span-2">
+                          <div className="h-20 w-full rounded-lg overflow-hidden border">
+                            <img src={p0} alt={r.type} className="w-full h-full object-cover" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Room' }} />
+                          </div>
+                        </div>
+                        <div className="col-span-6">
+                          <div className="font-semibold">{r.type}</div>
+                          <div className="text-xs text-muted-foreground">Members: {r.members}</div>
+                          <div className="flex gap-2 mt-2">
+                            {(r.amenities||[]).slice(0,4).map((a:string)=>(<span key={a} className="px-2 py-1 bg-muted rounded text-xs">{a}</span>))}
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <span className={`px-2 py-1 rounded text-xs ${r.availability ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{r.availability ? 'Available' : 'Unavailable'}</span>
+                            {r.blocked && <span className="px-2 py-1 rounded text-xs bg-accent/20">Blocked</span>}
+                          </div>
+                        </div>
+                        <div className="col-span-4 text-right">
+                          <div className="text-primary font-bold mb-2">₹{r.price}</div>
+                          <Button variant={roomType===r.type?'default':'outline'} size="sm" onClick={()=>setRoomType(r.type)}>
+                            {roomType===r.type ? 'Selected' : 'Show price'}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {availableRooms.length===0 && (
+                    <div className="p-4 text-sm text-muted-foreground">No rooms found for this hotel</div>
+                  )}
                 </div>
               </div>
 
@@ -194,6 +248,14 @@ const HotelDetail = () => {
                     value={checkOutTime}
                     onChange={(e) => setCheckOutTime(e.target.value)}
                   />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Room Type</label>
+                    <select className="w-full px-4 py-2 rounded-lg border bg-background" value={roomType} onChange={(e)=>setRoomType(e.target.value)}>
+                      {availableRooms.map(r=> (
+                        <option key={r.id} value={r.type}>{r.type} • ₹{r.price}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Guests</label>

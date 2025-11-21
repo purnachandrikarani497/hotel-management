@@ -66,8 +66,9 @@ async function create(req, res) {
   const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)
   const extraHours = diffHours > 24 ? (diffHours - stayDays * 24) : 0
 
-  const pricing = hotel?.pricing || { weekendPercent: 0, seasonal: [], specials: [] }
-  const weekendPercent = Number(pricing?.weekendPercent || 0)
+  const pricing = hotel?.pricing || { normalPrice: Number(hotel.price)||0, weekendPrice: Number(hotel.price)||0, seasonal: [], specials: [] }
+  const normalPrice = Number(pricing?.normalPrice || basePricePerDay)
+  const weekendPrice = Number(pricing?.weekendPrice || basePricePerDay)
   const seasonal = Array.isArray(pricing?.seasonal) ? pricing.seasonal : []
   const specials = Array.isArray(pricing?.specials) ? pricing.specials : []
 
@@ -83,10 +84,10 @@ async function create(req, res) {
     for (const s of seasonal) {
       const st = parseDateStr(s?.start)
       const en = parseDateStr(s?.end)
-      const pct = Number(s?.percent || 0)
-      if (st && en && d >= st && d <= en) return pct
+      const price = Number(s?.price || 0)
+      if (st && en && d >= st && d <= en) return price
     }
-    return 0
+    return null
   }
   function specialFor(d) {
     for (const sp of specials) {
@@ -98,12 +99,12 @@ async function create(req, res) {
   function applyPricing(d, base) {
     const special = specialFor(d)
     if (special !== null && !isNaN(special) && special > 0) return special
-    let price = Number(base || 0)
-    const isWeekend = d.getDay() === 6 || d.getDay() === 0
-    if (isWeekend && weekendPercent) price = Math.round(price * (1 + weekendPercent / 100))
-    const seasonPct = inSeason(d)
-    if (seasonPct) price = Math.round(price * (1 + seasonPct / 100))
-    return price
+    const seasonPrice = inSeason(d)
+    if (seasonPrice !== null && !isNaN(seasonPrice) && seasonPrice > 0) return seasonPrice
+    const dow = d.getDay() // 0 Sun ... 6 Sat
+    const isWeekend = dow === 5 || dow === 6 || dow === 0 // Fri-Sun
+    if (isWeekend) return weekendPrice || base
+    return normalPrice || base
   }
 
   let computedTotal = 0

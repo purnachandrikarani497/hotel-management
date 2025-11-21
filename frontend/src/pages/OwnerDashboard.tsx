@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api"
 
 type OwnerStats = { totalBookings:number; totalRevenue:number; dailyStats:number; roomOccupancy:number; upcomingArrivals: { id:number; hotelId:number; checkIn:string; guests:number }[] }
-type Hotel = { id:number; name:string; location:string; status:string; price:number; amenities:string[]; images:string[]; docs:string[]; pricing?: { weekendPercent?: number; seasonal?: { start:string; end:string; percent:number }[]; specials?: { date:string; price:number }[] } }
+  type Hotel = { id:number; name:string; location:string; status:string; price:number; amenities:string[]; images:string[]; docs:string[]; description?: string; pricing?: { normalPrice?: number; weekendPrice?: number; seasonal?: { start:string; end:string; price:number }[]; specials?: { date:string; price:number }[] } }
 type Room = { id:number; hotelId:number; type:string; price:number; members:number; availability:boolean; blocked:boolean; amenities:string[]; photos:string[] }
 type Booking = { id:number; hotelId:number; roomId?:number; checkIn:string; checkOut:string; guests:number; total:number; status:string }
 type Review = { id:number; hotelId:number; rating:number; comment:string; createdAt:string; response?:string }
@@ -47,8 +47,9 @@ const OwnerDashboard = () => {
   const bookings = bookingsQ.data?.bookings || []
   const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
 
-  const submitHotel = useMutation({ mutationFn: (p: { name:string; location:string; price:number; amenities:string[] }) => apiPost<{ id:number }, { ownerId:number; name:string; location:string; price:number; amenities:string[] }>(`/api/owner/hotels/submit`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) addId("hotels", res.id); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
+  const submitHotel = useMutation({ mutationFn: (p: { name:string; location:string; price:number; amenities:string[]; description?:string }) => apiPost<{ id:number }, { ownerId:number; name:string; location:string; price:number; amenities:string[]; description?:string }>(`/api/owner/hotels/submit`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) addId("hotels", res.id); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
   const updateAmenities = useMutation({ mutationFn: (p: { id:number; amenities:string[] }) => apiPost(`/api/owner/hotels/${p.id}/amenities`, { amenities: p.amenities }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
+  const updateDescription = useMutation({ mutationFn: (p: { id:number; description:string }) => apiPost(`/api/owner/hotels/${p.id}/description`, { description: p.description }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
   const updateImages = useMutation({ mutationFn: (p: { id:number; images:string[] }) => apiPost(`/api/owner/hotels/${p.id}/images`, { images: p.images }), onSuccess: (_res, vars) => { setImageUploaded(prev => ({ ...prev, [vars.id]: true })); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
   const updateDocs = useMutation({ mutationFn: (p: { id:number; docs:string[] }) => apiPost(`/api/owner/hotels/${p.id}/docs`, { docs: p.docs }), onSuccess: (_res, vars) => { setDocUploaded(prev => ({ ...prev, [vars.id]: true })); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
   const createRoom = useMutation({ mutationFn: (p: { hotelId:number; type:string; price:number; members:number; amenities:string[]; photos:string[]; availability:boolean }) => apiPost<{ id:number }, { ownerId:number; hotelId:number; type:string; price:number; members:number; amenities:string[]; photos:string[]; availability:boolean }>(`/api/owner/rooms`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) { addId("rooms", res.id); setLastRoomId(res.id) } qc.invalidateQueries({ queryKey: ["owner","rooms",ownerId] }) } })
@@ -58,11 +59,12 @@ const OwnerDashboard = () => {
   const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/cancel`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
   const checkinBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
   const checkoutBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
-  const updatePricing = useMutation({ mutationFn: (p: { hotelId:number; weekendPercent?:number; seasonal?:{start:string;end:string;percent:number}[]; specials?:{date:string;price:number}[] }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
+  const updatePricing = useMutation({ mutationFn: (p: { hotelId:number; normalPrice?:number; weekendPrice?:number; seasonal?:{start:string;end:string;price:number}[]; specials?:{date:string;price:number}[] }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
   const respondReview = useMutation({ mutationFn: (p: { id:number; response:string }) => apiPost(`/api/owner/reviews/${p.id}/respond`, { response: p.response }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","reviews",ownerId] }) })
 
-  const [hotelForm, setHotelForm] = React.useState({ name:"", location:"", price:0, amenities:"" })
+  const [hotelForm, setHotelForm] = React.useState({ name:"", location:"", price:0, amenities:"", description:"" })
   const [amenitiesEdit, setAmenitiesEdit] = React.useState<{ [id:number]: string }>({})
+  const [descriptionEdit, setDescriptionEdit] = React.useState<{ [id:number]: string }>({})
   const [imageFiles, setImageFiles] = React.useState<{ [id:number]: File[] }>({})
   const [docFiles, setDocFiles] = React.useState<{ [id:number]: File[] }>({})
   const [imageUploaded, setImageUploaded] = React.useState<{ [id:number]: boolean }>({})
@@ -71,25 +73,19 @@ const OwnerDashboard = () => {
   const [lastRoomId, setLastRoomId] = React.useState<number | null>(null)
   const [roomPhotoFiles, setRoomPhotoFiles] = React.useState<File[]>([])
   const [uploadInfo, setUploadInfo] = React.useState<{ type: 'images' | 'documents' | 'photos' | null; names: string[] }>({ type: null, names: [] })
-  const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { weekendPercent:string; seasonalStart:string; seasonalEnd:string; seasonalPercent:string; specialDate:string; specialPrice:string } }>({})
+  const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { normalPrice:string; weekendPrice:string; seasonal:{ start:string; end:string; price:string }[]; specials:{ date:string; price:string }[] } }>({})
   const [reviewReply, setReviewReply] = React.useState<{ [id:number]: string }>({})
 
   React.useEffect(() => {
     const hs = hotelsQ.data?.hotels || []
-    const next: { [id:number]: { weekendPercent:string; seasonalStart:string; seasonalEnd:string; seasonalPercent:string; specialDate:string; specialPrice:string } } = {}
+    const next: { [id:number]: { normalPrice:string; weekendPrice:string; seasonal:{ start:string; end:string; price:string }[]; specials:{ date:string; price:string }[] } } = {}
     hs.forEach((h: Hotel) => {
       const p = h?.pricing || {}
-      const weekendPercent = String(p?.weekendPercent ?? '')
-      const s0 = Array.isArray(p?.seasonal) && p.seasonal.length > 0 ? p.seasonal[0] : null
-      const sp0 = Array.isArray(p?.specials) && p.specials.length > 0 ? p.specials[0] : null
-      next[h.id] = {
-        weekendPercent: weekendPercent || '',
-        seasonalStart: String(s0?.start ?? ''),
-        seasonalEnd: String(s0?.end ?? ''),
-        seasonalPercent: s0?.percent !== undefined ? String(s0.percent) : '',
-        specialDate: String(sp0?.date ?? ''),
-        specialPrice: sp0?.price !== undefined ? String(sp0.price) : ''
-      }
+      const normalPrice = String(p?.normalPrice ?? '')
+      const weekendPrice = String(p?.weekendPrice ?? '')
+      const seasonal = Array.isArray(p?.seasonal) ? p.seasonal.map(s=>({ start:String(s.start||''), end:String(s.end||''), price:String(s.price??'') })) : []
+      const specials = Array.isArray(p?.specials) ? p.specials.map(sp=>({ date:String(sp.date||''), price:String(sp.price??'') })) : []
+      next[h.id] = { normalPrice: normalPrice || '', weekendPrice: weekendPrice || '', seasonal, specials }
     })
     setPricingForm(next)
   }, [hotelsQ.data])
@@ -129,8 +125,9 @@ const OwnerDashboard = () => {
               <Input placeholder="Location" value={hotelForm.location} onChange={e=>setHotelForm({...hotelForm,location:e.target.value})} />
               <Input type="number" placeholder="Base Price" value={hotelForm.price} onChange={e=>setHotelForm({...hotelForm,price:Number(e.target.value)})} />
               <Input className="col-span-3" placeholder="Amenities (comma-separated)" value={hotelForm.amenities} onChange={e=>setHotelForm({...hotelForm,amenities:e.target.value})} />
+              <Input className="col-span-3" placeholder="Description" value={hotelForm.description} onChange={e=>setHotelForm({...hotelForm,description:e.target.value})} />
             </div>
-            <Button onClick={()=>submitHotel.mutate({ name:hotelForm.name, location:hotelForm.location, price:hotelForm.price, amenities: hotelForm.amenities.split(',').map(s=>s.trim()).filter(Boolean) })} disabled={!hotelForm.name || !hotelForm.location}>Submit Hotel</Button>
+            <Button onClick={()=>submitHotel.mutate({ name:hotelForm.name, location:hotelForm.location, price:hotelForm.price, amenities: hotelForm.amenities.split(',').map(s=>s.trim()).filter(Boolean), description: hotelForm.description })} disabled={!hotelForm.name || !hotelForm.location}>Submit Hotel</Button>
             <div className="rounded-lg border overflow-hidden mt-4">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Amenities</th><th className="p-3">Images</th><th className="p-3">Documents</th></tr></thead>
@@ -145,6 +142,13 @@ const OwnerDashboard = () => {
                         <div className="flex gap-2 mt-2">
                           <Input placeholder="amenities" value={amenitiesEdit[h.id]||""} onChange={e=>setAmenitiesEdit({...amenitiesEdit,[h.id]:e.target.value})} />
                           <Button onClick={()=>updateAmenities.mutate({ id:h.id, amenities:(amenitiesEdit[h.id]||"").split(',').map(s=>s.trim()).filter(Boolean) })}>Save</Button>
+                        </div>
+                        <div className="mt-4">
+                          <label className="text-sm font-medium mb-2 block">Description</label>
+                          <Input placeholder="Description" value={descriptionEdit[h.id] ?? (h.description || "")} onChange={e=>setDescriptionEdit({...descriptionEdit,[h.id]:e.target.value})} />
+                          <div className="mt-2">
+                          <Button onClick={()=>updateDescription.mutate({ id:h.id, description: ((descriptionEdit[h.id] ?? h.description) || "") })}>Save Description</Button>
+                          </div>
                         </div>
                       </td>
                       <td className="p-2">
@@ -302,7 +306,7 @@ const OwnerDashboard = () => {
                         <Button size="sm" variant="outline" onClick={()=>approveBooking.mutate(b.id)}>Approve</Button>
                         <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
                         <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
-                        <Button size="sm" variant="destructive" onClick={()=>cancelBooking.mutate(b.id)}>Cancel</Button>
+                        {b.status!=='checked_in' && <Button size="sm" variant="destructive" onClick={()=>cancelBooking.mutate(b.id)}>Cancel</Button>}
                       </td>
                     </tr>
                   ))}
@@ -319,29 +323,60 @@ const OwnerDashboard = () => {
           <CardContent className="space-y-3">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="text-left"><th className="p-2">Hotel</th><th className="p-2">Weekend %</th><th className="p-2">Seasonal</th><th className="p-2">Special</th><th className="p-2">Actions</th></tr></thead>
+                <thead><tr className="text-left"><th className="p-2">Hotel</th><th className="p-2">Normal ₹</th><th className="p-2">Weekend ₹</th><th className="p-2">Seasonal</th><th className="p-2">Special Days</th><th className="p-2">Actions</th></tr></thead>
                 <tbody>
                   {hotels.map(h=>{
-                    const pf = pricingForm[h.id]||{ weekendPercent:"", seasonalStart:"", seasonalEnd:"", seasonalPercent:"", specialDate:"", specialPrice:"" }
+                    const pf = pricingForm[h.id]||{ normalPrice:"", weekendPrice:"", seasonal:[], specials:[] }
                     return (
                       <tr key={h.id} className="border-t">
                         <td className="p-2">{h.id} • {h.name}</td>
-                        <td className="p-2"><Input placeholder="%" value={pf.weekendPercent} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, weekendPercent: e.target.value } })} /></td>
+                        <td className="p-2"><Input placeholder="₹" value={pf.normalPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, normalPrice: e.target.value } })} /></td>
+                        <td className="p-2"><Input placeholder="₹" value={pf.weekendPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, weekendPrice: e.target.value } })} /></td>
                         <td className="p-2">
-                          <div className="grid grid-cols-3 gap-2">
-                            <Input placeholder="Start" value={pf.seasonalStart} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonalStart: e.target.value } })} />
-                            <Input placeholder="End" value={pf.seasonalEnd} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonalEnd: e.target.value } })} />
-                            <Input placeholder="%" value={pf.seasonalPercent} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonalPercent: e.target.value } })} />
+                          <div className="space-y-2">
+                            {(pf.seasonal||[]).map((row,idx)=> (
+                              <div key={idx} className="grid grid-cols-4 gap-2">
+                                <Input placeholder="Start" value={row.start} onChange={e=>{
+                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, start: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                                }} />
+                                <Input placeholder="End" value={row.end} onChange={e=>{
+                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, end: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                                }} />
+                                <Input placeholder="₹" value={row.price} onChange={e=>{
+                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                                }} />
+                                <Button variant="outline" onClick={()=>{
+                                  const next = (pf.seasonal||[]).filter((_,i)=>i!==idx); setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                                }}>Remove</Button>
+                              </div>
+                            ))}
+                            <Button size="sm" variant="secondary" onClick={()=>{
+                              const next = (pf.seasonal||[]).concat({ start:"", end:"", price:"" }); setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                            }}>Add Seasonal</Button>
                           </div>
                         </td>
                         <td className="p-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input placeholder="Date" value={pf.specialDate} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, specialDate: e.target.value } })} />
-                            <Input placeholder="Price" value={pf.specialPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, specialPrice: e.target.value } })} />
+                          <div className="space-y-2">
+                            {(pf.specials||[]).map((row,idx)=> (
+                              <div key={idx} className="grid grid-cols-3 gap-2">
+                                <Input placeholder="Date" value={row.date} onChange={e=>{
+                                  const next = (pf.specials||[]).slice(); next[idx] = { ...row, date: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
+                                }} />
+                                <Input placeholder="₹" value={row.price} onChange={e=>{
+                                  const next = (pf.specials||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
+                                }} />
+                                <Button variant="outline" onClick={()=>{
+                                  const next = (pf.specials||[]).filter((_,i)=>i!==idx); setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
+                                }}>Remove</Button>
+                              </div>
+                            ))}
+                            <Button size="sm" variant="secondary" onClick={()=>{
+                              const next = (pf.specials||[]).concat({ date:"", price:"" }); setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
+                            }}>Add Special Day</Button>
                           </div>
                         </td>
                         <td className="p-2">
-                          <Button onClick={()=>updatePricing.mutate({ hotelId: h.id, weekendPercent: pf.weekendPercent ? Number(pf.weekendPercent) : undefined, seasonal: (pf.seasonalStart && pf.seasonalEnd && pf.seasonalPercent) ? [{ start: pf.seasonalStart, end: pf.seasonalEnd, percent: Number(pf.seasonalPercent) }] : undefined, specials: (pf.specialDate && pf.specialPrice) ? [{ date: pf.specialDate, price: Number(pf.specialPrice) }] : undefined })}>Save</Button>
+                          <Button onClick={()=>updatePricing.mutate({ hotelId: h.id, normalPrice: pf.normalPrice ? Number(pf.normalPrice) : undefined, weekendPrice: pf.weekendPrice ? Number(pf.weekendPrice) : undefined, seasonal: (pf.seasonal||[]).filter(s=>s.start&&s.end&&s.price).map(s=>({ start:s.start, end:s.end, price:Number(s.price) })), specials: (pf.specials||[]).filter(sp=>sp.date&&sp.price).map(sp=>({ date:sp.date, price:Number(sp.price) })) })}>Save</Button>
                         </td>
                       </tr>
                     )

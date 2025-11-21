@@ -6,6 +6,7 @@ router.get('/stats', owner.stats)
 router.get('/hotels', owner.hotels)
 router.post('/hotels/submit', owner.submitHotel)
 router.post('/hotels/:id/amenities', owner.updateAmenities)
+router.post('/hotels/:id/description', owner.updateDescription)
 router.post('/hotels/:id/images', owner.updateImages)
 router.post('/hotels/:id/docs', owner.updateDocs)
 

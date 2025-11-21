@@ -59,7 +59,7 @@ async function blockUser(req, res) {
 
 async function hotelsList(req, res) {
   await connect(); await ensureSeed();
-  const hotels = await Hotel.find().lean()
+  const hotels = await Hotel.find({ ownerId: { $ne: null } }).lean()
   res.json({ hotels })
 }
 

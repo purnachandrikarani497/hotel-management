@@ -13,7 +13,7 @@ import AdminOverview from "@/components/admin/AdminOverview"
 
 type Stats = { totalHotels: number; totalBookings: number; totalRevenue: number; monthlySales: Record<string, number>; cityGrowth: Record<string, number> }
 type User = { id: number; email: string; role: "admin"|"user"|"owner"; isApproved?: boolean; blocked?: boolean }
-type Hotel = { id: number; name: string; location: string; status?: "approved"|"rejected"|"suspended"|"pending"; featured?: boolean; rating?: number; price?: number }
+type Hotel = { id: number; name: string; location: string; ownerId?: number|null; status?: "approved"|"rejected"|"suspended"|"pending"; featured?: boolean; price?: number }
 type Booking = { id: number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number; status: string; refundIssued: boolean; hotel?: Hotel }
 type Coupon = { id: number; code: string; discount: number; expiry: string|null; usageLimit: number; used: number; enabled: boolean }
 type Settings = { taxRate: number; commissionRate: number }
@@ -120,7 +120,7 @@ const AdminDashboard = () => {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {(hotels.data?.hotels || []).filter(h => getSet("hotels").has(h.id)).map(h => (
+                  {(hotels.data?.hotels || []).map(h => (
                     <tr key={h.id} className="border-t">
                       <td className="p-3">{h.name}</td>
                       <td className="p-3">{h.location}</td>
