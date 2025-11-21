@@ -59,7 +59,22 @@ async function getRooms(req, res) {
   await connect(); await ensureSeed();
   const id = Number(req.params.id)
   const items = await Room.find({ hotelId: id }).lean()
-  res.json({ rooms: items })
+  if (items && items.length > 0) return res.json({ rooms: items })
+  const h = await Hotel.findOne({ id }).lean()
+  if (!h) return res.json({ rooms: [] })
+  const imgs = Array.isArray(h.images) ? h.images : []
+  const primary = h.image || (imgs.length ? imgs[0] : '')
+  const resolve = (url) => {
+    if (!url || typeof url !== 'string') return ''
+    if (/^https?:\/\//.test(url)) return url
+    if (/^data:/.test(url)) return url
+    if (url.startsWith('/uploads/')) return `http://localhost:5000${url}`
+    if (url.startsWith('uploads/')) return `http://localhost:5000/${url}`
+    return ''
+  }
+  const photos = imgs.map(resolve).filter(Boolean)
+  const fallback = [{ id: 0, hotelId: id, type: 'Standard', price: Number(h.price)||0, members: 2, amenities: Array.isArray(h.amenities)?h.amenities:[], photos: (photos.length?photos:[resolve(primary)].filter(Boolean)), availability: true, blocked: false }]
+  res.json({ rooms: fallback })
 }
 
 async function featured(req, res) {
