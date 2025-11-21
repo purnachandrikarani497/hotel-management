@@ -25,6 +25,23 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
 const uploadsDir = path.join(__dirname, 'uploads')
 try { fs.mkdirSync(uploadsDir, { recursive: true }) } catch {}
+app.get('/uploads/:name', (req, res) => {
+  try {
+    const name = path.basename(String(req.params.name || ''))
+    const filePath = path.join(uploadsDir, name)
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+      return res.sendFile(filePath)
+    }
+    const transparentPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII='
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    return res.status(200).send(Buffer.from(transparentPngBase64, 'base64'))
+  } catch (e) {
+    return res.status(404).end()
+  }
+})
 app.use('/uploads', express.static(uploadsDir))
 
 const port =5000

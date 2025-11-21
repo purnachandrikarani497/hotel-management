@@ -85,8 +85,8 @@ const HotelDetail = () => {
             const resolve = (src?: string) => {
               const s = String(src||'')
               if (!s) return 'https://placehold.co/800x600?text=Hotel'
-              if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
-              if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+              if (s.startsWith('/uploads/')) return s
+              if (s.startsWith('uploads/')) return `/${s}`
               return s
             }
             const imgs = (hotel.images||[])
@@ -146,8 +146,8 @@ const HotelDetail = () => {
                     const resolve = (src?: string) => {
                       const s = String(src||'')
                       if (!s) return 'https://placehold.co/160x120?text=Room'
-                      if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
-                      if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+                      if (s.startsWith('/uploads/')) return s
+                      if (s.startsWith('uploads/')) return `/${s}`
                       return s
                     }
                     const p0 = resolve(r.photos?.[0])
