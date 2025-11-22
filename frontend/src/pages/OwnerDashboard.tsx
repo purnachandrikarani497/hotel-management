@@ -5,12 +5,15 @@ import Footer from "@/components/Footer"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Building2, CalendarCheck2, DollarSign } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Building2, CalendarCheck2, DollarSign, Calendar as CalendarIcon } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import RoomTypeManager from "@/components/RoomTypeManager"
+import { useToast } from "@/hooks/use-toast"
 
-type OwnerStats = { totalBookings:number; totalRevenue:number; dailyStats:number; roomOccupancy:number; upcomingArrivals: { id:number; hotelId:number; checkIn:string; guests:number }[] }
+type OwnerStats = { totalRooms:number; totalBookings:number; totalRevenue:number; pendingBookings:number; hotelStatus:string }
   type Hotel = { id:number; name:string; location:string; status:string; price:number; amenities:string[]; images:string[]; docs:string[]; description?: string; pricing?: { normalPrice?: number; weekendPrice?: number; seasonal?: { start:string; end:string; price:number }[]; specials?: { date:string; price:number }[] } }
 type Room = { id:number; hotelId:number; type:string; price:number; members:number; availability:boolean; blocked:boolean; amenities:string[]; photos:string[] }
 type Booking = { id:number; hotelId:number; roomId?:number; checkIn:string; checkOut:string; guests:number; total:number; status:string }
@@ -22,6 +25,7 @@ const OwnerDashboard = () => {
   const ownerId = auth?.user?.id || 0
   const { feature } = useParams<{ feature?: string }>()
   const qc = useQueryClient()
+  const { toast } = useToast()
   const abKey = "addedByDashboard"
   type AddedStore = { hotels?: number[]; rooms?: number[]; reviews?: number[]; coupons?: number[]; wishlist?: number[] }
   const readAB = (): AddedStore => {
@@ -43,13 +47,17 @@ const OwnerDashboard = () => {
   const bookingsQ = useQuery({ queryKey: ["owner","bookings",ownerId], queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/owner/bookings?ownerId=${ownerId}`), enabled: !!ownerId })
   const reviewsQ = useQuery({ queryKey: ["owner","reviews",ownerId], queryFn: () => apiGet<{ reviews: Review[] }>(`/api/owner/reviews?ownerId=${ownerId}`), enabled: !!ownerId })
 
+  const allHotels = hotelsQ.data?.hotels || []
   const hotels = (hotelsQ.data?.hotels || []).filter(h => getSet("hotels").has(h.id))
   const roomsRaw = roomsQ.data?.rooms || []
   const rooms = React.useMemo(() => (roomsRaw || []).filter(r => getSet("rooms").has(r.id)), [roomsRaw, getSet])
+  const hotelName = (id:number) => { const all = hotelsQ.data?.hotels || []; const h = all.find(x=>x.id===id); return h?.name || '' }
+  const resolve = (u:string) => { if (!u) return ''; const s = String(u); if (s.startsWith('/uploads')) return 'http://localhost:5000'+s; if (s.startsWith('uploads')) return 'http://localhost:5000/'+s; return s }
   const bookings = bookingsQ.data?.bookings || []
   const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
 
-  const submitHotel = useMutation({ mutationFn: (p: { name:string; location:string; price:number; amenities:string[]; description?:string }) => apiPost<{ id:number }, { ownerId:number; name:string; location:string; price:number; amenities:string[]; description?:string }>(`/api/owner/hotels/submit`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) addId("hotels", res.id); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
+  const [lastHotelRegId, setLastHotelRegId] = React.useState<number | null>(null)
+  const submitHotel = useMutation({ mutationFn: (p: { name:string; location:string; price:number; amenities:string[]; description?:string }) => apiPost<{ id:number }, { ownerId:number; name:string; location:string; price:number; amenities:string[]; description?:string }>(`/api/owner/hotels/submit`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) { addId("hotels", res.id); setLastHotelRegId(res.id) } qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
   const updateAmenities = useMutation({ mutationFn: (p: { id:number; amenities:string[] }) => apiPost(`/api/owner/hotels/${p.id}/amenities`, { amenities: p.amenities }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
   const updateDescription = useMutation({ mutationFn: (p: { id:number; description:string }) => apiPost(`/api/owner/hotels/${p.id}/description`, { description: p.description }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
   const updateImages = useMutation({ mutationFn: (p: { id:number; images:string[] }) => apiPost(`/api/owner/hotels/${p.id}/images`, { images: p.images }), onSuccess: (_res, vars) => { setImageUploaded(prev => ({ ...prev, [vars.id]: true })); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
@@ -65,7 +73,7 @@ const OwnerDashboard = () => {
   const checkoutBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
   const updatePricing = useMutation({ mutationFn: (p: { hotelId:number; normalPrice?:number; weekendPrice?:number; seasonal?:{start:string;end:string;price:number}[]; specials?:{date:string;price:number}[] }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
   const deletePricing = useMutation({ mutationFn: (hotelId:number) => apiDelete(`/api/owner/pricing/${hotelId}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
-  const respondReview = useMutation({ mutationFn: (p: { id:number; response:string }) => apiPost(`/api/owner/reviews/${p.id}/respond`, { response: p.response }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","reviews",ownerId] }) })
+  const respondReview = useMutation({ mutationFn: (p: { id:number; response:string }) => apiPost(`/api/owner/reviews/${p.id}/respond`, { response: p.response }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["owner","reviews",ownerId] }); toast({ title: "Response sent", description: `Review #${vars.id}` }) }, onError: () => toast({ title: "Response failed", variant: "destructive" }) })
 
   const [hotelForm, setHotelForm] = React.useState({ name:"", location:"", price:0, amenities:"", description:"" })
   const [amenitiesEdit, setAmenitiesEdit] = React.useState<{ [id:number]: string }>({})
@@ -86,6 +94,10 @@ const OwnerDashboard = () => {
   const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { normalPrice:string; weekendPrice:string; seasonal:{ start:string; end:string; price:string }[]; specials:{ date:string; price:string }[] } }>({})
   const [pricingType, setPricingType] = React.useState<{ [id:number]: string }>({})
   const [pricingEditing, setPricingEditing] = React.useState<{ [id:number]: boolean }>({})
+  const [seasonSel, setSeasonSel] = React.useState<{ [id:number]: { from?: Date; to?: Date } }>({})
+  const [seasonPrice, setSeasonPrice] = React.useState<{ [id:number]: string }>({})
+  const [specialSel, setSpecialSel] = React.useState<{ [id:number]: Date[] }>({})
+  const [specialPrice, setSpecialPrice] = React.useState<{ [id:number]: string }>({})
   const [roomTypes, setRoomTypes] = React.useState<string[]>(()=>{
     try {
       const raw = localStorage.getItem('roomTypes')
@@ -160,11 +172,11 @@ const OwnerDashboard = () => {
             </div>
             <p className="opacity-90">Manage your properties and reservations</p>
             <div className="mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Rooms</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.totalRooms ?? 0}</div></CardContent></Card>
               <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.totalBookings ?? 0}</div></CardContent></Card>
               <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Revenue</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">₹{stats.data?.totalRevenue ?? 0}</div></CardContent></Card>
-              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Daily Stats</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.dailyStats ?? 0}</div></CardContent></Card>
-              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Room Occupancy</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.roomOccupancy ?? 0}%</div></CardContent></Card>
-              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Upcoming Arrivals</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.upcomingArrivals?.length ?? 0}</div></CardContent></Card>
+              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Pending Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.pendingBookings ?? 0}</div></CardContent></Card>
+              <Card className="shadow-card hover:shadow-card-hover transition-all"><CardHeader className="pb-2"><CardTitle className="text-sm">Hotel Status</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats.data?.hotelStatus ?? 'pending'}</div></CardContent></Card>
             </div>
           </div>
         </section>
@@ -177,22 +189,32 @@ const OwnerDashboard = () => {
         <Card className="shadow-card hover:shadow-card-hover transition-all">
           <CardHeader><CardTitle>Hotel Registration</CardTitle></CardHeader>
           <CardContent className="space-y-3">
+            {(()=>{ const hasHotel = allHotels.length > 0; return (
+              <div className="text-sm text-muted-foreground">
+                {hasHotel ? (
+                  <span>Registration is one-time. Your Hotel ID{allHotels.length>1?'s':''}: {allHotels.map(h=>`#${h.id}`).join(', ')}.</span>
+                ) : (
+                  <span>No hotel registered yet.</span>
+                )}
+                {lastHotelRegId && <span className="ml-2 font-medium text-foreground">Last registered ID: #{lastHotelRegId}</span>}
+              </div>
+            ) })()}
             <div className="grid grid-cols-3 gap-3">
-              <Input placeholder="Hotel Name" value={hotelForm.name} onChange={e=>setHotelForm({...hotelForm,name:e.target.value})} />
-              <Input placeholder="Location" value={hotelForm.location} onChange={e=>setHotelForm({...hotelForm,location:e.target.value})} />
-              <Input type="number" placeholder="Base Price" value={hotelForm.price} onChange={e=>setHotelForm({...hotelForm,price:Number(e.target.value)})} />
-              <Input className="col-span-3" placeholder="Amenities (comma-separated)" value={hotelForm.amenities} onChange={e=>setHotelForm({...hotelForm,amenities:e.target.value})} />
-              <Input className="col-span-3" placeholder="Description" value={hotelForm.description} onChange={e=>setHotelForm({...hotelForm,description:e.target.value})} />
+              <Input placeholder="Hotel Name" value={hotelForm.name} onChange={e=>setHotelForm({...hotelForm,name:e.target.value})} disabled={(hotelsQ.data?.hotels||[]).length>0} />
+              <Input placeholder="Location" value={hotelForm.location} onChange={e=>setHotelForm({...hotelForm,location:e.target.value})} disabled={(hotelsQ.data?.hotels||[]).length>0} />
+              <Input type="number" placeholder="Base Price" value={hotelForm.price} onChange={e=>setHotelForm({...hotelForm,price:Number(e.target.value)})} disabled={(hotelsQ.data?.hotels||[]).length>0} />
+              <Input className="col-span-3" placeholder="Amenities (comma-separated)" value={hotelForm.amenities} onChange={e=>setHotelForm({...hotelForm,amenities:e.target.value})} disabled={(hotelsQ.data?.hotels||[]).length>0} />
+              <Input className="col-span-3" placeholder="Description" value={hotelForm.description} onChange={e=>setHotelForm({...hotelForm,description:e.target.value})} disabled={(hotelsQ.data?.hotels||[]).length>0} />
             </div>
-            <Button onClick={()=>submitHotel.mutate({ name:hotelForm.name, location:hotelForm.location, price:hotelForm.price, amenities: hotelForm.amenities.split(',').map(s=>s.trim()).filter(Boolean), description: hotelForm.description })} disabled={!hotelForm.name || !hotelForm.location}>Submit Hotel</Button>
+            <Button onClick={()=>submitHotel.mutate({ name:hotelForm.name, location:hotelForm.location, price:hotelForm.price, amenities: hotelForm.amenities.split(',').map(s=>s.trim()).filter(Boolean), description: hotelForm.description })} disabled={(hotelsQ.data?.hotels||[]).length>0 || !hotelForm.name || !hotelForm.location}>Submit Hotel</Button>
             <div className="rounded-lg border overflow-hidden mt-4">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Amenities</th><th className="p-3">Images</th><th className="p-3">Documents</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {hotels.map(h=>(
+                  {allHotels.map(h=>(
                     <tr key={h.id} className="border-t align-top">
                       <td className="p-3">
-                        <div className="font-medium mb-2">{h.name}</div>
+                        <div className="font-medium mb-2">{h.name} <span className="text-xs text-muted-foreground">• ID #{h.id}</span></div>
                         <div className="flex gap-2">
                           <Input placeholder="Name" value={(nameEdit[h.id] ?? h.name ?? "")} onChange={e=>setNameEdit({ ...nameEdit, [h.id]: e.target.value })} disabled={!editing[h.id]} />
                         </div>
@@ -205,7 +227,7 @@ const OwnerDashboard = () => {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${h.status === 'approved' ? 'bg-primary/15 text-primary' : h.status === 'rejected' ? 'bg-destructive/15 text-destructive' : h.status === 'suspended' ? 'bg-accent/15 text-foreground' : 'bg-muted text-foreground'}`}>{h.status}</span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${h.status === 'approved' ? 'bg-primary/15 text-primary' : h.status === 'rejected' ? 'bg-muted text-foreground' : h.status === 'suspended' ? 'bg-accent/15 text-foreground' : 'bg-muted text-foreground'}`}>{h.status}</span>
                           <select className="px-2 py-1 rounded border bg-background text-xs" value={(statusEdit[h.id] ?? h.status ?? '')} onChange={e=>setStatusEdit({ ...statusEdit, [h.id]: e.target.value })} disabled={!editing[h.id]}>
                             <option value="approved">approved</option>
                             <option value="rejected">rejected</option>
@@ -251,6 +273,15 @@ const OwnerDashboard = () => {
                             const status = (statusEdit[h.id] ?? h.status ?? '')
                             if (name || location || price || description || status) updateInfo.mutate({ id:h.id, name, location, price, description, status })
                             updateAmenities.mutate({ id:h.id, amenities })
+                            const imgFiles = (imageFiles[h.id]||[]).slice(0,10)
+                            if (imgFiles.length) {
+                              const toDataUrl = (f: File) => new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result||'')); r.onerror = reject; r.readAsDataURL(f) })
+                              const dataUrls = await Promise.all(imgFiles.map(toDataUrl))
+                              updateImages.mutate({ id:h.id, images: dataUrls })
+                              setUploadInfo({ type:'images', names: imgFiles.map(f=>f.name) })
+                            }
+                            const docNames = Array.from(new Set((docFiles[h.id]||[]).map(f=>f.name))).slice(0,10)
+                            if (docNames.length) { updateDocs.mutate({ id:h.id, docs: docNames }); setUploadInfo({ type:'documents', names: docNames }) }
                           }}>Update</Button>
                           <Button variant="secondary" onClick={async ()=>{
                             const imgFiles = (imageFiles[h.id]||[]).slice(0,10)
@@ -263,7 +294,7 @@ const OwnerDashboard = () => {
                             const docNames = Array.from(new Set((docFiles[h.id]||[]).map(f=>f.name))).slice(0,10)
                             if (docNames.length) { updateDocs.mutate({ id:h.id, docs: docNames }); setUploadInfo({ type:'documents', names: docNames }) }
                           }}>Add</Button>
-                          <Button variant="destructive" onClick={()=>deleteHotel.mutate(h.id)}>Delete</Button>
+                          <Button variant="outline" onClick={()=>deleteHotel.mutate(h.id)}>Delete</Button>
                         </div>
                       </td>
                     </tr>
@@ -284,6 +315,7 @@ const OwnerDashboard = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Hotel ID</label>
                 <Input type="number" value={roomForm.hotelId} onChange={e=>setRoomForm({...roomForm,hotelId:Number(e.target.value)})} />
+                <div className="text-xs text-muted-foreground mt-1">{roomForm.hotelId ? (hotelName(roomForm.hotelId) || 'Unknown hotel') : ''}</div>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Type</label>
@@ -326,7 +358,7 @@ const OwnerDashboard = () => {
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {rooms.map(r=>(
                     <tr key={r.id} className="border-t">
-                      <td className="p-3">{r.hotelId}</td>
+                      <td className="p-3">{r.hotelId} • {hotelName(r.hotelId)}</td>
                       <td className="p-3">
                         <select className="px-2 py-1 rounded border bg-background text-sm" value={roomEdit[r.id]?.type ?? r.type} onChange={e=>setRoomEdit({ ...roomEdit, [r.id]: { ...(roomEdit[r.id]||{}), type: e.target.value } })} disabled={!roomEditing[r.id]}>
                           {Array.from(new Set([...
@@ -346,7 +378,7 @@ const OwnerDashboard = () => {
                         <Input placeholder="amenities" value={(roomEdit[r.id]?.amenities ?? '')} onChange={e=>setRoomEdit({ ...roomEdit, [r.id]: { ...(roomEdit[r.id]||{}), amenities:e.target.value } })} disabled={!roomEditing[r.id]} />
                       </td>
                       <td className="p-3">
-                        {(r.photos?.length||0)}
+                        <div className="flex gap-2 flex-wrap">{(r.photos||[]).map(p=>(<img key={`${r.id}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div>
                         <div className="mt-2">
                           <input type="file" multiple accept="image/*" onChange={e=>setRoomPhotosById({ ...roomPhotosById, [r.id]: Array.from(e.target.files||[]).slice(0,10) })} disabled={!roomEditing[r.id]} />
                         </div>
@@ -359,7 +391,7 @@ const OwnerDashboard = () => {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${r.blocked ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'}`}>{r.blocked ? 'Blocked' : 'Free'}</span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${r.blocked ? 'bg-muted text-foreground' : 'bg-primary/15 text-primary'}`}>{r.blocked ? 'Blocked' : 'Free'}</span>
                           <input type="checkbox" checked={(roomEdit[r.id]?.blocked ?? r.blocked)} onChange={e=>setRoomEdit({ ...roomEdit, [r.id]: { ...(roomEdit[r.id]||{}), blocked:e.target.checked } })} disabled={!roomEditing[r.id]} />
                         </div>
                       </td>
@@ -385,7 +417,7 @@ const OwnerDashboard = () => {
                             setUploadInfo({ type:'photos', names: files.map(f=>f.name) })
                           }
                         }}>Add</Button>
-                        <Button size="sm" variant="destructive" onClick={()=>apiDelete(`/api/owner/rooms/${r.id}`).then(()=>qc.invalidateQueries({ queryKey:["owner","rooms",ownerId] }))}>Delete</Button>
+                        <Button size="sm" variant="outline" onClick={()=>apiDelete(`/api/owner/rooms/${r.id}`).then(()=>qc.invalidateQueries({ queryKey:["owner","rooms",ownerId] }))}>Delete</Button>
                       </td>
                     </tr>
                   ))}
@@ -421,7 +453,7 @@ const OwnerDashboard = () => {
                 <div><span className="text-sm text-muted-foreground">Availability</span><div>{lr.availability ? 'Available' : 'Unavailable'}</div></div>
                 <div><span className="text-sm text-muted-foreground">Blocked</span><div>{lr.blocked ? 'Blocked' : 'Free'}</div></div>
                 <div><span className="text-sm text-muted-foreground">Amenities</span><div className="flex gap-1 flex-wrap">{lr.amenities?.map(a=>(<span key={a} className="px-2 py-1 bg-secondary rounded text-xs">{a}</span>))}</div></div>
-                <div><span className="text-sm text-muted-foreground">Photos</span><div className="flex gap-2 flex-wrap">{(lr.photos||[]).map(p=>(<span key={p} className="px-2 py-1 bg-secondary rounded text-xs">{p}</span>))}</div></div>
+                <div><span className="text-sm text-muted-foreground">Photos</span><div className="flex gap-2 flex-wrap">{(lr.photos||[]).map(p=>(<img key={`${lr.id}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div></div>
               </div>
             </div>
           ) : null })()}
@@ -447,7 +479,7 @@ const OwnerDashboard = () => {
                         <Button size="sm" variant="outline" onClick={()=>approveBooking.mutate(b.id)}>Approve</Button>
                         <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
                         <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
-                        {b.status!=='checked_in' && <Button size="sm" variant="destructive" onClick={()=>cancelBooking.mutate(b.id)}>Cancel</Button>}
+                        {b.status!=='checked_in' && <Button size="sm" variant="outline" onClick={()=>cancelBooking.mutate(b.id)}>Cancel</Button>}
                       </td>
                     </tr>
                   ))}
@@ -493,10 +525,33 @@ const OwnerDashboard = () => {
                             </select>
                           </div>
                         </td>
-                        <td className="p-2"><Input placeholder="₹" value={(pricingForm[h.id]?.normalPrice ?? '')} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...(pricingForm[h.id]||pf), normalPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
-                        <td className="p-2"><Input placeholder="₹" value={pf.weekendPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, weekendPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
+                        <td className="p-2"><Input placeholder="" value={(pricingForm[h.id]?.normalPrice ?? '')} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...(pricingForm[h.id]||pf), normalPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
+                        <td className="p-2"><Input placeholder="" value={pf.weekendPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, weekendPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
                         <td className="p-2">
                           <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button size="sm" variant="outline" className="p-2" aria-label="Select range" disabled={!pricingEditing[h.id]}>
+                                    <CalendarIcon className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0" align="start">
+                                  <Calendar mode="range" selected={seasonSel[h.id]} onSelect={(v)=>setSeasonSel({ ...seasonSel, [h.id]: v||{} })} numberOfMonths={2} fromDate={new Date()} disabled={(date)=>{ const t=new Date(); t.setHours(0,0,0,0); return date < t }} />
+                                </PopoverContent>
+                              </Popover>
+                              <Input className="w-28" placeholder="" value={seasonPrice[h.id]||""} onChange={e=>setSeasonPrice({ ...seasonPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
+                              <Button size="sm" onClick={()=>{
+                                const sel = seasonSel[h.id]||{}
+                                const price = seasonPrice[h.id]||""
+                                const start = sel?.from ? sel.from.toISOString().slice(0,10) : ''
+                                const end = sel?.to ? sel.to.toISOString().slice(0,10) : ''
+                                if (start && end) {
+                                  const next = (pf.seasonal||[]).concat({ start, end, price })
+                                  setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
+                                }
+                              }} disabled={!pricingEditing[h.id]}>Apply Range</Button>
+                            </div>
                             {(pf.seasonal||[]).map((row,idx)=> (
                               <div key={idx} className="grid grid-cols-4 gap-2">
                                 <Input placeholder="Start" value={row.start} onChange={e=>{
@@ -505,7 +560,7 @@ const OwnerDashboard = () => {
                                 <Input placeholder="End" value={row.end} onChange={e=>{
                                   const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, end: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
                                 }} disabled={!pricingEditing[h.id]} />
-                                <Input placeholder="₹" value={row.price} onChange={e=>{
+                                <Input placeholder="" value={row.price} onChange={e=>{
                                   const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
                                 }} disabled={!pricingEditing[h.id]} />
                                 <Button variant="outline" onClick={()=>{
@@ -520,12 +575,34 @@ const OwnerDashboard = () => {
                         </td>
                         <td className="p-2">
                           <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button size="sm" variant="outline" className="p-2" aria-label="Select dates" disabled={!pricingEditing[h.id]}>
+                                    <CalendarIcon className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0" align="start">
+                                  <Calendar mode="multiple" selected={specialSel[h.id]||[]} onSelect={(v:any)=>setSpecialSel({ ...specialSel, [h.id]: Array.isArray(v)?v:[] })} fromDate={new Date()} disabled={(date)=>{ const t=new Date(); t.setHours(0,0,0,0); return date < t }} />
+                                </PopoverContent>
+                              </Popover>
+                              <Input className="w-28" placeholder="" value={specialPrice[h.id]||""} onChange={e=>setSpecialPrice({ ...specialPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
+                              <Button size="sm" onClick={()=>{
+                                const dates = (specialSel[h.id]||[]).map(d=>d.toISOString().slice(0,10))
+                                const price = specialPrice[h.id]||""
+                                if (dates.length) {
+                                  const rows = dates.map(date=>({ date, price }))
+                                  const next = (pf.specials||[]).concat(rows)
+                                  setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
+                                }
+                              }} disabled={!pricingEditing[h.id]}>Apply Dates</Button>
+                            </div>
                             {(pf.specials||[]).map((row,idx)=> (
                               <div key={idx} className="grid grid-cols-3 gap-2">
                                 <Input placeholder="Date" value={row.date} onChange={e=>{
                                   const next = (pf.specials||[]).slice(); next[idx] = { ...row, date: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
                                 }} disabled={!pricingEditing[h.id]} />
-                                <Input placeholder="₹" value={row.price} onChange={e=>{
+                                <Input placeholder="" value={row.price} onChange={e=>{
                                   const next = (pf.specials||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
                                 }} disabled={!pricingEditing[h.id]} />
                                 <Button variant="outline" onClick={()=>{
@@ -541,7 +618,7 @@ const OwnerDashboard = () => {
                         <td className="p-2 flex gap-2 flex-wrap">
                           <Button size="sm" variant="outline" onClick={()=>setPricingEditing({ ...pricingEditing, [h.id]: !pricingEditing[h.id] })}>{pricingEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button>
                           <Button size="sm" onClick={()=>updatePricing.mutate({ hotelId: h.id, normalPrice: pf.normalPrice ? Number(pf.normalPrice) : undefined, weekendPrice: pf.weekendPrice ? Number(pf.weekendPrice) : undefined, seasonal: (pf.seasonal||[]).filter(s=>s.start&&s.end&&s.price).map(s=>({ start:s.start, end:s.end, price:Number(s.price) })), specials: (pf.specials||[]).filter(sp=>sp.date&&sp.price).map(sp=>({ date:sp.date, price:Number(sp.price) })) })} disabled={!pricingEditing[h.id]}>Update</Button>
-                          <Button size="sm" variant="destructive" onClick={()=>deletePricing.mutate(h.id)}>Delete</Button>
+                          <Button size="sm" variant="outline" onClick={()=>deletePricing.mutate(h.id)}>Delete</Button>
                         </td>
                       </tr>
                     )

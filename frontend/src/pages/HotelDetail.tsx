@@ -40,9 +40,31 @@ const HotelDetail = () => {
   }, [roomsQuery.data, roomType])
   const selectedRoom = availableRooms.find(r => r.type === roomType) || availableRooms[0]
   const price = Number(selectedRoom?.price ?? hotel?.price ?? 0)
-  const hasDateTime = !!checkIn && !!checkOut && !!checkInTime && !!checkOutTime
-  const ci = hasDateTime ? new Date(`${checkIn}T${checkInTime}:00`) : null
-  const co = hasDateTime ? new Date(`${checkOut}T${checkOutTime}:00`) : null
+  const istTZ = 'Asia/Kolkata'
+  const parts = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: istTZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
+  const ymdIST = (d: Date) => { const p = parts(d); const y = p.find(x=>x.type==='year')?.value||'0000'; const m = p.find(x=>x.type==='month')?.value||'01'; const da = p.find(x=>x.type==='day')?.value||'01'; return `${y}-${m}-${da}` }
+  const hmIST = (d: Date) => { const p = parts(d); const h = p.find(x=>x.type==='hour')?.value||'00'; const mi = p.find(x=>x.type==='minute')?.value||'00'; return `${h}:${mi}` }
+  const todayIso = ymdIST(new Date())
+  const hasDateTime = !!checkIn && !!checkOut && !!checkInTime && !!checkOutTime && (()=>{
+    const ci2 = new Date(`${checkIn}T${checkInTime}:00+05:30`)
+    const co2 = new Date(`${checkOut}T${checkOutTime}:00+05:30`)
+    const startOfToday = new Date(`${todayIso}T00:00:00+05:30`)
+    const notBeforeToday = ci2 >= startOfToday
+    const notAfter = co2 > ci2
+    return notBeforeToday && notAfter
+  })()
+  useEffect(() => {
+    const now = new Date()
+    const todayStr = ymdIST(now)
+    const tomorrowStr = ymdIST(new Date(now.getTime() + 24*60*60*1000))
+    const curHM = hmIST(now)
+    if (!checkIn) setCheckIn(todayStr)
+    if (!checkOut) setCheckOut(tomorrowStr)
+    if (!checkInTime) setCheckInTime(curHM)
+    if (!checkOutTime) setCheckOutTime(curHM)
+  }, [])
+  const ci = hasDateTime ? new Date(`${checkIn}T${checkInTime}:00+05:30`) : null
+  const co = hasDateTime ? new Date(`${checkOut}T${checkOutTime}:00+05:30`) : null
   const diffMs = ci && co ? Math.max(0, co.getTime() - ci.getTime()) : 0
   const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
   const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)
@@ -53,7 +75,7 @@ const HotelDetail = () => {
   const grandTotal = subtotal
 
   type ReserveResp = { status: string; id: number; roomId: number; holdExpiresAt: string }
-  const reserve = useMutation({ mutationFn: () => apiPost<ReserveResp, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string }>("/api/bookings", { userId: auth?.user?.id || 0, hotelId: Number(id), checkIn: hasDateTime ? ci!.toISOString() : checkIn, checkOut: hasDateTime ? co!.toISOString() : checkOut, guests, roomType }) })
+  const reserve = useMutation({ mutationFn: () => apiPost<ReserveResp, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string }>("/api/bookings", { userId: auth?.user?.id || 0, hotelId: Number(id), checkIn: hasDateTime ? `${checkIn}T${checkInTime}:00+05:30` : checkIn, checkOut: hasDateTime ? `${checkOut}T${checkOutTime}:00+05:30` : checkOut, guests, roomType }) })
 
   const [open, setOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'upi'|'cod'|''>('')
@@ -85,8 +107,8 @@ const HotelDetail = () => {
             const resolve = (src?: string) => {
               const s = String(src||'')
               if (!s) return 'https://placehold.co/800x600?text=Hotel'
-              if (s.startsWith('/uploads/')) return s
-              if (s.startsWith('uploads/')) return `/${s}`
+              if (s.startsWith('/uploads')) return `http://localhost:5000${s}`
+              if (s.startsWith('uploads')) return `http://localhost:5000/${s}`
               return s
             }
             const imgs = (hotel.images||[])
@@ -146,13 +168,13 @@ const HotelDetail = () => {
                     const resolve = (src?: string) => {
                       const s = String(src||'')
                       if (!s) return 'https://placehold.co/160x120?text=Room'
-                      if (s.startsWith('/uploads/')) return s
-                      if (s.startsWith('uploads/')) return `/${s}`
+                      if (s.startsWith('/uploads')) return `http://localhost:5000${s}`
+                      if (s.startsWith('uploads')) return `http://localhost:5000/${s}`
                       return s
                     }
                     const p0 = resolve(r.photos?.[0])
                     return (
-                      <div key={r.id} className={`grid grid-cols-12 gap-4 items-center p-4 ${idx>0?'border-t':''} bg-card`}>
+                      <div key={r.id} className={`grid grid-cols-12 gap-4 items-center p-4 ${idx>0?'border-t':''} bg-card`} onClick={()=>setRoomType(r.type)} style={{cursor:'pointer'}}>
                         <div className="col-span-2">
                           <div className="h-20 w-full rounded-lg overflow-hidden border">
                             <img src={p0} alt={r.type} className="w-full h-full object-cover" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Room' }} />
@@ -225,12 +247,14 @@ const HotelDetail = () => {
                     type="date"
                     className="w-full px-4 py-2 rounded-lg border bg-background"
                     value={checkIn}
+                    min={todayIso}
                     onChange={(e) => setCheckIn(e.target.value)}
                   />
                   <input
                     type="time"
                     className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
                     value={checkInTime}
+                    min={(checkIn===todayIso) ? hmIST(new Date()) : undefined}
                     onChange={(e) => setCheckInTime(e.target.value)}
                   />
                   </div>
@@ -240,12 +264,14 @@ const HotelDetail = () => {
                     type="date"
                     className="w-full px-4 py-2 rounded-lg border bg-background"
                     value={checkOut}
+                    min={checkIn || todayIso}
                     onChange={(e) => setCheckOut(e.target.value)}
                   />
                   <input
                     type="time"
                     className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
                     value={checkOutTime}
+                    min={(checkOut===checkIn && checkInTime) ? checkInTime : undefined}
                     onChange={(e) => setCheckOutTime(e.target.value)}
                   />
                   </div>

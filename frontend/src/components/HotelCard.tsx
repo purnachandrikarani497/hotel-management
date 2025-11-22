@@ -16,8 +16,8 @@ const HotelCard = ({ id, name, location, price, image, amenities = [] }: HotelCa
   const resolveImage = (src?: string) => {
     const s = String(src||'')
     if (!s) return 'https://placehold.co/800x600?text=Hotel'
-    if (s.startsWith('/uploads/')) return `http://localhost:5000${s}`
-    if (s.startsWith('uploads/')) return `http://localhost:5000/${s}`
+    if (s.startsWith('/uploads')) return `http://localhost:5000${s}`
+    if (s.startsWith('uploads')) return `http://localhost:5000/${s}`
     return s
   }
   const getAmenityIcon = (amenity: string) => {

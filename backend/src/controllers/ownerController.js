@@ -51,14 +51,19 @@ async function stats(req, res) {
   const ownerBookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean()
   const totalBookings = ownerBookings.length
   const totalRevenue = ownerBookings.reduce((s,b)=>s+(Number(b.total)||0),0)
-  const today = new Date().toISOString().slice(0,10)
-  const dailyStats = ownerBookings.filter(b => (b.createdAt||new Date()).toISOString().slice(0,10)===today).length
   const rooms = await Room.find({ hotelId: { $in: hotelIds } }).lean()
-  const totalRooms = rooms.length || 1
-  const occupied = ownerBookings.filter(b => b.status==='checked_in').length
-  const roomOccupancy = Math.round((occupied/totalRooms)*100)
-  const upcomingArrivals = ownerBookings.filter(b => new Date(b.checkIn) >= new Date() && b.status==='confirmed').slice(0,10)
-  res.json({ totalBookings, totalRevenue, dailyStats, roomOccupancy, upcomingArrivals })
+  const totalRooms = rooms.length
+  const pendingBookings = ownerBookings.filter(b => ['held','pending'].includes(String(b.status||''))).length
+  let hotelStatus = 'pending'
+  if (hotels && hotels.length) {
+    const statuses = new Set((hotels||[]).map(h=>String(h.status||'pending')))
+    if (statuses.has('approved')) hotelStatus = 'approved'
+    else if (statuses.has('pending')) hotelStatus = 'pending'
+    else if (statuses.has('rejected')) hotelStatus = 'rejected'
+    else if (statuses.has('suspended')) hotelStatus = 'suspended'
+    else hotelStatus = String(hotels[0].status||'pending')
+  }
+  res.json({ totalRooms, totalBookings, totalRevenue, pendingBookings, hotelStatus })
 }
 
 async function hotels(req, res) {
@@ -72,6 +77,8 @@ async function submitHotel(req, res) {
   await connect(); await ensureSeed();
   const { ownerId, name, location, price, amenities, description } = req.body || {}
   if (!ownerId || !name || !location) return res.status(400).json({ error: 'Missing fields' })
+  const existing = await Hotel.findOne({ ownerId: Number(ownerId) })
+  if (existing) return res.status(409).json({ error: 'Hotel already registered', id: existing.id })
   const id = await nextIdFor('Hotel')
   await Hotel.create({ id, ownerId: Number(ownerId), name, location, price: Number(price)||0, image: '', amenities: Array.isArray(amenities)?amenities:[], description: String(description||''), status: 'approved', featured: false, images: [], docs: [], pricing: { normalPrice: Number(price)||0, weekendPrice: Number(price)||0, seasonal: [], specials: [] } })
   res.json({ status: 'submitted', id })
@@ -267,6 +274,16 @@ async function pricing(req, res) {
   res.json({ status: 'updated' })
 }
 
+async function deletePricing(req, res) {
+  await connect(); await ensureSeed();
+  const hotelId = Number(req.params.hotelId)
+  const h = await Hotel.findOne({ id: hotelId })
+  if (!h) return res.status(404).json({ error: 'Hotel not found' })
+  h.pricing = { normalPrice: Number(h.price)||0, weekendPrice: Number(h.price)||0, seasonal: [], specials: [] }
+  await h.save()
+  res.json({ status: 'deleted' })
+}
+
 async function ownerReviews(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId)
@@ -319,6 +336,7 @@ module.exports = {
   checkoutBooking,
   cancelBooking,
   pricing,
+  deletePricing,
   ownerReviews,
   respondReview
 }

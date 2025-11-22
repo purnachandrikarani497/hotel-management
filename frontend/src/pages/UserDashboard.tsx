@@ -5,8 +5,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { User, CalendarDays, Heart } from "lucide-react"
+import { Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 type Booking = { id:number; hotelId:number; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string }
 type Review = { id:number; hotelId:number; rating:number; comment:string; createdAt:string }
@@ -17,6 +19,7 @@ const UserDashboard = () => {
   const auth = raw ? JSON.parse(raw) as { user?: { id?: number } } : null
   const userId = auth?.user?.id || 0
   const qc = useQueryClient()
+  const { toast } = useToast()
   const abKey = "addedByDashboard"
   type AddedStore = { hotels?: number[]; rooms?: number[]; reviews?: number[]; coupons?: number[]; wishlist?: number[]; bookings?: number[] }
   const readAB = (): AddedStore => { try { return JSON.parse(localStorage.getItem(abKey) || "{}") as AddedStore } catch { return {} } }
@@ -24,18 +27,55 @@ const UserDashboard = () => {
   const addId = (type: keyof AddedStore, id: number) => { const cur = readAB(); const list = new Set(cur[type] || []); list.add(id); cur[type] = Array.from(list); writeAB(cur) }
   const getSet = (type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[])
 
-  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/user/bookings?userId=${userId}`), enabled: !!userId })
+  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/user/bookings?userId=${userId}`), enabled: !!userId, refetchInterval: 8000 })
   const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: Review[] }>(`/api/user/reviews?userId=${userId}`), enabled: !!userId })
   const wishlistQ = useQuery({ queryKey: ["user","wishlist",userId], queryFn: () => apiGet<{ wishlist: WishlistItem[] }>(`/api/user/wishlist?userId=${userId}`), enabled: !!userId })
 
   const bookings = (bookingsQ.data?.bookings || []).filter(b => getSet("bookings").has(b.id))
   const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
   const wishlist = (wishlistQ.data?.wishlist || []).filter(w => getSet("wishlist").has(w.hotelId))
+  const statusPrevRef = React.useRef<{ [id:number]: string }>({})
+  React.useEffect(() => {
+    const list = bookingsQ.data?.bookings || []
+    const prev = statusPrevRef.current
+    list.forEach(b => {
+      const cur = String(b.status || '')
+      const prevStatus = prev[b.id]
+      if (prevStatus && prevStatus !== cur) {
+        if (cur === 'cancelled') {
+          toast({ title: `Booking #${b.id} cancelled`, description: `Your reservation for hotel ${b.hotelId} was cancelled.` })
+        } else if (cur === 'confirmed') {
+          toast({ title: `Booking #${b.id} approved`, description: `Your reservation for hotel ${b.hotelId} was approved.` })
+        }
+      }
+    })
+    statusPrevRef.current = Object.fromEntries(list.map(b => [b.id, String(b.status || '')]))
+  }, [bookingsQ.data, toast])
+
+  const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
+  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/160x120?text=Hotel'; if (s.startsWith('/uploads')) return `http://localhost:5000${s}`; if (s.startsWith('uploads')) return `http://localhost:5000/${s}`; return s }
+  React.useEffect(() => {
+    const ids = Array.from(new Set([
+      ...bookings.map(b=>b.hotelId),
+      ...wishlist.map(w=>w.hotelId),
+      ...reviews.map(r=>r.hotelId)
+    ].filter(Boolean)))
+    const need = ids.filter(id => !hotelMap[id])
+    if (need.length===0) return
+    Promise.all(need.map(id => apiGet<{ hotel: { id:number; name:string; image:string } }>(`/api/hotels/${id}`).catch(()=>({ hotel: { id, name: `Hotel ${id}`, image: '' } }))))
+      .then(list => {
+        const next = { ...hotelMap }
+        list.forEach(({ hotel }) => { next[hotel.id] = { id: hotel.id, name: hotel.name, image: hotel.image } })
+        setHotelMap(next)
+      })
+      .catch(()=>{})
+  }, [bookings, wishlist, reviews])
+  const hotelInfo = (id:number) => hotelMap[id]
 
   const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/user/bookings/${id}/cancel`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["user","bookings",userId] }) })
-  const addReview = useMutation({ mutationFn: (p:{ hotelId:number; rating:number; comment:string }) => apiPost<{ id:number }, { userId:number; hotelId:number; rating:number; comment:string }>(`/api/user/reviews`, { userId, ...p }), onSuccess: (res) => { if (res?.id) addId("reviews", res.id); qc.invalidateQueries({ queryKey: ["user","reviews",userId] }) } })
-  const updateReview = useMutation({ mutationFn: (p:{ id:number; rating?:number; comment?:string }) => apiPost(`/api/user/reviews/${p.id}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["user","reviews",userId] }) })
-  const deleteReview = useMutation({ mutationFn: (id:number) => apiDelete(`/api/user/reviews/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["user","reviews",userId] }) })
+  const addReview = useMutation({ mutationFn: (p:{ hotelId:number; rating:number; comment:string }) => apiPost<{ id:number }, { userId:number; hotelId:number; rating:number; comment:string }>(`/api/user/reviews`, { userId, ...p }), onSuccess: (res) => { if (res?.id) addId("reviews", res.id); qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review added", description: `Hotel ${p.hotelId} • ${p.rating}/5` }) }, onError: () => toast({ title: "Add failed", variant: "destructive" }) })
+  const updateReview = useMutation({ mutationFn: (p:{ id:number; rating?:number; comment?:string }) => apiPost(`/api/user/reviews/${p.id}`, p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review updated", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+  const deleteReview = useMutation({ mutationFn: (id:number) => apiDelete(`/api/user/reviews/${id}`), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review deleted", description: `#${vars}` }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
   const addWishlist = useMutation({ mutationFn: (hotelId:number) => apiPost(`/api/user/wishlist`, { userId, hotelId }), onSuccess: () => { addId("wishlist", Number(wishlistAdd || 0)); qc.invalidateQueries({ queryKey: ["user","wishlist",userId] }) } })
   const removeWishlist = useMutation({ mutationFn: (hotelId:number) => apiDelete(`/api/user/wishlist/${hotelId}?userId=${userId}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["user","wishlist",userId] }) })
 
@@ -70,7 +110,15 @@ const UserDashboard = () => {
                     {bookings.filter(b => new Date(b.checkIn) >= new Date() && b.status !== 'cancelled').map(b => (
                       <tr key={b.id} className="border-t">
                         <td className="p-3">#{b.id}</td>
-                        <td className="p-3">{b.hotelId}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <img src={resolveImage(hotelInfo(b.hotelId)?.image)} alt={hotelInfo(b.hotelId)?.name||`Hotel ${b.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
+                            <div className="flex flex-col">
+                              <Link to={`/hotel/${b.hotelId}`} className="font-medium hover:underline">{hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`}</Link>
+                              <span className="text-xs text-muted-foreground">#{b.hotelId}</span>
+                            </div>
+                          </div>
+                        </td>
                         <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                         <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
@@ -98,7 +146,15 @@ const UserDashboard = () => {
                     {bookings.filter(b => new Date(b.checkOut) < new Date()).map(b => (
                       <tr key={b.id} className="border-t">
                         <td className="p-3">#{b.id}</td>
-                        <td className="p-3">{b.hotelId}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <img src={resolveImage(hotelInfo(b.hotelId)?.image)} alt={hotelInfo(b.hotelId)?.name||`Hotel ${b.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
+                            <div className="flex flex-col">
+                              <Link to={`/hotel/${b.hotelId}`} className="font-medium hover:underline">{hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`}</Link>
+                              <span className="text-xs text-muted-foreground">#{b.hotelId}</span>
+                            </div>
+                          </div>
+                        </td>
                         <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                         <td className="p-3">{b.guests}</td>
                         <td className="p-3">₹{b.total}</td>
@@ -152,7 +208,15 @@ const UserDashboard = () => {
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {wishlist.map(w => (
                     <tr key={`${w.userId}-${w.hotelId}`} className="border-t">
-                      <td className="p-3">{w.hotelId}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <img src={resolveImage(hotelInfo(w.hotelId)?.image)} alt={hotelInfo(w.hotelId)?.name||`Hotel ${w.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
+                          <div className="flex flex-col">
+                            <Link to={`/hotel/${w.hotelId}`} className="font-medium hover:underline">{hotelInfo(w.hotelId)?.name || `Hotel ${w.hotelId}`}</Link>
+                            <span className="text-xs text-muted-foreground">#{w.hotelId}</span>
+                          </div>
+                        </div>
+                      </td>
                       <td className="p-3">{new Date(w.createdAt).toLocaleString()}</td>
                       <td className="p-3"><Button size="sm" variant="destructive" onClick={()=>removeWishlist.mutate(w.hotelId)}>Remove</Button></td>
                     </tr>

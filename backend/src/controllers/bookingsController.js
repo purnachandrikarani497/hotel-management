@@ -14,9 +14,17 @@ async function create(req, res) {
   if (!(ci instanceof Date) || isNaN(ci.getTime())) return res.status(400).json({ error: 'Invalid check-in' })
   if (!(co instanceof Date) || isNaN(co.getTime())) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
   if (ci >= co) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (ci < startOfToday) return res.status(400).json({ error: 'Check-in must be today or later' })
+  const isTodayCi = ci.getFullYear()===now.getFullYear() && ci.getMonth()===now.getMonth() && ci.getDate()===now.getDate()
+  if (isTodayCi) {
+    const ciMinutes = ci.getHours()*60 + ci.getMinutes()
+    const nowMinutes = now.getHours()*60 + now.getMinutes()
+    if (ciMinutes < nowMinutes) return res.status(400).json({ error: 'Check-in time must be later than now' })
+  }
   const settings = await Settings.findOne().lean()
   const holdMinutes = Number(settings?.holdMinutes || 15)
-  const now = new Date()
   if (userId) {
     const existingHeld = await Booking.findOne({ userId: Number(userId), hotelId: Number(hotelId), status: 'held' })
     if (existingHeld) {
