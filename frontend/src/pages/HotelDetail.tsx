@@ -23,11 +23,19 @@ const HotelDetail = () => {
   const roomsQuery = useQuery({ queryKey: ["hotel","rooms",id], queryFn: () => apiGet<{ rooms: RoomInfo[] }>(`/api/hotels/${id}/rooms`), enabled: !!id })
   const hotel: Hotel | undefined = data?.hotel
   const reviews = useQuery({ queryKey: ["hotel","reviews",id], queryFn: () => apiGet<{ reviews: { id:number; userId:number; hotelId:number; rating:number; comment:string; createdAt:string }[] }>(`/api/hotels/${id}/reviews`), enabled: !!id })
-  const [checkIn, setCheckIn] = useState("")
-  const [checkOut, setCheckOut] = useState("")
+  const istTZ = 'Asia/Kolkata'
+  const parts = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: istTZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
+  const ymdIST = (d: Date) => { const p = parts(d); const y = p.find(x=>x.type==='year')?.value||'0000'; const m = p.find(x=>x.type==='month')?.value||'01'; const da = p.find(x=>x.type==='day')?.value||'01'; return `${y}-${m}-${da}` }
+  const hmIST = (d: Date) => { const p = parts(d); const h = p.find(x=>x.type==='hour')?.value||'00'; const mi = p.find(x=>x.type==='minute')?.value||'00'; return `${h}:${mi}` }
+  const nowInit = new Date()
+  const todayStrInit = ymdIST(nowInit)
+  const tomorrowStrInit = ymdIST(new Date(nowInit.getTime() + 24*60*60*1000))
+  const curHMInit = hmIST(nowInit)
+  const [checkIn, setCheckIn] = useState(todayStrInit)
+  const [checkOut, setCheckOut] = useState(tomorrowStrInit)
   const [guests, setGuests] = useState(1)
-  const [checkInTime, setCheckInTime] = useState("")
-  const [checkOutTime, setCheckOutTime] = useState("")
+  const [checkInTime, setCheckInTime] = useState(curHMInit)
+  const [checkOutTime, setCheckOutTime] = useState(curHMInit)
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
   const auth = raw ? JSON.parse(raw) as { user?: { id?: number } } : null
   
@@ -40,10 +48,6 @@ const HotelDetail = () => {
   }, [roomsQuery.data, roomType])
   const selectedRoom = availableRooms.find(r => r.type === roomType) || availableRooms[0]
   const price = Number(selectedRoom?.price ?? hotel?.price ?? 0)
-  const istTZ = 'Asia/Kolkata'
-  const parts = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: istTZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
-  const ymdIST = (d: Date) => { const p = parts(d); const y = p.find(x=>x.type==='year')?.value||'0000'; const m = p.find(x=>x.type==='month')?.value||'01'; const da = p.find(x=>x.type==='day')?.value||'01'; return `${y}-${m}-${da}` }
-  const hmIST = (d: Date) => { const p = parts(d); const h = p.find(x=>x.type==='hour')?.value||'00'; const mi = p.find(x=>x.type==='minute')?.value||'00'; return `${h}:${mi}` }
   const todayIso = ymdIST(new Date())
   const hasDateTime = !!checkIn && !!checkOut && !!checkInTime && !!checkOutTime && (()=>{
     const ci2 = new Date(`${checkIn}T${checkInTime}:00+05:30`)
@@ -53,16 +57,7 @@ const HotelDetail = () => {
     const notAfter = co2 > ci2
     return notBeforeToday && notAfter
   })()
-  useEffect(() => {
-    const now = new Date()
-    const todayStr = ymdIST(now)
-    const tomorrowStr = ymdIST(new Date(now.getTime() + 24*60*60*1000))
-    const curHM = hmIST(now)
-    if (!checkIn) setCheckIn(todayStr)
-    if (!checkOut) setCheckOut(tomorrowStr)
-    if (!checkInTime) setCheckInTime(curHM)
-    if (!checkOutTime) setCheckOutTime(curHM)
-  }, [])
+  
   const ci = hasDateTime ? new Date(`${checkIn}T${checkInTime}:00+05:30`) : null
   const co = hasDateTime ? new Date(`${checkOut}T${checkOutTime}:00+05:30`) : null
   const diffMs = ci && co ? Math.max(0, co.getTime() - ci.getTime()) : 0

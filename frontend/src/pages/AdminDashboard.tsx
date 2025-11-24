@@ -162,14 +162,14 @@ const AdminDashboard = () => {
                     const src = bookings.data?.bookings || []
                     return src.map(b => (
                     <tr key={b.id} className="border-t">
-                      <td className="p-3">{(b as any).hotel?.name || hmap[b.hotelId]?.name || `#${b.hotelId}`}</td>
+                      <td className="p-3">{b.hotel?.name || hmap[b.hotelId]?.name || `#${b.hotelId}`}</td>
                       <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
-                      <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{(b as any).refundIssued ? ' • Refunded' : ''}</span></td>
+                      <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{b.refundIssued ? ' • Refunded' : ''}</span></td>
                       <td className="p-3 flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => cancelBooking.mutate(b.id)}>Cancel</Button>
-                        <Button size="sm" onClick={() => refundBooking.mutate(b.id)} disabled={(b as any).refundIssued}>Issue Refund</Button>
+                        <Button size="sm" onClick={() => refundBooking.mutate(b.id)} disabled={b.refundIssued}>Issue Refund</Button>
                       </td>
                     </tr>
                     ))

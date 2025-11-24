@@ -69,11 +69,11 @@ const UserDashboard = () => {
         setHotelMap(next)
       })
       .catch(()=>{})
-  }, [bookings, wishlist, reviews])
+  }, [bookings, wishlist, reviews, hotelMap])
   const hotelInfo = (id:number) => hotelMap[id]
 
   const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/user/bookings/${id}/cancel`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["user","bookings",userId] }) })
-  const addReview = useMutation({ mutationFn: (p:{ hotelId:number; rating:number; comment:string }) => apiPost<{ id:number }, { userId:number; hotelId:number; rating:number; comment:string }>(`/api/user/reviews`, { userId, ...p }), onSuccess: (res) => { if (res?.id) addId("reviews", res.id); qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review added", description: `Hotel ${p.hotelId} • ${p.rating}/5` }) }, onError: () => toast({ title: "Add failed", variant: "destructive" }) })
+  const addReview = useMutation({ mutationFn: (p:{ hotelId:number; rating:number; comment:string }) => apiPost<{ id:number }, { userId:number; hotelId:number; rating:number; comment:string }>(`/api/user/reviews`, { userId, ...p }), onSuccess: (res, vars) => { if (res?.id) addId("reviews", res.id); qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review added", description: `Hotel ${vars.hotelId} • ${vars.rating}/5` }) }, onError: () => toast({ title: "Add failed", variant: "destructive" }) })
   const updateReview = useMutation({ mutationFn: (p:{ id:number; rating?:number; comment?:string }) => apiPost(`/api/user/reviews/${p.id}`, p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review updated", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const deleteReview = useMutation({ mutationFn: (id:number) => apiDelete(`/api/user/reviews/${id}`), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","reviews",userId] }); toast({ title: "Review deleted", description: `#${vars}` }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
   const addWishlist = useMutation({ mutationFn: (hotelId:number) => apiPost(`/api/user/wishlist`, { userId, hotelId }), onSuccess: () => { addId("wishlist", Number(wishlistAdd || 0)); qc.invalidateQueries({ queryKey: ["user","wishlist",userId] }) } })

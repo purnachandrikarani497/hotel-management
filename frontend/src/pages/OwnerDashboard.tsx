@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { DateRange } from "react-day-picker"
 import { useParams } from "react-router-dom"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
@@ -28,9 +29,9 @@ const OwnerDashboard = () => {
   const { toast } = useToast()
   const abKey = "addedByDashboard"
   type AddedStore = { hotels?: number[]; rooms?: number[]; reviews?: number[]; coupons?: number[]; wishlist?: number[] }
-  const readAB = (): AddedStore => {
+  const readAB = React.useCallback((): AddedStore => {
     try { return JSON.parse(localStorage.getItem(abKey) || "{}") as AddedStore } catch { return {} }
-  }
+  }, [])
   const writeAB = (obj: AddedStore) => { try { localStorage.setItem(abKey, JSON.stringify(obj)); return true } catch (e) { return false } }
   const addId = (type: keyof AddedStore, id: number) => {
     const cur = readAB();
@@ -39,7 +40,7 @@ const OwnerDashboard = () => {
     cur[type] = Array.from(list);
     writeAB(cur);
   }
-  const getSet = (type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[])
+  const getSet = React.useCallback((type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[]), [readAB])
 
   const stats = useQuery({ queryKey: ["owner","stats",ownerId], queryFn: () => apiGet<OwnerStats>(`/api/owner/stats?ownerId=${ownerId}`), enabled: !!ownerId })
   const hotelsQ = useQuery({ queryKey: ["owner","hotels",ownerId], queryFn: () => apiGet<{ hotels: Hotel[] }>(`/api/owner/hotels?ownerId=${ownerId}`), enabled: !!ownerId })
@@ -49,7 +50,7 @@ const OwnerDashboard = () => {
 
   const allHotels = hotelsQ.data?.hotels || []
   const hotels = (hotelsQ.data?.hotels || []).filter(h => getSet("hotels").has(h.id))
-  const roomsRaw = roomsQ.data?.rooms || []
+  const roomsRaw = React.useMemo(() => roomsQ.data?.rooms || [], [roomsQ.data])
   const rooms = React.useMemo(() => (roomsRaw || []).filter(r => getSet("rooms").has(r.id)), [roomsRaw, getSet])
   const hotelName = (id:number) => { const all = hotelsQ.data?.hotels || []; const h = all.find(x=>x.id===id); return h?.name || '' }
   const resolve = (u:string) => { if (!u) return ''; const s = String(u); if (s.startsWith('/uploads')) return 'http://localhost:5000'+s; if (s.startsWith('uploads')) return 'http://localhost:5000/'+s; return s }
@@ -94,7 +95,7 @@ const OwnerDashboard = () => {
   const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { normalPrice:string; weekendPrice:string; seasonal:{ start:string; end:string; price:string }[]; specials:{ date:string; price:string }[] } }>({})
   const [pricingType, setPricingType] = React.useState<{ [id:number]: string }>({})
   const [pricingEditing, setPricingEditing] = React.useState<{ [id:number]: boolean }>({})
-  const [seasonSel, setSeasonSel] = React.useState<{ [id:number]: { from?: Date; to?: Date } }>({})
+  const [seasonSel, setSeasonSel] = React.useState<{ [id:number]: DateRange | undefined }>({})
   const [seasonPrice, setSeasonPrice] = React.useState<{ [id:number]: string }>({})
   const [specialSel, setSpecialSel] = React.useState<{ [id:number]: Date[] }>({})
   const [specialPrice, setSpecialPrice] = React.useState<{ [id:number]: string }>({})
@@ -144,20 +145,22 @@ const OwnerDashboard = () => {
 
   React.useEffect(() => {
     const hs = hotelsQ.data?.hotels || []
-    const next = { ...pricingForm }
-    hs.forEach((h: Hotel) => {
-      const sel = pricingType[h.id]
-      if (!sel) return
-      const selNorm = sel.trim().toLowerCase()
-      const rrHotel = roomsRaw.find(r=>r.hotelId===h.id && r.type.trim().toLowerCase()===selNorm)
-      const rrGlobal = roomsRaw.find(r=>r.type.trim().toLowerCase()===selNorm)
-      const anyR = roomsRaw.find(r=>r.hotelId===h.id)
-      const cur = next[h.id] || { normalPrice:"", weekendPrice:"", seasonal:[], specials:[] }
-      const newPrice = String((rrHotel?.price ?? rrGlobal?.price ?? anyR?.price ?? cur.normalPrice) ?? '')
-      next[h.id] = { ...cur, normalPrice: newPrice }
+    setPricingForm(prev => {
+      const next = { ...prev }
+      hs.forEach((h: Hotel) => {
+        const sel = pricingType[h.id]
+        if (!sel) return
+        const selNorm = sel.trim().toLowerCase()
+        const rrHotel = roomsRaw.find(r=>r.hotelId===h.id && r.type.trim().toLowerCase()===selNorm)
+        const rrGlobal = roomsRaw.find(r=>r.type.trim().toLowerCase()===selNorm)
+        const anyR = roomsRaw.find(r=>r.hotelId===h.id)
+        const cur = next[h.id] || { normalPrice:"", weekendPrice:"", seasonal:[], specials:[] }
+        const newPrice = String((rrHotel?.price ?? rrGlobal?.price ?? anyR?.price ?? cur.normalPrice) ?? '')
+        next[h.id] = { ...cur, normalPrice: newPrice }
+      })
+      return next
     })
-    setPricingForm(next)
-  }, [pricingType, roomsRaw])
+  }, [pricingType, roomsRaw, hotelsQ.data])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -537,12 +540,12 @@ const OwnerDashboard = () => {
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="p-0" align="start">
-                                  <Calendar mode="range" selected={seasonSel[h.id]} onSelect={(v)=>setSeasonSel({ ...seasonSel, [h.id]: v||{} })} numberOfMonths={2} fromDate={new Date()} disabled={(date)=>{ const t=new Date(); t.setHours(0,0,0,0); return date < t }} />
+                                  <Calendar mode="range" selected={seasonSel[h.id]} onSelect={(v)=>setSeasonSel({ ...seasonSel, [h.id]: v })} numberOfMonths={2} fromDate={new Date()} disabled={{ before: new Date() }} />
                                 </PopoverContent>
                               </Popover>
                               <Input className="w-28" placeholder="" value={seasonPrice[h.id]||""} onChange={e=>setSeasonPrice({ ...seasonPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
                               <Button size="sm" onClick={()=>{
-                                const sel = seasonSel[h.id]||{}
+                                const sel: DateRange | undefined = seasonSel[h.id]
                                 const price = seasonPrice[h.id]||""
                                 const start = sel?.from ? sel.from.toISOString().slice(0,10) : ''
                                 const end = sel?.to ? sel.to.toISOString().slice(0,10) : ''
@@ -583,7 +586,7 @@ const OwnerDashboard = () => {
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="p-0" align="start">
-                                  <Calendar mode="multiple" selected={specialSel[h.id]||[]} onSelect={(v:any)=>setSpecialSel({ ...specialSel, [h.id]: Array.isArray(v)?v:[] })} fromDate={new Date()} disabled={(date)=>{ const t=new Date(); t.setHours(0,0,0,0); return date < t }} />
+                                  <Calendar mode="multiple" selected={specialSel[h.id]||[]} onSelect={(v: Date[] | undefined)=>setSpecialSel({ ...specialSel, [h.id]: Array.isArray(v)?v:[] })} fromDate={new Date()} disabled={{ before: new Date() }} />
                                 </PopoverContent>
                               </Popover>
                               <Input className="w-28" placeholder="" value={specialPrice[h.id]||""} onChange={e=>setSpecialPrice({ ...specialPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
