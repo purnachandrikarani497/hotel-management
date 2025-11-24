@@ -17,8 +17,16 @@ const Register = () => {
   const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
+  const [fullName, setFullName] = useState("")
+  const [dob, setDob] = useState("")
+  const [address, setAddress] = useState("")
+  const [idType, setIdType] = useState("Aadhaar Card")
+  const [idNumber, setIdNumber] = useState("")
+  const [idIssueDate, setIdIssueDate] = useState("")
+  const [idExpiryDate, setIdExpiryDate] = useState("")
+  const [idDocImage, setIdDocImage] = useState<string>("")
   const { toast } = useToast()
-  const mutation = useMutation({ mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password }), onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) }, onError: () => { toast({ title: "Registration failed", variant: "destructive" }) } })
+  const mutation = useMutation({ mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage }), onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) }, onError: () => { toast({ title: "Registration failed", variant: "destructive" }) } })
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -65,7 +73,50 @@ const Register = () => {
                 <Input type="password" placeholder="Confirm your password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
               </div>
 
-              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Full Name</label>
+                  <Input placeholder="As per ID" value={fullName} onChange={(e)=>setFullName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Date of Birth</label>
+                  <Input type="date" value={dob} onChange={(e)=>setDob(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Address</label>
+                <Input placeholder="Residential address" value={address} onChange={(e)=>setAddress(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">ID Type</label>
+                  <select className="w-full border rounded h-10 px-3 bg-background" value={idType} onChange={(e)=>setIdType(e.target.value)}>
+                    <option>Aadhaar Card</option>
+                    <option>Passport</option>
+                    <option>Driving Licence</option>
+                    <option>Voter ID</option>
+                    <option>PAN card (usually not accepted as primary ID)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">ID Number</label>
+                  <Input placeholder="ID Number" value={idNumber} onChange={(e)=>setIdNumber(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Document Upload</label>
+                  <Input type="file" accept="image/*" onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Issue Date</label>
+                  <Input type="date" value={idIssueDate} onChange={(e)=>setIdIssueDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Expiry Date</label>
+                  <Input type="date" value={idExpiryDate} onChange={(e)=>setIdExpiryDate(e.target.value)} />
+                </div>
+              </div>
 
               <div className="flex items-center space-x-2">
                 <Checkbox id="terms" />

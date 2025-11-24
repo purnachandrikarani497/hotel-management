@@ -54,7 +54,7 @@ const OwnerDashboard = () => {
   const rooms = React.useMemo(() => (roomsRaw || []).filter(r => getSet("rooms").has(r.id)), [roomsRaw, getSet])
   const hotelName = (id:number) => { const all = hotelsQ.data?.hotels || []; const h = all.find(x=>x.id===id); return h?.name || '' }
   const resolve = (u:string) => { if (!u) return ''; const s = String(u); if (s.startsWith('/uploads')) return 'http://localhost:5000'+s; if (s.startsWith('uploads')) return 'http://localhost:5000/'+s; return s }
-  const bookings = bookingsQ.data?.bookings || []
+  const bookings = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
   const [statusFilter, setStatusFilter] = React.useState<string>('all')
   const bookingsOrdered = React.useMemo(() => {
     const arr: Booking[] = [...bookings]

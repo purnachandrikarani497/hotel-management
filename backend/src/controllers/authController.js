@@ -2,6 +2,11 @@ const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
 const { User } = require('../models')
+const fs = require('fs')
+const path = require('path')
+
+function ensureUploadsDir() { const uploadsDir = path.join(__dirname, '../uploads'); try { fs.mkdirSync(uploadsDir, { recursive: true }) } catch {} return uploadsDir }
+function dataUrlToBuffer(dataUrl) { if (typeof dataUrl !== 'string') return null; const match = dataUrl.match(/^data:(.+);base64,(.+)$/); if (!match) return null; const mime = match[1]; const base64 = match[2]; const buf = Buffer.from(base64, 'base64'); let ext = 'png'; if (mime.includes('jpeg')) ext = 'jpg'; else if (mime.includes('png')) ext = 'png'; else if (mime.includes('gif')) ext = 'gif'; else if (mime.includes('webp')) ext = 'webp'; return { buf, ext } }
 
 async function signin(req, res) {
   try {
@@ -22,12 +27,23 @@ async function signin(req, res) {
 
 async function register(req, res) {
   await connect(); await ensureSeed();
-  const { email, password, firstName, lastName, phone } = req.body || {}
+  const { email, password, firstName, lastName, phone, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Missing fields' })
   const existing = await User.findOne({ email })
   if (existing) return res.status(409).json({ error: 'Email exists' })
   const id = await nextIdFor('User')
-  await User.create({ id, email, password, firstName, lastName, phone, role: 'user', isApproved: true })
+  let idDocUrl = ''
+  try {
+    const parsed = dataUrlToBuffer(idDocImage)
+    if (parsed) {
+      const uploadsDir = ensureUploadsDir()
+      const filename = `user-doc-${id}-${Date.now()}.${parsed.ext}`
+      const filePath = path.join(__dirname, '../uploads', filename)
+      try { fs.writeFileSync(filePath, parsed.buf) } catch {}
+      idDocUrl = `/uploads/${filename}`
+    }
+  } catch {}
+  await User.create({ id, email, password, firstName, lastName, phone, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocUrl, role: 'user', isApproved: true })
   res.json({ status: 'created', user: { id, email, role: 'user' } })
 }
 

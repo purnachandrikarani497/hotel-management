@@ -22,18 +22,21 @@ const UserDashboard = () => {
   const { toast } = useToast()
   const abKey = "addedByDashboard"
   type AddedStore = { hotels?: number[]; rooms?: number[]; reviews?: number[]; coupons?: number[]; wishlist?: number[]; bookings?: number[] }
-  const readAB = (): AddedStore => { try { return JSON.parse(localStorage.getItem(abKey) || "{}") as AddedStore } catch { return {} } }
+  const readAB = React.useCallback((): AddedStore => { try { return JSON.parse(localStorage.getItem(abKey) || "{}") as AddedStore } catch { return {} } }, [])
   const writeAB = (obj: AddedStore) => { try { localStorage.setItem(abKey, JSON.stringify(obj)); return true } catch (e) { return false } }
   const addId = (type: keyof AddedStore, id: number) => { const cur = readAB(); const list = new Set(cur[type] || []); list.add(id); cur[type] = Array.from(list); writeAB(cur) }
-  const getSet = (type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[])
+  const getSet = React.useCallback((type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[]), [readAB])
 
   const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/user/bookings?userId=${userId}`), enabled: !!userId, refetchInterval: 8000 })
   const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: Review[] }>(`/api/user/reviews?userId=${userId}`), enabled: !!userId })
   const wishlistQ = useQuery({ queryKey: ["user","wishlist",userId], queryFn: () => apiGet<{ wishlist: WishlistItem[] }>(`/api/user/wishlist?userId=${userId}`), enabled: !!userId })
 
-  const bookings = (bookingsQ.data?.bookings || []).filter(b => getSet("bookings").has(b.id))
-  const reviews = reviewsQ.data?.reviews || []
-  const wishlist = (wishlistQ.data?.wishlist || []).filter(w => getSet("wishlist").has(w.hotelId))
+  const bookingsAll = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
+  const reviewsAll = React.useMemo(() => reviewsQ.data?.reviews ?? [], [reviewsQ.data])
+  const wishlistAll = React.useMemo(() => wishlistQ.data?.wishlist ?? [], [wishlistQ.data])
+  const bookings = React.useMemo(() => bookingsAll.filter(b => getSet("bookings").has(b.id)), [bookingsAll, getSet])
+  const reviews = React.useMemo(() => reviewsAll.filter(r => getSet("reviews").has(r.id)), [reviewsAll, getSet])
+  const wishlist = React.useMemo(() => wishlistAll.filter(w => getSet("wishlist").has(w.hotelId)), [wishlistAll, getSet])
   const statusPrevRef = React.useRef<{ [id:number]: string }>({})
   React.useEffect(() => {
     const list = bookingsQ.data?.bookings || []

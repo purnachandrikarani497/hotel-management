@@ -28,8 +28,8 @@ const Index = () => {
         const next = Array.from(new Set(cur.concat(unseen)))
         localStorage.setItem(k, JSON.stringify(next))
       }
-    } catch { void 0 }
-  }, [bookingsQ.data])
+    } catch { /* ignore */ }
+  }, [bookingsQ.data, toast])
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

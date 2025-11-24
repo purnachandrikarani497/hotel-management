@@ -23,7 +23,7 @@ const MessageInbox = () => {
     enabled: !!userId,
     refetchInterval: 8000
   })
-  const threads = threadsQ.data?.threads || []
+  const threads = React.useMemo(() => threadsQ.data?.threads ?? [], [threadsQ.data])
   const orderedThreads = React.useMemo(() => {
     const arr = [...threads]
     arr.sort((a,b) => {
@@ -38,14 +38,14 @@ const MessageInbox = () => {
     if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
   }, [threads, activeId])
   const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 6000 })
-  const messages = messagesQ.data?.messages || []
+  const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
   const orderedMessages = React.useMemo(() => {
     const arr = [...messages]
     arr.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     return arr
   }, [messages])
   const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) } })
-  React.useEffect(() => { if (activeId) markRead.mutate(activeId) }, [activeId])
+  React.useEffect(() => { if (activeId) markRead.mutate(activeId) }, [activeId, markRead])
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
