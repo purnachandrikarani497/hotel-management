@@ -245,6 +245,15 @@ async function checkinBooking(req, res) {
   if (!b) return res.status(404).json({ error: 'Booking not found' })
   b.status = 'checked_in'
   await b.save()
+  let thread = await MessageThread.findOne({ bookingId: id })
+  if (!thread) {
+    const tid = await nextIdFor('MessageThread')
+    const h = await Hotel.findOne({ id: Number(b.hotelId) })
+    await MessageThread.create({ id: tid, bookingId: id, hotelId: Number(b.hotelId), userId: Number(b.userId)||null, ownerId: Number(h?.ownerId)||null })
+    thread = await MessageThread.findOne({ id: tid }).lean()
+  }
+  const mid = await nextIdFor('Message')
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Check-in confirmed for booking #${id}. Enjoy your stay!`, readByUser: false, readByOwner: true })
   res.json({ status: 'updated' })
 }
 
@@ -255,6 +264,15 @@ async function checkoutBooking(req, res) {
   if (!b) return res.status(404).json({ error: 'Booking not found' })
   b.status = 'checked_out'
   await b.save()
+  let thread = await MessageThread.findOne({ bookingId: id })
+  if (!thread) {
+    const tid = await nextIdFor('MessageThread')
+    const h = await Hotel.findOne({ id: Number(b.hotelId) })
+    await MessageThread.create({ id: tid, bookingId: id, hotelId: Number(b.hotelId), userId: Number(b.userId)||null, ownerId: Number(h?.ownerId)||null })
+    thread = await MessageThread.findOne({ id: tid }).lean()
+  }
+  const mid = await nextIdFor('Message')
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Checkout complete for booking #${id}. Please share your rating and feedback.`, readByUser: false, readByOwner: true })
   res.json({ status: 'updated' })
 }
 

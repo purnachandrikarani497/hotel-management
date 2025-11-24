@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, Wifi, Coffee, Car, Users, BedDouble, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "@/lib/api";
@@ -40,6 +40,9 @@ const HotelDetail = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
   const auth = raw ? JSON.parse(raw) as { user?: { id?: number } } : null
   const { toast } = useToast()
+  const qc = useQueryClient()
+
+  
 
   const availableRooms = roomsQuery.data?.rooms || []
   const [roomType, setRoomType] = useState<string>(availableRooms[0]?.type || 'Standard')

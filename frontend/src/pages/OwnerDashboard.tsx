@@ -70,7 +70,7 @@ const OwnerDashboard = () => {
     if (statusFilter==='all') return bookingsOrdered
     return bookingsOrdered.filter((b: Booking)=> String(b.status).trim().toLowerCase()===m(statusFilter))
   }, [bookingsOrdered, statusFilter])
-  const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
+  const reviews = reviewsQ.data?.reviews || []
 
   const [lastHotelRegId, setLastHotelRegId] = React.useState<number | null>(null)
   const submitHotel = useMutation({ mutationFn: (p: { name:string; location:string; price:number; amenities:string[]; description?:string }) => apiPost<{ id:number }, { ownerId:number; name:string; location:string; price:number; amenities:string[]; description?:string }>(`/api/owner/hotels/submit`, { ownerId, ...p }), onSuccess: (res) => { if (res?.id) { addId("hotels", res.id); setLastHotelRegId(res.id); toast({ title: "Hotel submitted", description: `#${res.id}` }) } qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })

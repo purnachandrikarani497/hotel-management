@@ -32,7 +32,7 @@ const UserDashboard = () => {
   const wishlistQ = useQuery({ queryKey: ["user","wishlist",userId], queryFn: () => apiGet<{ wishlist: WishlistItem[] }>(`/api/user/wishlist?userId=${userId}`), enabled: !!userId })
 
   const bookings = (bookingsQ.data?.bookings || []).filter(b => getSet("bookings").has(b.id))
-  const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
+  const reviews = reviewsQ.data?.reviews || []
   const wishlist = (wishlistQ.data?.wishlist || []).filter(w => getSet("wishlist").has(w.hotelId))
   const statusPrevRef = React.useRef<{ [id:number]: string }>({})
   React.useEffect(() => {

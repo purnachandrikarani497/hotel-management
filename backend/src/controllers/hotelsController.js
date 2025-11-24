@@ -8,6 +8,7 @@ function toPublicUrl(url) {
   if (/^data:/.test(url)) return url
   if (url.startsWith('/uploads/')) return `http://localhost:5000${url}`
   if (url.startsWith('uploads/')) return `http://localhost:5000/${url}`
+  if (url.startsWith('/src/assets/')) return url
   return ''
 }
 

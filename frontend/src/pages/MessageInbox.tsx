@@ -5,9 +5,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Star } from "lucide-react"
 import { apiGet, apiPost } from "@/lib/api"
 
-type Thread = { id:number; bookingId:number; hotelId:number; userId:number; ownerId:number; lastMessage?: { content:string; senderRole:string; createdAt:string } | null; unreadForUser?: number; unreadForOwner?: number }
+type Thread = { id:number; bookingId:number; hotelId:number; userId:number; ownerId:number; createdAt?: string; lastMessage?: { content:string; senderRole:string; createdAt:string } | null; unreadForUser?: number; unreadForOwner?: number }
 type Message = { id:number; threadId:number; senderRole:'user'|'owner'|'system'; senderId:number|null; content:string; createdAt:string; readByUser?: boolean; readByOwner?: boolean }
 
 const MessageInbox = () => {
@@ -48,7 +49,25 @@ const MessageInbox = () => {
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
-  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; if (s.startsWith('/uploads')) return `http://localhost:5000${s}`; if (s.startsWith('uploads')) return `http://localhost:5000/${s}`; return s }
+  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 10000 })
+  const threadBooking = React.useMemo(() => {
+    const t = (threads||[]).find(x=>x.id===activeId)
+    const bid = t?.bookingId
+    return (bookingsQ.data?.bookings||[]).find(b=>b.id===bid)
+  }, [activeId, threads, bookingsQ.data])
+  const hasCheckoutMsg = messages.some(m=>m.senderRole==='system' && /Checkout complete/i.test(m.content||''))
+  const canReview = role==='user' && hasCheckoutMsg
+  const isCancelled = String(threadBooking?.status||'') === 'cancelled'
+  const [rating, setRating] = React.useState<number>(5)
+  const [feedback, setFeedback] = React.useState<string>("")
+  const createReview = useMutation({ mutationFn: () => {
+    const t = (threads||[]).find(x=>x.id===activeId)
+    const hotelId = Number(t?.hotelId||0)
+    const comment = String(feedback||'').trim()
+    return apiPost(`/api/user/reviews`, { userId, hotelId, rating, comment })
+  }, onSuccess: () => { setFeedback("") } })
+
+  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; if (s.startsWith('/uploads')) return `http://localhost:5000${s}`; if (s.startsWith('uploads')) return `http://localhost:5000/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
   const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
   React.useEffect(() => {
     const ids = Array.from(new Set(threads.map(t=>t.hotelId))).filter(Boolean)
@@ -126,9 +145,23 @@ const MessageInbox = () => {
                   {messages.length===0 && <div className="text-sm text-muted-foreground">Select a thread</div>}
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <Input placeholder="Type a message" value={draft} onChange={e=>setDraft(e.target.value)} />
-                  <Button onClick={()=>send.mutate({ id: activeId, content: draft })} disabled={!draft || !activeId}>Send</Button>
+                  <Input placeholder={isCancelled?"Conversation closed":"Type a message"} value={draft} onChange={e=>setDraft(e.target.value)} disabled={isCancelled} />
+                  <Button onClick={()=>send.mutate({ id: activeId, content: draft })} disabled={isCancelled || !draft || !activeId}>Send</Button>
                 </div>
+                {(!isCancelled && canReview) && (
+                  <div className="mt-4 p-4 rounded border bg-muted/30">
+                    <div className="mb-2 font-semibold">Rate your stay</div>
+                    <div className="flex items-center gap-1 mb-3">
+                      {[1,2,3,4,5].map(n => (
+                        <Star key={n} className={`h-6 w-6 ${n <= rating ? 'fill-current text-accent' : 'text-muted-foreground'}`} style={{cursor:'pointer'}} onClick={()=>setRating(n)} />
+                      ))}
+                    </div>
+                    <Input placeholder="Feedback (optional)" value={feedback} onChange={e=>setFeedback(e.target.value)} />
+                    <div className="mt-3 text-right">
+                      <Button onClick={()=>createReview.mutate()} disabled={!userId || createReview.isPending}>{createReview.isPending ? 'Submitting...' : 'Submit'}</Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
