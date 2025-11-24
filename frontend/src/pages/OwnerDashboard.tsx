@@ -84,7 +84,7 @@ const OwnerDashboard = () => {
   const updateRoom = useMutation({ mutationFn: (p: { id:number; price?:number; members?:number; availability?:boolean; amenities?:string[]; photos?:string[] }) => apiPost(`/api/owner/rooms/${p.id}`, p), onSuccess: (_res, vars) => { toast({ title: "Room updated", description: `#${vars.id}` }); qc.invalidateQueries({ queryKey: ["owner","rooms",ownerId] }) } })
   const blockRoom = useMutation({ mutationFn: (p: { id:number; blocked:boolean }) => apiPost(`/api/owner/rooms/${p.id}/block`, { blocked: p.blocked }), onSuccess: (_res, vars) => { toast({ title: vars.blocked ? "Room blocked" : "Room unblocked", description: `#${vars.id}` }); qc.invalidateQueries({ queryKey: ["owner","rooms",ownerId] }) } })
   const approveBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/approve`, {}), onSuccess: (_res, vars) => { toast({ title: "Booking approved", description: `#${vars}` }); qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) } })
-  const cancelBooking = useMutation({ mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/owner/bookings/${p.id}/cancel`, { reason: p.reason }), onSuccess: (_res, vars) => { toast({ title: "Booking cancelled", description: `#${vars.id}` }); qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) } , onError: () => toast({ title: "Cancellation failed", description: "Provide valid reason and 24h prior notice", variant: "destructive" }) })
+  const cancelBooking = useMutation({ mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/owner/bookings/${p.id}/cancel`, { reason: p.reason }), onSuccess: (_res, vars) => { toast({ title: "Booking cancelled", description: `#${vars.id}` }); qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) } , onError: () => toast({ title: "Cancellation failed", variant: "destructive" }) })
   const checkinBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}), onSuccess: (_res, vars) => { toast({ title: "Checked in", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) } })
   const checkoutBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}), onSuccess: (_res, vars) => { toast({ title: "Checked out", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) } })
   const updatePricing = useMutation({ mutationFn: (p: { hotelId:number; normalPrice?:number; weekendPrice?:number; seasonal?:{start:string;end:string;price:number}[]; specials?:{date:string;price:number}[] }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p), onSuccess: (_res, vars) => { toast({ title: "Pricing updated", description: `Hotel #${vars.hotelId}` }); qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) } })
@@ -514,16 +514,32 @@ const OwnerDashboard = () => {
                       <td className="p-3">₹{b.total}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}</span></td>
                       <td className="p-3 flex gap-2 flex-wrap items-center">
-                        <Button size="sm" variant="outline" onClick={()=>approveBooking.mutate(b.id)}>Approve</Button>
-                        <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
-                        <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
-                        {b.status!=='checked_in' && (
-                          <Button size="sm" variant="destructive" onClick={()=>{
-                            const r = (window.prompt("Reason for cancellation")||"").trim()
-                            if (r.length < 5) { toast({ title: "Reason required", description: "Please provide a meaningful reason", variant: "destructive" }); return }
-                            cancelBooking.mutate({ id: b.id, reason: r })
-                          }}>Cancel</Button>
-                        )}
+                        {(() => {
+                          const s = String(b.status || '').trim().toLowerCase();
+                          const canApprove = s === 'pending';
+                          const canCancel = s === 'pending' || s === 'confirmed';
+                          const canCheckin = s === 'confirmed';
+                          const canCheckout = s === 'confirmed' || s === 'checked_in';
+                          return (
+                            <>
+                              {canApprove && (
+                                <Button size="sm" variant="outline" onClick={()=>approveBooking.mutate(b.id)}>Approve</Button>
+                              )}
+                              {canCheckin && (
+                                <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
+                              )}
+                              {canCheckout && (
+                                <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
+                              )}
+                              {canCancel && (
+                                <Button size="sm" variant="destructive" onClick={()=>{
+                                  const r = (window.prompt("Reason for cancellation")||"")
+                                  cancelBooking.mutate({ id: b.id, reason: r })
+                                }}>Cancel</Button>
+                              )}
+                            </>
+                          )
+                        })()}
                       </td>
                     </tr>
                   ))}
