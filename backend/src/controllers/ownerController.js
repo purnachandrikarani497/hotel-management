@@ -261,9 +261,15 @@ async function checkoutBooking(req, res) {
 async function cancelBooking(req, res) {
   await connect(); await ensureSeed();
   const id = Number(req.params.id)
+  const { reason } = req.body || {}
   const b = await Booking.findOne({ id })
   if (!b) return res.status(404).json({ error: 'Booking not found' })
+  const ci = new Date(b.checkIn)
+  const msUntilCi = (ci instanceof Date && !isNaN(ci.getTime())) ? (ci.getTime() - Date.now()) : null
+  if (!reason || String(reason).trim().length < 5) return res.status(400).json({ error: 'Cancellation reason required' })
+  if (msUntilCi !== null && msUntilCi < 24*60*60*1000) return res.status(409).json({ error: 'Owner cancellations must be at least 24 hours before check-in' })
   b.status = 'cancelled'
+  b.cancelReason = String(reason).trim()
   await b.save()
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {
@@ -273,7 +279,7 @@ async function cancelBooking(req, res) {
     thread = await MessageThread.findOne({ id: tid }).lean()
   }
   const mid = await nextIdFor('Message')
-  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by owner`, readByUser: false, readByOwner: true })
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by owner: ${String(reason).trim()}`, readByUser: false, readByOwner: true })
   res.json({ status: 'updated' })
 }
 

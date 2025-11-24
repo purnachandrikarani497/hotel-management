@@ -55,6 +55,21 @@ const OwnerDashboard = () => {
   const hotelName = (id:number) => { const all = hotelsQ.data?.hotels || []; const h = all.find(x=>x.id===id); return h?.name || '' }
   const resolve = (u:string) => { if (!u) return ''; const s = String(u); if (s.startsWith('/uploads')) return 'http://localhost:5000'+s; if (s.startsWith('uploads')) return 'http://localhost:5000/'+s; return s }
   const bookings = bookingsQ.data?.bookings || []
+  const [statusFilter, setStatusFilter] = React.useState<string>('all')
+  const bookingsOrdered = React.useMemo(() => {
+    const arr = [...bookings]
+    arr.sort((a:any,b:any) => new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
+    return arr
+  }, [bookings])
+  const bookingsFiltered = React.useMemo(() => {
+    const m = (s:string) => {
+      if (s==='checkin') return 'checked_in'
+      if (s==='checkout') return 'checked_out'
+      return s
+    }
+    if (statusFilter==='all') return bookingsOrdered
+    return bookingsOrdered.filter((b:any)=> String(b.status).trim().toLowerCase()===m(statusFilter))
+  }, [bookingsOrdered, statusFilter])
   const reviews = (reviewsQ.data?.reviews || []).filter(r => getSet("reviews").has(r.id))
 
   const [lastHotelRegId, setLastHotelRegId] = React.useState<number | null>(null)
@@ -69,7 +84,7 @@ const OwnerDashboard = () => {
   const updateRoom = useMutation({ mutationFn: (p: { id:number; price?:number; members?:number; availability?:boolean; amenities?:string[]; photos?:string[] }) => apiPost(`/api/owner/rooms/${p.id}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","rooms",ownerId] }) })
   const blockRoom = useMutation({ mutationFn: (p: { id:number; blocked:boolean }) => apiPost(`/api/owner/rooms/${p.id}/block`, { blocked: p.blocked }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","rooms",ownerId] }) })
   const approveBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/approve`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
-  const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/cancel`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
+  const cancelBooking = useMutation({ mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/owner/bookings/${p.id}/cancel`, { reason: p.reason }), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) , onError: () => toast({ title: "Cancellation failed", description: "Provide valid reason and 24h prior notice", variant: "destructive" }) })
   const checkinBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
   const checkoutBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","bookings",ownerId] }) })
   const updatePricing = useMutation({ mutationFn: (p: { hotelId:number; normalPrice?:number; weekendPrice?:number; seasonal?:{start:string;end:string;price:number}[]; specials?:{date:string;price:number}[] }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p), onSuccess: () => qc.invalidateQueries({ queryKey: ["owner","hotels",ownerId] }) })
@@ -92,6 +107,7 @@ const OwnerDashboard = () => {
   const [lastRoomId, setLastRoomId] = React.useState<number | null>(null)
   const [roomPhotoFiles, setRoomPhotoFiles] = React.useState<File[]>([])
   const [uploadInfo, setUploadInfo] = React.useState<{ type: 'images' | 'documents' | 'photos' | null; names: string[] }>({ type: null, names: [] })
+  const [cancelReason, setCancelReason] = React.useState<{ [id:number]: string }>({})
   const [pricingForm, setPricingForm] = React.useState<{ [id:number]: { normalPrice:string; weekendPrice:string; seasonal:{ start:string; end:string; price:string }[]; specials:{ date:string; price:string }[] } }>({})
   const [pricingType, setPricingType] = React.useState<{ [id:number]: string }>({})
   const [pricingEditing, setPricingEditing] = React.useState<{ [id:number]: boolean }>({})
@@ -463,13 +479,32 @@ const OwnerDashboard = () => {
 
         {feature === 'bookings' && (
         <Card className="shadow-card hover:shadow-card-hover transition-all">
-          <CardHeader><CardTitle>Manage Bookings</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Manage Bookings</CardTitle>
+              {(() => {
+                const opts = [
+                  { k:'all', v:'All' },
+                  { k:'pending', v:'Pending' },
+                  { k:'confirmed', v:'Confirmed' },
+                  { k:'checkin', v:'Check-in' },
+                  { k:'checkout', v:'Check-out' },
+                  { k:'cancelled', v:'Cancelled' },
+                ]
+                return (
+                  <select className="px-2 py-1 rounded border bg-background text-sm" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+                    {opts.map(o=> (<option key={o.k} value={o.k}>{o.v}</option>))}
+                  </select>
+                )
+              })()}
+            </div>
+          </CardHeader>
           <CardContent>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {bookings.map(b=>(
+                  {bookingsFiltered.map(b=>(
                     <tr key={b.id} className="border-t">
                       <td className="p-3">#{b.id}</td>
                       <td className="p-3">{b.hotelId}</td>
@@ -478,11 +513,17 @@ const OwnerDashboard = () => {
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}</span></td>
-                      <td className="p-3 flex gap-2 flex-wrap">
+                      <td className="p-3 flex gap-2 flex-wrap items-center">
                         <Button size="sm" variant="outline" onClick={()=>approveBooking.mutate(b.id)}>Approve</Button>
                         <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
                         <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
-                        {b.status!=='checked_in' && <Button size="sm" variant="outline" onClick={()=>cancelBooking.mutate(b.id)}>Cancel</Button>}
+                        {b.status!=='checked_in' && (
+                          <Button size="sm" variant="destructive" onClick={()=>{
+                            const r = (window.prompt("Reason for cancellation")||"").trim()
+                            if (r.length < 5) { toast({ title: "Reason required", description: "Please provide a meaningful reason", variant: "destructive" }); return }
+                            cancelBooking.mutate({ id: b.id, reason: r })
+                          }}>Cancel</Button>
+                        )}
                       </td>
                     </tr>
                   ))}

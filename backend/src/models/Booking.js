@@ -13,6 +13,7 @@ const BookingSchema = new mongoose.Schema({
   holdExpiresAt: Date,
   paid: { type: Boolean, default: false },
   refundIssued: { type: Boolean, default: false },
+  cancelReason: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 })
 
