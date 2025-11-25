@@ -46,7 +46,8 @@ function saveImagesFromDataUrls(prefix, entityId, list) {
 async function stats(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId)
-  const hotels = await Hotel.find({ ownerId }).lean()
+  const filter = Number.isFinite(ownerId) ? { ownerId } : {}
+  const hotels = await Hotel.find(filter).lean()
   const hotelIds = hotels.map(h => h.id)
   const ownerBookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean()
   const totalBookings = ownerBookings.length
@@ -69,7 +70,8 @@ async function stats(req, res) {
 async function hotels(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId)
-  const hotels = await Hotel.find({ ownerId }).lean()
+  const filter = Number.isFinite(ownerId) ? { ownerId } : {}
+  const hotels = await Hotel.find(filter).lean()
   res.json({ hotels })
 }
 
@@ -154,7 +156,8 @@ async function updateInfo(req, res) {
 async function rooms(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId)
-  const hotelIds = (await Hotel.find({ ownerId }).lean()).map(h=>h.id)
+  const filter = Number.isFinite(ownerId) ? { ownerId } : {}
+  const hotelIds = (await Hotel.find(filter).lean()).map(h=>h.id)
   const rooms = await Room.find({ hotelId: { $in: hotelIds } }).lean()
   res.json({ rooms })
 }

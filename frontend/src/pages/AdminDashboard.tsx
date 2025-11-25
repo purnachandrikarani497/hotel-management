@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Shield, BarChart3, Building2 } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { apiGet, apiPost } from "@/lib/api"
+import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import AdminOverview from "@/components/admin/AdminOverview"
 
 type Stats = { totalHotels: number; totalBookings: number; totalRevenue: number; monthlySales: Record<string, number>; cityGrowth: Record<string, number> }
-type User = { id: number; email: string; role: "admin"|"user"|"owner"; isApproved?: boolean; blocked?: boolean }
-type Hotel = { id: number; name: string; location: string; ownerId?: number|null; status?: "approved"|"rejected"|"suspended"|"pending"; featured?: boolean; price?: number }
-type Booking = { id: number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number; status: string; refundIssued: boolean; hotel?: Hotel }
+type User = { id: number; email: string; role: "admin"|"user"|"owner"; isApproved?: boolean; blocked?: boolean; createdAt?: string }
+type Hotel = { id: number; name: string; location: string; ownerId?: number|null; status?: "approved"|"rejected"|"suspended"|"pending"; featured?: boolean; price?: number; createdAt?: string }
+type Booking = { id: number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number; status: string; refundIssued: boolean; hotel?: Hotel; createdAt?: string }
 type Coupon = { id: number; code: string; discount: number; expiry: string|null; usageLimit: number; used: number; enabled: boolean }
 type Settings = { taxRate: number; commissionRate: number }
 
@@ -34,7 +34,7 @@ const AdminDashboard = () => {
   const stats = useQuery({ queryKey: ["admin","stats"], queryFn: () => apiGet<{ totalHotels: number; totalBookings: number; totalRevenue: number; monthlySales: Record<string, number>; cityGrowth: Record<string, number> }>("/api/admin/stats") })
   const users = useQuery({ queryKey: ["admin","users"], queryFn: () => apiGet<{ users: User[] }>("/api/admin/users") })
   const hotels = useQuery({ queryKey: ["admin","hotels"], queryFn: () => apiGet<{ hotels: Hotel[] }>("/api/admin/hotels") })
-  const bookings = useQuery({ queryKey: ["admin","bookings"], queryFn: () => apiGet<{ bookings: Booking[] }>("/api/admin/bookings") })
+  const bookings = useQuery({ queryKey: ["admin","bookings"], queryFn: () => apiGet<{ bookings: Booking[] }>("/api/admin/bookings"), refetchOnWindowFocus: true, refetchInterval: 5000 })
   const coupons = useQuery({ queryKey: ["admin","coupons"], queryFn: () => apiGet<{ coupons: Coupon[] }>("/api/admin/coupons") })
   const settings = useQuery({ queryKey: ["admin","settings"], queryFn: () => apiGet<{ settings: Settings }>("/api/admin/settings") })
   const inbox = useQuery({ queryKey: ["admin","support"], queryFn: () => apiGet<{ inbox: { id:number; email:string; subject:string; message:string; createdAt:string }[] }>("/api/admin/support") })
@@ -46,8 +46,8 @@ const AdminDashboard = () => {
   const blockUser = useMutation({ mutationFn: (p: { id:number; blocked:boolean }) => apiPost("/api/admin/users/"+p.id+"/block", { blocked: p.blocked }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin","users"] }) })
   const setHotelStatus = useMutation({ mutationFn: (p: { id:number; status:Hotel["status"] }) => apiPost("/api/admin/hotels/"+p.id+"/status", { status: p.status }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel status updated", description: `#${vars.id} → ${vars.status}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const setHotelFeatured = useMutation({ mutationFn: (p: { id:number; featured:boolean }) => apiPost("/api/admin/hotels/"+p.id+"/feature", { featured: p.featured }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: vars.featured ? "Featured" : "Unfeatured", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
-  const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost("/api/admin/bookings/"+id+"/cancel", {}), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","bookings"] }); toast({ title: "Booking cancelled", description: `#${vars}` }) }, onError: () => toast({ title: "Cancel failed", variant: "destructive" }) })
-  const refundBooking = useMutation({ mutationFn: (id:number) => apiPost("/api/admin/bookings/"+id+"/refund", {}), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","bookings"] }); toast({ title: "Refund issued", description: `#${vars}` }) }, onError: () => toast({ title: "Refund failed", variant: "destructive" }) })
+  
+  const deleteHotelOwner = useMutation({ mutationFn: (id:number) => apiDelete(`/api/owner/hotels/${id}`), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel deleted", description: `#${vars}` }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); toast({ title: "Settings updated" }) }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
@@ -66,11 +66,57 @@ const AdminDashboard = () => {
   })
 
   const [couponForm, setCouponForm] = React.useState({ code:"", discount:0, expiry:"", usageLimit:0, enabled:true })
+  const [usersPeriod, setUsersPeriod] = React.useState<'all'|'yearly'|'monthly'|'weekly'|'daily'>('all')
+  const [hotelsPeriod, setHotelsPeriod] = React.useState<'all'|'yearly'|'monthly'|'weekly'|'daily'>('all')
+  const [bookingsPeriod, setBookingsPeriod] = React.useState<'all'|'yearly'|'monthly'|'weekly'|'daily'>('all')
   
   const [taxInput, setTaxInput] = React.useState("")
   const [commInput, setCommInput] = React.useState("")
   const [ownerForm, setOwnerForm] = React.useState({ email:"", password:"", firstName:"", lastName:"", phone:"" })
   const [filterRole, setFilterRole] = React.useState<'all'|'user'|'owner'>('all')
+
+  const periodStart = (p: 'all'|'yearly'|'monthly'|'weekly'|'daily') => {
+    const now = new Date()
+    if (p==='daily') return new Date(now.getTime() - 24*60*60*1000)
+    if (p==='weekly') return new Date(now.getTime() - 7*24*60*60*1000)
+    if (p==='monthly') return new Date(now.getTime() - 30*24*60*60*1000)
+    if (p==='yearly') return new Date(now.getTime() - 365*24*60*60*1000)
+    return null
+  }
+  const inPeriod = (p: 'all'|'yearly'|'monthly'|'weekly'|'daily', dt?: string) => {
+    const start = periodStart(p)
+    if (!start) return true
+    if (!dt) return false
+    const d = new Date(dt)
+    return d >= start
+  }
+  const sortRecent = <T extends { createdAt?: string; id?: number }>(arr: T[]): T[] => {
+    return [...arr].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      if (tb !== ta) return tb - ta
+      return (Number(b.id) || 0) - (Number(a.id) || 0)
+    })
+  }
+  type Row = Record<string, string | number | boolean | null | undefined>
+  const downloadCsv = (name: string, rows: Row[]) => {
+    if (!rows.length) return
+    const headers = Array.from(new Set(rows.flatMap(r => Object.keys(r))))
+    const escape = (v: string | number | boolean | null | undefined) => {
+      if (v === null || v === undefined) return ''
+      const s = String(v)
+      const needs = s.includes(',') || s.includes('\n') || s.includes('"')
+      return needs ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
+    const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => escape(r[h])).join(','))).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name.endsWith('.csv') ? name : `${name}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -100,13 +146,26 @@ const AdminDashboard = () => {
                 <option value="user">Users</option>
                 <option value="owner">Hotel Owners</option>
               </select>
+              <select className="px-3 py-2 rounded border bg-background text-sm" value={usersPeriod} onChange={e=>setUsersPeriod(e.target.value as typeof usersPeriod)}>
+                <option value="all">All</option>
+                <option value="yearly">Yearly</option>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+              </select>
+              <Button variant="outline" onClick={()=>{
+                const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt)))
+                const rows = data.map(u=>({ id:u.id, email:u.email, role:u.role, blocked:u.blocked, createdAt:u.createdAt }))
+                downloadCsv(`users-${usersPeriod}`, rows)
+              }}>Download</Button>
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Email</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Email</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {(users.data?.users || []).filter(u => filterRole==='all' ? true : u.role===filterRole).map(u => (
+                  {sortRecent((users.data?.users || []).filter(u => (filterRole==='all' ? true : u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))).map((u, idx) => (
                     <tr key={u.id} className="border-t">
+                      <td className="p-3">{idx+1}</td>
                       <td className="p-3">{u.email}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary text-xs">{u.role}</span></td>
                       <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${u.blocked ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'}`}>{u.blocked ? 'Blocked' : 'Active'}</span></td>
@@ -126,17 +185,34 @@ const AdminDashboard = () => {
         <Card className="shadow-card hover:shadow-card-hover transition-all">
           <CardHeader><CardTitle>Hotel Management</CardTitle></CardHeader>
           <CardContent>
+            <div className="flex items-center gap-2 mb-3">
+              <select className="px-3 py-2 rounded border bg-background text-sm" value={hotelsPeriod} onChange={e=>setHotelsPeriod(e.target.value as typeof hotelsPeriod)}>
+                <option value="all">All</option>
+                <option value="yearly">Yearly</option>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+              </select>
+              <Button variant="outline" onClick={()=>{
+                const data = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined)))
+                const rows = data.map(h=>({ id:h.id, name:h.name, location:h.location, status:h.status, featured:h.featured, createdAt:h.createdAt }))
+                downloadCsv(`hotels-${hotelsPeriod}`, rows)
+              }}>Download</Button>
+            </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {(hotels.data?.hotels || []).map(h => (
+                  {sortRecent((hotels.data?.hotels || []).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))).map((h, idx) => (
                     <tr key={h.id} className="border-t">
+                      <td className="p-3">{idx+1}</td>
                       <td className="p-3">{h.name}</td>
                       <td className="p-3">{h.location}</td>
                       <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${h.status === 'approved' ? 'bg-primary/15 text-primary' : h.status === 'rejected' ? 'bg-destructive/15 text-destructive' : h.status === 'suspended' ? 'bg-accent/15 text-foreground' : 'bg-muted text-foreground'}`}>{h.status}</span></td>
                       <td className="p-3 flex gap-2 flex-wrap">
                         <Button size="sm" variant={h.status === 'suspended' ? 'outline' : 'destructive'} onClick={() => setHotelStatus.mutate({ id: h.id, status: h.status === 'suspended' ? 'approved' : 'suspended' })}>{h.status === 'suspended' ? 'Unblock' : 'Block'}</Button>
+                        <Button size="sm" variant="outline" onClick={() => setHotelFeatured.mutate({ id: h.id, featured: !h.featured })}>{h.featured ? 'Unfeature' : 'Feature'}</Button>
+                        <Button size="sm" variant="destructive" onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>Delete</Button>
                       </td>
                     </tr>
                   ))}
@@ -151,72 +227,48 @@ const AdminDashboard = () => {
         <Card className="shadow-card hover:shadow-card-hover transition-all">
           <CardHeader><CardTitle>Booking Management</CardTitle></CardHeader>
           <CardContent>
+            <div className="flex items-center gap-2 mb-3">
+              <select className="px-3 py-2 rounded border bg-background text-sm" value={bookingsPeriod} onChange={e=>setBookingsPeriod(e.target.value as typeof bookingsPeriod)}>
+                <option value="all">All</option>
+                <option value="yearly">Yearly</option>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+              </select>
+              <Button variant="outline" onClick={()=>{
+                const src = bookings.data?.bookings || []
+                const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined)))
+                const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
+                downloadCsv(`bookings-${bookingsPeriod}`, rows)
+              }}>Download</Button>
+            </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const hotelsArr = hotels.data?.hotels || []
                     const hmap: Record<number, Hotel> = {}
                     hotelsArr.forEach(h => { hmap[h.id] = h })
                     const src = bookings.data?.bookings || []
-                    return src.map(b => (
+                    return sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))).map((b, idx) => (
                     <tr key={b.id} className="border-t">
+                      <td className="p-3">{idx+1}</td>
                       <td className="p-3">{b.hotel?.name || hmap[b.hotelId]?.name || `#${b.hotelId}`}</td>
                       <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{b.refundIssued ? ' • Refunded' : ''}</span></td>
-                      <td className="p-3 flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => cancelBooking.mutate(b.id)}>Cancel</Button>
-                        <Button size="sm" onClick={() => refundBooking.mutate(b.id)} disabled={b.refundIssued}>Issue Refund</Button>
-                      </td>
                     </tr>
-                    ))
-                  })()}
-                </tbody>
+                  ))
+                })()}
+              </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
         )}
 
-        {feature === 'coupons' && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="shadow-card hover:shadow-card-hover transition-all">
-            <CardHeader><CardTitle>Coupon Management</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Code" value={couponForm.code} onChange={e => setCouponForm({ ...couponForm, code: e.target.value })} />
-                <Input type="number" placeholder="Discount" value={couponForm.discount} onChange={e => setCouponForm({ ...couponForm, discount: Number(e.target.value) })} />
-                <Input type="date" placeholder="Expiry" min={new Date().toISOString().slice(0,10)} value={couponForm.expiry} onChange={e => setCouponForm({ ...couponForm, expiry: e.target.value })} />
-                <Input type="number" placeholder="Usage Limit" value={couponForm.usageLimit} onChange={e => setCouponForm({ ...couponForm, usageLimit: Number(e.target.value) })} />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => createCoupon.mutate({ ...couponForm })} disabled={!couponForm.code || couponForm.discount<=0}>Create Coupon</Button>
-              </div>
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Code</th><th className="p-3">Discount</th><th className="p-3">Expiry</th><th className="p-3">Usage</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
-                <tbody className="[&_tr:hover]:bg-muted/30">
-                  {(coupons.data?.coupons || []).map(c => (
-                    <tr key={c.id} className="border-t">
-                      <td className="p-3">{c.code}</td>
-                      <td className="p-3">{c.discount}%</td>
-                      <td className="p-3">{c.expiry ?? '—'}</td>
-                      <td className="p-3">{c.used}/{c.usageLimit}</td>
-                      <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${c.enabled ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{c.enabled ? 'Enabled' : 'Disabled'}</span></td>
-                      <td className="p-3"><Button size="sm" onClick={() => setCouponStatus.mutate({ id: c.id, enabled: !c.enabled })}>{c.enabled ? 'Disable' : 'Enable'}</Button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          </div>
-        )}
 
         {feature === 'settings' && (
           <Card className="shadow-card hover:shadow-card-hover transition-all">

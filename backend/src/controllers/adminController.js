@@ -128,10 +128,10 @@ async function couponsList(req, res) {
 
 async function createCoupon(req, res) {
   await connect(); await ensureSeed();
-  const { code, discount, expiry, usageLimit, enabled } = req.body || {}
+  const { code, discount, expiry, usageLimit, enabled, hotelId, ownerId } = req.body || {}
   if (!code || !discount) return res.status(400).json({ error: 'Missing fields' })
   const id = await nextIdFor('Coupon')
-  await Coupon.create({ id, code, discount: Number(discount), expiry: expiry || null, usageLimit: Number(usageLimit) || 0, used: 0, enabled: enabled !== false })
+  await Coupon.create({ id, code, discount: Number(discount), expiry: expiry || null, usageLimit: Number(usageLimit) || 0, used: 0, enabled: enabled !== false, hotelId: hotelId ? Number(hotelId) : null, ownerId: ownerId ? Number(ownerId) : null })
   res.json({ status: 'created', id })
 }
 
@@ -157,6 +157,20 @@ async function updateCoupon(req, res) {
   if (usageLimit !== undefined) c.usageLimit = Number(usageLimit)
   await c.save()
   res.json({ status: 'updated' })
+}
+
+async function deleteAllCoupons(req, res) {
+  await connect(); await ensureSeed();
+  await Coupon.deleteMany({})
+  res.json({ status: 'deleted_all' })
+}
+async function deleteCoupon(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const c = await Coupon.findOne({ id })
+  if (!c) return res.status(404).json({ error: 'Coupon not found' })
+  await c.deleteOne()
+  res.json({ status: 'deleted' })
 }
 
 async function settingsGet(req, res) {
@@ -220,6 +234,8 @@ module.exports = {
   createCoupon,
   couponStatus,
   updateCoupon,
+  deleteCoupon,
+  deleteAllCoupons,
   settingsGet,
   settingsUpdate,
   ownersPending,

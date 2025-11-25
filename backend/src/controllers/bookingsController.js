@@ -1,11 +1,11 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
-const { Booking, Hotel, Room, Settings, MessageThread, Message } = require('../models')
+const { Booking, Hotel, Room, Settings, MessageThread, Message, Coupon } = require('../models')
 
 async function create(req, res) {
   await connect(); await ensureSeed();
-  const { hotelId, checkIn, checkOut, guests, userId, roomType } = req.body || {}
+  const { hotelId, checkIn, checkOut, guests, userId, roomType, couponCode, couponId } = req.body || {}
   if (!hotelId || !checkIn || !checkOut || !guests) return res.status(400).json({ error: 'Missing booking fields' })
   const hotel = await Hotel.findOne({ id: Number(hotelId) })
   if (!hotel) return res.status(404).json({ error: 'Hotel not found' })
@@ -129,9 +129,32 @@ async function create(req, res) {
     const hourlyRate = adjustedDayPrice / 24
     computedTotal += Math.round(hourlyRate * extraHours)
   }
+  let appliedCouponId = null
+  let appliedCouponCode = ''
+  if (couponId || couponCode) {
+    const dateStr = `${ci.getFullYear()}-${String(ci.getMonth()+1).padStart(2,'0')}-${String(ci.getDate()).padStart(2,'0')}`
+    const q = {}
+    if (couponId) q.id = Number(couponId)
+    if (!q.id && couponCode) q.code = String(couponCode)
+    const c = await Coupon.findOne({ ...q, enabled: true }).lean()
+    if (c) {
+      const hasQuota = Number(c.usageLimit||0) === 0 || Number(c.used||0) < Number(c.usageLimit||0)
+      const matchesDate = String(c.expiry||'').slice(0,10) ? String(c.expiry||'').slice(0,10) === dateStr : true
+      const matchesHotel = !c.hotelId || Number(c.hotelId) === Number(hotelId)
+      if (hasQuota && matchesDate && matchesHotel) {
+        const pct = Number(c.discount||0)
+        if (!isNaN(pct) && pct > 0) {
+          const cut = Math.round(computedTotal * pct / 100)
+          computedTotal = Math.max(0, computedTotal - cut)
+          appliedCouponId = Number(c.id) || null
+          appliedCouponCode = String(c.code||'')
+        }
+      }
+    }
+  }
   const id = await nextIdFor('Booking')
   const holdExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), checkIn, checkOut, guests: Number(guests), total: computedTotal, status: 'held', holdExpiresAt, paid: false })
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), checkIn, checkOut, guests: Number(guests), total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'held', holdExpiresAt, paid: false })
   // Do not hard-block room for all dates; overlap logic prevents conflicts
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {
@@ -171,6 +194,10 @@ async function confirm(req, res) {
   b.status = 'pending'
   b.paid = true
   await b.save()
+  if (b.couponId) {
+    const c = await Coupon.findOne({ id: Number(b.couponId) })
+    if (c) { c.used = Number(c.used||0) + 1; await c.save() }
+  }
   if (b.roomId) {
     const r = await Room.findOne({ id: Number(b.roomId) })
     if (r) { r.blocked = false; await r.save() }

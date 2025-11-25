@@ -43,7 +43,6 @@ const Header = () => {
         { to: "/dashboard/admin/users", label: "Users" },
         { to: "/dashboard/admin/hotels", label: "Hotels" },
         { to: "/dashboard/admin/bookings", label: "Bookings" },
-        { to: "/dashboard/admin/coupons", label: "Coupons" },
         { to: "/dashboard/admin/settings", label: "Settings" },
       ]
     }
@@ -56,6 +55,7 @@ const Header = () => {
         { to: "/dashboard/owner/guests", label: "Guests" },
         { to: "/dashboard/owner/pricing", label: "Pricing" },
         { to: "/dashboard/owner/reviews", label: "Reviews" },
+        { to: "/dashboard/owner/coupons", label: "Coupons" },
       ]
     }
     return []

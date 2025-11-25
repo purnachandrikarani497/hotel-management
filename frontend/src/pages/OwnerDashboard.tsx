@@ -513,8 +513,8 @@ const OwnerDashboard = () => {
                       <td className="p-3">#{b.id}</td>
                       <td className="p-3">{b.hotelId}</td>
                       <td className="p-3">
-                        <div className="font-medium">{(b as any).user?.fullName || `${(b as any).user?.firstName||''} ${(b as any).user?.lastName||''}`.trim() || ((b as any).user?.email||`User #${(b as any).user?.id||''}`)}</div>
-                        <div className="text-xs text-muted-foreground">{(b as any).user?.email || '-'}</div>
+                        <div className="font-medium">{b.user?.fullName || `${b.user?.firstName||''} ${b.user?.lastName||''}`.trim() || (b.user?.email||`User #${b.user?.id||''}`)}</div>
+                        <div className="text-xs text-muted-foreground">{b.user?.email || '-'}</div>
                       </td>
                       <td className="p-3">{b.roomId ?? '-'}</td>
                       <td className="p-3">{b.checkIn} → {b.checkOut}</td>

@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import OwnerCoupons from "./pages/OwnerCoupons";
 import MessageInbox from "./pages/MessageInbox";
 import UserDetails from "./pages/UserDetails";
 
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/dashboard/user/details" element={<ProtectedRoute role="user"><UserDetails /></ProtectedRoute>} />
           <Route path="/dashboard/owner" element={<ProtectedRoute role="owner"><OwnerDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/owner/:feature" element={<ProtectedRoute role="owner"><OwnerDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/owner/coupons" element={<ProtectedRoute role="owner"><OwnerCoupons /></ProtectedRoute>} />
           <Route path="/inbox" element={<ProtectedRoute><MessageInbox /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

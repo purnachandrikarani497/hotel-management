@@ -1,13 +1,14 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
-const { Hotel, Booking, Review, Room } = require('../models')
+const { Hotel, Booking, Review, Room, Coupon } = require('../models')
+const BASE_URL = process.env.API_BASE || `http://localhost:${process.env.PORT || 5000}`
 
 function toPublicUrl(url) {
   if (!url || typeof url !== 'string') return ''
   if (/^https?:\/\//.test(url)) return url
   if (/^data:/.test(url)) return url
-  if (url.startsWith('/uploads/')) return `http://localhost:5000${url}`
-  if (url.startsWith('uploads/')) return `http://localhost:5000/${url}`
+  if (url.startsWith('/uploads/')) return `${BASE_URL}${url}`
+  if (url.startsWith('uploads/')) return `${BASE_URL}/${url}`
   return ''
 }
 
@@ -91,4 +92,18 @@ async function about(req, res) {
   res.json({ stats })
 }
 
-module.exports = { list, getById, getReviews, featured, about, getRooms }
+module.exports = { list, getById, getReviews, featured, about, getRooms, getCoupons }
+
+async function getCoupons(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const date = String(req.query.date || '').slice(0,10)
+  const q = { hotelId: id, enabled: true }
+  const items = await Coupon.find(q).lean()
+  const filtered = items.filter(c => {
+    const hasQuota = Number(c.usageLimit||0) === 0 || Number(c.used||0) < Number(c.usageLimit||0)
+    const matchesDate = date ? String(c.expiry||'').slice(0,10) === date : true
+    return hasQuota && matchesDate
+  })
+  res.json({ coupons: filtered })
+}

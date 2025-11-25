@@ -16,7 +16,8 @@ const HotelSchema = new mongoose.Schema({
   featured: { type: Boolean, default: false },
   images: [String],
   docs: [String],
-  pricing: { type: PricingSchema, default: () => ({}) }
+  pricing: { type: PricingSchema, default: () => ({}) },
+  createdAt: { type: Date, default: Date.now }
 })
 
 module.exports = mongoose.model('Hotel', HotelSchema)

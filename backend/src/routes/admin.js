@@ -20,6 +20,8 @@ router.get('/coupons', admin.couponsList)
 router.post('/coupons', admin.createCoupon)
 router.post('/coupons/:id/status', admin.couponStatus)
 router.post('/coupons/:id', admin.updateCoupon)
+router.delete('/coupons/:id', admin.deleteCoupon)
+router.delete('/coupons', admin.deleteAllCoupons)
 
 router.get('/settings', admin.settingsGet)
 router.post('/settings', admin.settingsUpdate)

@@ -71,12 +71,16 @@ const HotelDetail = () => {
   const baseAmount = stayDays * price
   const extraAmount = Math.round((price / 24) * extraHours)
   const subtotal = baseAmount + extraAmount
-  const grandTotal = subtotal
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
+  const discountAmount = Math.max(0, Math.round((appliedCoupon?.discount || 0) * subtotal / 100))
+  const grandTotal = Math.max(0, subtotal - discountAmount)
+  type Coupon = { id:number; code:string; discount:number; expiry:string|null; usageLimit:number; used:number; enabled:boolean; hotelId?:number }
+  const couponsQ = useQuery({ queryKey: ["hotel","coupons", id, checkIn], queryFn: () => apiGet<{ coupons: Coupon[] }>(`/api/hotels/${id}/coupons?date=${checkIn}`), enabled: !!id && !!checkIn })
 
   type ReserveResp = { status: string; id: number; roomId: number; holdExpiresAt: string }
   const reserve = useMutation({
-    mutationFn: (body: { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string }) =>
-      apiPost<ReserveResp, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string }>("/api/bookings", body),
+    mutationFn: (body: { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string; couponCode?: string }) =>
+      apiPost<ReserveResp, { userId:number; hotelId: number; checkIn: string; checkOut: string; guests: number; roomType: string; couponCode?: string }>("/api/bookings", body),
     onSuccess: (res) => {
       toast({ title: "Reservation successful", description: `Booking #${res.id} is on hold` })
     },
@@ -255,6 +259,30 @@ const HotelDetail = () => {
                   <div className="text-3xl font-bold text-primary mb-1">₹{price}</div>
                   <p className="text-muted-foreground">per 24h</p>
                 </div>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Coupons for {checkIn}</span>
+                  </div>
+                  {couponsQ.isLoading && <div className="text-xs text-muted-foreground">Checking coupons...</div>}
+                  {couponsQ.isError && <div className="text-xs text-muted-foreground">Failed to load coupons</div>}
+                  {!couponsQ.isLoading && !couponsQ.isError && (
+                    (couponsQ.data?.coupons||[]).length ? (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {(couponsQ.data?.coupons||[]).map(c => (
+                          <span
+                            key={c.id}
+                            onClick={() => setAppliedCoupon(appliedCoupon?.id===c.id ? null : c)}
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs cursor-pointer ${appliedCoupon?.id===c.id ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+                          >
+                            {c.code} • {c.discount}%
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground mt-2">No coupons for selected date</div>
+                    )
+                  )}
+                </div>
 
                 <div className="space-y-4 mb-6">
                   <div>
@@ -320,7 +348,7 @@ const HotelDetail = () => {
                   const ciStr = `${checkIn}T${ciTime}:00+05:30`
                   const coStr = `${checkOut}T${checkOutTime}:00+05:30`
                   setOpen(true);
-                  reserve.mutate({ userId: auth?.user?.id || 0, hotelId: Number(id), checkIn: ciStr, checkOut: coStr, guests, roomType })
+                  reserve.mutate({ userId: auth?.user?.id || 0, hotelId: Number(id), checkIn: ciStr, checkOut: coStr, guests, roomType, couponCode: appliedCoupon?.code || undefined })
                 }}>
                   {reserve.isPending ? "Reserving..." : "Reserve Now"}
                 </Button>
@@ -337,6 +365,12 @@ const HotelDetail = () => {
                       <span className="font-medium">₹{extraAmount}</span>
                     </div>
                   )}
+                  {appliedCoupon?.discount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Coupon {appliedCoupon.code} ({appliedCoupon.discount}%)</span>
+                      <span className="font-medium">-₹{discountAmount}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total</span>
                     <span>₹{grandTotal}</span>

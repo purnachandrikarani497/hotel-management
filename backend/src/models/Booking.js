@@ -9,6 +9,8 @@ const BookingSchema = new mongoose.Schema({
   checkOut: String,
   guests: Number,
   total: Number,
+  couponId: { type: Number, default: null },
+  couponCode: { type: String, default: '' },
   status: { type: String, default: 'pending' },
   holdExpiresAt: Date,
   paid: { type: Boolean, default: false },
