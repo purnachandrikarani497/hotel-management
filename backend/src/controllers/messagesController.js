@@ -18,6 +18,11 @@ async function threads(req, res) {
     const unreadForOwner = await Message.countDocuments({ threadId: t.id, readByOwner: false })
     enriched.push({ ...t, lastMessage: last[0] || null, unreadForUser, unreadForOwner })
   }
+  enriched.sort((a,b)=>{
+    const at = new Date(a?.lastMessage?.createdAt || a?.createdAt || 0).getTime()
+    const bt = new Date(b?.lastMessage?.createdAt || b?.createdAt || 0).getTime()
+    return bt - at
+  })
   res.json({ threads: enriched })
 }
 

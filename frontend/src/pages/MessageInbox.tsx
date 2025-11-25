@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Star } from "lucide-react"
 import { apiGet, apiPost } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 type Thread = { id:number; bookingId:number; hotelId:number; userId:number; ownerId:number; createdAt?: string; lastMessage?: { content:string; senderRole:string; createdAt:string } | null; unreadForUser?: number; unreadForOwner?: number }
 type Message = { id:number; threadId:number; senderRole:'user'|'owner'|'system'; senderId:number|null; content:string; createdAt:string; readByUser?: boolean; readByOwner?: boolean }
@@ -17,11 +18,13 @@ const MessageInbox = () => {
   const role = (auth?.user?.role || 'user') as 'user'|'owner'|'admin'
   const userId = auth?.user?.id || 0
   const qc = useQueryClient()
+  const { toast } = useToast()
   const threadsQ = useQuery({
     queryKey: ["inbox","threads",role,userId],
     queryFn: () => role === 'owner' ? apiGet<{ threads: Thread[] }>(`/api/messages/threads?ownerId=${userId}`) : apiGet<{ threads: Thread[] }>(`/api/messages/threads?userId=${userId}`),
     enabled: !!userId,
-    refetchInterval: 8000
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true
   })
   const threads = React.useMemo(() => threadsQ.data?.threads ?? [], [threadsQ.data])
   const orderedThreads = React.useMemo(() => {
@@ -37,15 +40,16 @@ const MessageInbox = () => {
   React.useEffect(() => {
     if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
   }, [threads, activeId])
-  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 6000 })
+  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 6000, refetchOnWindowFocus: true })
   const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
   const orderedMessages = React.useMemo(() => {
     const arr = [...messages]
     arr.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     return arr
   }, [messages])
-  const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) } })
-  React.useEffect(() => { if (activeId) markRead.mutate(activeId) }, [activeId, markRead])
+  const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) }, onError: () => {} , retry: false })
+  const lastReadRef = React.useRef<number>(0)
+  React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId) } }, [activeId, markRead.isPending])
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
@@ -62,12 +66,21 @@ const MessageInbox = () => {
   const [feedback, setFeedback] = React.useState<string>("")
   const createReview = useMutation({ mutationFn: () => {
     const t = (threads||[]).find(x=>x.id===activeId)
-    const hotelId = Number(t?.hotelId||0)
+    const hotelId = Number((t?.hotelId ?? threadBooking?.hotelId) || 0)
     const comment = String(feedback||'').trim()
-    return apiPost(`/api/user/reviews`, { userId, hotelId, rating, comment })
-  }, onSuccess: () => { setFeedback("") } })
+    const bookingId = Number(threadBooking?.id||0) || null
+    return apiPost(`/api/user/reviews`, { userId, hotelId, bookingId, rating, comment })
+  }, onSuccess: (_res) => {
+    const t = (threads||[]).find(x=>x.id===activeId)
+    const hotelId = Number((t?.hotelId ?? threadBooking?.hotelId) || 0)
+    const ownerId = Number(t?.ownerId||0)
+    setFeedback("")
+    toast({ title: "Review submitted", description: `Thank you for rating hotel #${hotelId}` })
+    qc.invalidateQueries({ queryKey: ["hotel","reviews", hotelId] })
+    if (ownerId) qc.invalidateQueries({ queryKey: ["owner","reviews", ownerId] })
+  }, onError: () => { toast({ title: "Review submission failed", variant: "destructive" }) } })
 
-  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; if (s.startsWith('/uploads')) return `http://localhost:5000${s}`; if (s.startsWith('uploads')) return `http://localhost:5000/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
+  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; if (s.startsWith('/uploads')) return `http://localhost:3015${s}`; if (s.startsWith('uploads')) return `http://localhost:3015/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
   const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
   React.useEffect(() => {
     const ids = Array.from(new Set(threads.map(t=>t.hotelId))).filter(Boolean)
@@ -158,7 +171,7 @@ const MessageInbox = () => {
                     </div>
                     <Input placeholder="Feedback (optional)" value={feedback} onChange={e=>setFeedback(e.target.value)} />
                     <div className="mt-3 text-right">
-                      <Button onClick={()=>createReview.mutate()} disabled={!userId || createReview.isPending}>{createReview.isPending ? 'Submitting...' : 'Submit'}</Button>
+                      <Button onClick={()=>createReview.mutate()} disabled={!userId || createReview.isPending || createReview.isSuccess}>{createReview.isPending ? 'Submitting...' : (createReview.isSuccess ? 'Submitted' : 'Submit')}</Button>
                     </div>
                   </div>
                 )}

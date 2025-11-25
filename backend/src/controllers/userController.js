@@ -42,12 +42,22 @@ async function reviews(req, res) {
 }
 
 async function createReview(req, res) {
-  await connect(); await ensureSeed();
-  const { userId, hotelId, rating, comment } = req.body || {}
-  if (!userId || !hotelId || !rating) return res.status(400).json({ error: 'Missing fields' })
-  const id = await nextIdFor('Review')
-  await Review.create({ id, userId: Number(userId), hotelId: Number(hotelId), rating: Number(rating), comment: String(comment||'') })
-  res.json({ status: 'created', id })
+  try {
+    await connect(); await ensureSeed();
+    const { userId, hotelId, bookingId, rating, comment } = req.body || {}
+    if (!userId || !hotelId || !rating) return res.status(400).json({ error: 'Missing fields' })
+    let bid = bookingId ? Number(bookingId) : null
+    if (!bid) {
+      const last = await Booking.find({ userId: Number(userId), hotelId: Number(hotelId) }).sort({ id: -1 }).limit(1).lean()
+      bid = Number(last?.[0]?.id || 0) || null
+    }
+    const id = await nextIdFor('Review')
+    await Review.create({ id, userId: Number(userId), hotelId: Number(hotelId), bookingId: bid, rating: Math.max(1, Math.min(5, Number(rating))), comment: String(comment||'') })
+    res.json({ status: 'created', id })
+  } catch (e) {
+    console.error('[CreateReview] error', e?.message || e)
+    res.status(503).json({ error: 'Database unavailable' })
+  }
 }
 
 async function updateReview(req, res) {
