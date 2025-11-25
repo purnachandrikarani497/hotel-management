@@ -31,7 +31,10 @@ const Header = () => {
       { to: "/about", label: "About" },
       { to: "/contact", label: "Contact" },
     ]
-    if (authed && role === 'user') base.push({ to: "/dashboard/user/details", label: "User Details" })
+    if (authed && role === 'user') {
+      base.push({ to: "/dashboard/user/details", label: "User Details" })
+      base.push({ to: "/dashboard/user", label: "User Dashboard" })
+    }
     return base
   })()
 

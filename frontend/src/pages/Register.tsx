@@ -25,6 +25,31 @@ const Register = () => {
   const [idIssueDate, setIdIssueDate] = useState("")
   const [idExpiryDate, setIdExpiryDate] = useState("")
   const [idDocImage, setIdDocImage] = useState<string>("")
+  const [agree, setAgree] = useState(false)
+  const idPatterns: { [k:string]: RegExp } = {
+    "Aadhaar Card": /^\d{12}$/,
+    "Passport": /^[A-Za-z]{1}\d{7}$/,
+    "Driving Licence": /^[A-Z0-9]{8,20}$/,
+    "Voter ID": /^[A-Z]{3}\d{7}$/,
+    "PAN card (usually not accepted as primary ID)": /^[A-Z]{5}\d{4}[A-Z]$/,
+  }
+  const idHints: { [k:string]: string } = {
+    "Aadhaar Card": "12 digits",
+    "Passport": "Letter + 7 digits",
+    "Driving Licence": "8-20 alphanumeric",
+    "Voter ID": "3 letters + 7 digits",
+    "PAN card (usually not accepted as primary ID)": "AAAAA9999A",
+  }
+  const phoneRe = /^[6-9]\d{9}$/
+  const validate = (): boolean => {
+    if (!firstName || !lastName || !email || !phone || !password || !confirm || !fullName || !dob || !address || !idType || !idNumber) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (!phoneRe.test(String(phone).trim())) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
+    if (password !== confirm) { toast({ title: "Passwords do not match", variant: "destructive" }); return false }
+    const pat = idPatterns[idType]
+    if (pat && !pat.test(String(idNumber).trim())) { toast({ title: "Invalid ID number", description: idHints[idType], variant: "destructive" }); return false }
+    if (!agree) { toast({ title: "Accept Terms & Conditions", variant: "destructive" }); return false }
+    return true
+  }
   const { toast } = useToast()
   const mutation = useMutation({ mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage }), onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) }, onError: () => { toast({ title: "Registration failed", variant: "destructive" }) } })
   return (
@@ -41,55 +66,55 @@ const Register = () => {
           </div>
 
           <div className="bg-card rounded-lg shadow-card p-8">
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}>
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!validate()) return; mutation.mutate(); }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">First Name</label>
+                  <label className="text-sm font-medium mb-2 block">First Name *</label>
                   <Input placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Last Name</label>
+                  <label className="text-sm font-medium mb-2 block">Last Name *</label>
                   <Input placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Email</label>
+                <label className="text-sm font-medium mb-2 block">Email *</label>
                 <Input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Phone Number</label>
-                <Input type="tel" placeholder="+1 (555) 000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <label className="text-sm font-medium mb-2 block">Phone Number *</label>
+                <Input type="tel" placeholder="10 digits, starts 6-9" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g,""))} maxLength={10} />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Password</label>
+                <label className="text-sm font-medium mb-2 block">Password *</label>
                 <Input type="password" placeholder="Create a strong password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Confirm Password</label>
+                <label className="text-sm font-medium mb-2 block">Confirm Password *</label>
                 <Input type="password" placeholder="Confirm your password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Full Name</label>
+                  <label className="text-sm font-medium mb-2 block">Full Name *</label>
                   <Input placeholder="As per ID" value={fullName} onChange={(e)=>setFullName(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Date of Birth</label>
+                  <label className="text-sm font-medium mb-2 block">Date of Birth *</label>
                   <Input type="date" value={dob} onChange={(e)=>setDob(e.target.value)} />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Address</label>
+                <label className="text-sm font-medium mb-2 block">Address *</label>
                 <Input placeholder="Residential address" value={address} onChange={(e)=>setAddress(e.target.value)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">ID Type</label>
+                  <label className="text-sm font-medium mb-2 block">ID Type *</label>
                   <select className="w-full border rounded h-10 px-3 bg-background" value={idType} onChange={(e)=>setIdType(e.target.value)}>
                     <option>Aadhaar Card</option>
                     <option>Passport</option>
@@ -99,8 +124,9 @@ const Register = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">ID Number</label>
-                  <Input placeholder="ID Number" value={idNumber} onChange={(e)=>setIdNumber(e.target.value)} />
+                  <label className="text-sm font-medium mb-2 block">ID Number *</label>
+                  <Input placeholder={idHints[idType]} value={idNumber} onChange={(e)=>{ const v=e.target.value; const upperNeeded = idType.includes("PAN") || idType==="Voter ID" || idType==="Driving Licence" || idType==="Passport"; setIdNumber(upperNeeded ? v.toUpperCase() : v) }} />
+                  <div className="text-xs text-muted-foreground mt-1">Format: {idHints[idType]}</div>
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Document Upload</label>
@@ -119,12 +145,13 @@ const Register = () => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox id="terms" />
+                <Checkbox id="terms" checked={agree} onCheckedChange={(v)=>setAgree(!!v)} />
                 <label htmlFor="terms" className="text-sm cursor-pointer">
                   I agree to the{" "}
                   <Link to="/terms" className="text-primary hover:underline">
                     Terms & Conditions
                   </Link>
+                  {" "}*
                 </label>
               </div>
 

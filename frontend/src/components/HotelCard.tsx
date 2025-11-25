@@ -10,14 +10,16 @@ interface HotelCardProps {
   price: number;
   image: string;
   amenities?: string[];
+  rating?: number;
+  reviews?: number;
 }
 
-const HotelCard = ({ id, name, location, price, image, amenities = [] }: HotelCardProps) => {
+const HotelCard = ({ id, name, location, price, image, amenities = [], rating, reviews }: HotelCardProps) => {
   const resolveImage = (src?: string) => {
     const s = String(src||'')
     if (!s) return 'https://placehold.co/800x600?text=Hotel'
-    if (s.startsWith('/uploads')) return `http://localhost:5000${s}`
-    if (s.startsWith('uploads')) return `http://localhost:5000/${s}`
+    if (s.startsWith('/uploads')) return `http://localhost:3015${s}`
+    if (s.startsWith('uploads')) return `http://localhost:3015/${s}`
     return s
   }
   const getAmenityIcon = (amenity: string) => {
@@ -49,7 +51,13 @@ const HotelCard = ({ id, name, location, price, image, amenities = [] }: HotelCa
           <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
             {name}
           </h3>
-          <div />
+          {typeof rating === 'number' ? (
+            <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full text-sm">
+              <Star className="h-4 w-4 text-accent fill-current" />
+              <span>{Math.round(rating * 10) / 10}</span>
+              {typeof reviews === 'number' ? (<span className="text-muted-foreground">({reviews})</span>) : null}
+            </div>
+          ) : null}
         </div>
         
         <div className="flex items-center text-muted-foreground mb-4">
