@@ -107,6 +107,7 @@ type GuestLastBooking = {
   checkIn: string
   checkOut: string
   status: string
+  createdAt?: string
 }
 
 type GuestItem = {
@@ -230,7 +231,11 @@ const OwnerDashboard = () => {
         m.blocked = r.blocked
       }
     })
-    return Object.values(map).sort((a, b) => (a.hotelId - b.hotelId) || a.type.localeCompare(b.type))
+    return Object.values(map).sort((a, b) => {
+      const aMaxId = Math.max(...a.ids)
+      const bMaxId = Math.max(...b.ids)
+      return bMaxId - aMaxId
+    })
   }, [rooms])
 
   const getRoomById = (id: number) => rooms.find((x) => x.id === id)
@@ -340,6 +345,18 @@ const OwnerDashboard = () => {
     () => guests.filter((g) => inRange(g.lastBooking?.checkIn || "", dateFilterGuests)),
     [guests, dateFilterGuests, inRange],
   )
+  const guestsOrdered = React.useMemo(() => {
+    const arr = [...guestsTimeFiltered]
+    arr.sort((a, b) => {
+      const bt = new Date(b.lastBooking?.createdAt || 0).getTime()
+      const at = new Date(a.lastBooking?.createdAt || 0).getTime()
+      if (bt !== at) return bt - at
+      const bid = Number(b.user?.id || 0)
+      const aid = Number(a.user?.id || 0)
+      return bid - aid
+    })
+    return arr
+  }, [guestsTimeFiltered])
 
   const [lastHotelRegId, setLastHotelRegId] = React.useState<number | null>(null)
 
@@ -936,6 +953,42 @@ const OwnerDashboard = () => {
               >
                 Submit Hotel
               </Button>
+              {(() => {
+                const list = hotelsQ.data?.hotels || []
+                if (!list.length) return null
+                return (
+                  <div className="rounded-lg border overflow-hidden mt-4">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr className="text-left">
+                          <th className="p-3">S.No</th>
+                          <th className="p-3">Hotel</th>
+                          <th className="p-3">Location</th>
+                          <th className="p-3">Price</th>
+                          <th className="p-3">Amenities</th>
+                          <th className="p-3">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="[&_tr:hover]:bg-muted/30">
+                        {list.map((h, idx) => (
+                          <tr key={h.id} className="border-t">
+                            <td className="p-3">{idx + 1}</td>
+                            <td className="p-3">{h.id} • {h.name}</td>
+                            <td className="p-3">{h.location}</td>
+                            <td className="p-3">₹{h.price}</td>
+                            <td className="p-3">
+                              {(h.amenities || []).map((a: string) => (
+                                <span key={`${h.id}-${a}`} className="inline-block mr-1 px-2 py-1 bg-secondary rounded text-xs">{a}</span>
+                              ))}
+                            </td>
+                            <td className="p-3">{h.description || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         )}
@@ -970,262 +1023,11 @@ const OwnerDashboard = () => {
             </div>
           ) : null })()}
 
-        {feature === 'bookings' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Manage Bookings</CardTitle>
-              {(() => {
-                const opts = [
-                  { k:'all', v:'All' },
-                  { k:'pending', v:'Pending' },
-                  { k:'confirmed', v:'Confirmed' },
-                  { k:'checkin', v:'Check-in' },
-                  { k:'checkout', v:'Check-out' },
-                  { k:'cancelled', v:'Cancelled' },
-                ]
-                return (
-                  <select className="px-2 py-1 rounded border bg-background text-sm" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-                    {opts.map(o=> (<option key={o.k} value={o.k}>{o.v}</option>))}
-                  </select>
-                )
-              })()}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">User</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
-                <tbody className="[&_tr:hover]:bg-muted/30">
-                  {bookingsFiltered.map(b=>(
-                    <tr key={b.id} className="border-t">
-                      <td className="p-3">#{b.id}</td>
-                      <td className="p-3">{b.hotelId}</td>
-                      <td className="p-3">
-                        <div className="font-medium">{b.user?.fullName || `${b.user?.firstName||''} ${b.user?.lastName||''}`.trim() || (b.user?.email||`User #${b.user?.id||''}`)}</div>
-                        <div className="text-xs text-muted-foreground">{b.user?.email || '-'}</div>
-                      </td>
-                      <td className="p-3">{b.roomId ?? '-'}</td>
-                      <td className="p-3">{b.checkIn} → {b.checkOut}</td>
-                      <td className="p-3">{b.guests}</td>
-                      <td className="p-3">₹{b.total}</td>
-                      <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}</span></td>
-                      <td className="p-3 flex gap-2 flex-wrap items-center">
-                        {(() => {
-                          const s = String(b.status || '').trim().toLowerCase();
-                          const canCancel = s === 'confirmed';
-                          const canCheckin = s === 'confirmed';
-                          const canCheckout = s === 'confirmed' || s === 'checked_in';
-                          return (
-                            <>
-                              {canCheckin && (
-                                <Button size="sm" onClick={()=>checkinBooking.mutate(b.id)}>Check-in</Button>
-                              )}
-                              {canCheckout && (
-                                <Button size="sm" variant="outline" onClick={()=>checkoutBooking.mutate(b.id)}>Check-out</Button>
-                              )}
-                              {canCancel && (
-                                <Button size="sm" variant="destructive" onClick={()=>{
-                                  const r = (window.prompt("Reason for cancellation")||"")
-                                  cancelBooking.mutate({ id: b.id, reason: r })
-                                }}>Cancel</Button>
-                              )}
-                            </>
-                          )
-                        })()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-        )}
+        
 
-        {feature === 'guests' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
-          <CardHeader><CardTitle>Guests</CardTitle></CardHeader>
-          <CardContent>
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Guest</th><th className="p-3">Contact</th><th className="p-3">ID</th><th className="p-3">Document</th><th className="p-3">Address</th><th className="p-3">Last Booking</th></tr></thead>
-                <tbody className="[&_tr:hover]:bg-muted/30">
-                  {guests.map(g => (
-                    <tr key={String(g.user?.id||g.lastBooking?.id||Math.random())} className="border-t">
-                      <td className="p-3">
-                        <div className="font-medium">{g.user?.fullName || `${g.user?.firstName||''} ${g.user?.lastName||''}`.trim() || `User #${g.user?.id}`}</div>
-                        <div className="text-xs text-muted-foreground">#{g.user?.id}</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="text-sm">{g.user?.email}</div>
-                        <div className="text-xs text-muted-foreground">{g.user?.phone}</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="text-sm">{g.user?.idType} {g.user?.idNumber}</div>
-                        <div className="text-xs text-muted-foreground">DOB {g.user?.dob || '-'}</div>
-                      </td>
-                      <td className="p-3">
-                        {(() => { const u = String(g.user?.idDocUrl||''); if (!u) return (<span className="text-sm text-muted-foreground">No document</span>); const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || ''; const s = u.startsWith('/uploads') ? `${base}${u}` : (u.startsWith('uploads') ? `${base}/${u}` : u); return (<a href={s} target="_blank" rel="noreferrer" className="text-sm underline">View</a>) })()}
-                      </td>
-                      <td className="p-3">{g.user?.address || '-'}</td>
-                      <td className="p-3">
-                        {g.lastBooking ? (
-                          <div className="text-sm">#{g.lastBooking.id} • Hotel {g.lastBooking.hotelId}</div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">No booking</div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {guests.length===0 && <tr><td className="p-3 text-muted-foreground" colSpan={5}>No guests yet</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-        )}
+        
 
-        {feature === 'pricing' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
-          <CardHeader><CardTitle>Dynamic Pricing</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="text-left"><th className="p-2">Hotel</th><th className="p-2">Normal ₹</th><th className="p-2">Weekend ₹</th><th className="p-2">Seasonal</th><th className="p-2">Special Days</th><th className="p-2">Actions</th></tr></thead>
-                <tbody>
-                  {hotels.map(h=>{
-                    const pf = pricingForm[h.id]||{ normalPrice:"", weekendPrice:"", seasonal:[], specials:[] }
-                    return (
-                      <tr key={h.id} className="border-t">
-                        <td className="p-2">
-                          {h.id} • {h.name}
-                          <div className="mt-2">
-                            <select className="px-2 py-1 rounded border bg-background text-xs" value={pricingType[h.id]||''} onChange={e=>{
-                              const sel = e.target.value
-                              setPricingType({ ...pricingType, [h.id]: sel })
-                              const selNorm = sel.trim().toLowerCase()
-                              const rrHotel = roomsRaw.find(r=>r.hotelId===h.id && r.type.trim().toLowerCase()===selNorm)
-                              const rrGlobal = roomsRaw.find(r=>r.type.trim().toLowerCase()===selNorm)
-                              const newPrice = String(rrHotel?.price ?? rrGlobal?.price ?? h.price ?? '')
-                              setPricingForm(prev => ({
-                                ...prev,
-                                [h.id]: { ...(prev[h.id]||pf), normalPrice: newPrice }
-                              }))
-                            }}>
-                              <option value="">Select room type</option>
-                              {Array.from(new Set([...
-                                roomTypes,
-                                ...roomsRaw.filter(r=>r.hotelId===h.id).map(r=>r.type)
-                              ])).map(t => (<option key={`${h.id}-${t}`} value={t}>{t}</option>))}
-                            </select>
-                          </div>
-                        </td>
-                        <td className="p-2"><Input placeholder="" value={(pricingForm[h.id]?.normalPrice ?? '')} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...(pricingForm[h.id]||pf), normalPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
-                        <td className="p-2"><Input placeholder="" value={pf.weekendPrice} onChange={e=>setPricingForm({ ...pricingForm, [h.id]: { ...pf, weekendPrice: e.target.value } })} disabled={!pricingEditing[h.id]} /></td>
-                        <td className="p-2">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button size="sm" variant="outline" className="p-2" aria-label="Select range" disabled={!pricingEditing[h.id]}>
-                                    <CalendarIcon className="h-4 w-4" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0" align="start">
-                                  <Calendar mode="range" selected={seasonSel[h.id]} onSelect={(v)=>setSeasonSel({ ...seasonSel, [h.id]: v })} numberOfMonths={2} fromDate={new Date()} disabled={{ before: new Date() }} />
-                                </PopoverContent>
-                              </Popover>
-                              <Input className="w-28" placeholder="" value={seasonPrice[h.id]||""} onChange={e=>setSeasonPrice({ ...seasonPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
-                              <Button size="sm" onClick={()=>{
-                                const sel: DateRange | undefined = seasonSel[h.id]
-                                const price = seasonPrice[h.id]||""
-                                const start = sel?.from ? sel.from.toISOString().slice(0,10) : ''
-                                const end = sel?.to ? sel.to.toISOString().slice(0,10) : ''
-                                if (start && end) {
-                                  const next = (pf.seasonal||[]).concat({ start, end, price })
-                                  setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                                }
-                              }} disabled={!pricingEditing[h.id]}>Apply Range</Button>
-                            </div>
-                            {(pf.seasonal||[]).map((row,idx)=> (
-                              <div key={idx} className="grid grid-cols-4 gap-2">
-                                <Input placeholder="Start" value={row.start} onChange={e=>{
-                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, start: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                                }} disabled={!pricingEditing[h.id]} />
-                                <Input placeholder="End" value={row.end} onChange={e=>{
-                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, end: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                                }} disabled={!pricingEditing[h.id]} />
-                                <Input placeholder="" value={row.price} onChange={e=>{
-                                  const next = (pf.seasonal||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                                }} disabled={!pricingEditing[h.id]} />
-                                <Button variant="outline" onClick={()=>{
-                                  const next = (pf.seasonal||[]).filter((_,i)=>i!==idx); setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                                }} disabled={!pricingEditing[h.id]}>Remove</Button>
-                              </div>
-                            ))}
-                            <Button size="sm" variant="secondary" onClick={()=>{
-                              const next = (pf.seasonal||[]).concat({ start:"", end:"", price:"" }); setPricingForm({ ...pricingForm, [h.id]: { ...pf, seasonal: next } })
-                            }} disabled={!pricingEditing[h.id]}>Add Seasonal</Button>
-                          </div>
-                        </td>
-                        <td className="p-2">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button size="sm" variant="outline" className="p-2" aria-label="Select dates" disabled={!pricingEditing[h.id]}>
-                                    <CalendarIcon className="h-4 w-4" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0" align="start">
-                                  <Calendar mode="multiple" selected={specialSel[h.id]||[]} onSelect={(v: Date[] | undefined)=>setSpecialSel({ ...specialSel, [h.id]: Array.isArray(v)?v:[] })} fromDate={new Date()} disabled={{ before: new Date() }} />
-                                </PopoverContent>
-                              </Popover>
-                              <Input className="w-28" placeholder="" value={specialPrice[h.id]||""} onChange={e=>setSpecialPrice({ ...specialPrice, [h.id]: e.target.value })} disabled={!pricingEditing[h.id]} />
-                              <Button size="sm" onClick={()=>{
-                                const dates = (specialSel[h.id]||[]).map(d=>d.toISOString().slice(0,10))
-                                const price = specialPrice[h.id]||""
-                                if (dates.length) {
-                                  const rows = dates.map(date=>({ date, price }))
-                                  const next = (pf.specials||[]).concat(rows)
-                                  setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
-                                }
-                              }} disabled={!pricingEditing[h.id]}>Apply Dates</Button>
-                            </div>
-                            {(pf.specials||[]).map((row,idx)=> (
-                              <div key={idx} className="grid grid-cols-3 gap-2">
-                                <Input placeholder="Date" value={row.date} onChange={e=>{
-                                  const next = (pf.specials||[]).slice(); next[idx] = { ...row, date: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
-                                }} disabled={!pricingEditing[h.id]} />
-                                <Input placeholder="" value={row.price} onChange={e=>{
-                                  const next = (pf.specials||[]).slice(); next[idx] = { ...row, price: e.target.value }; setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
-                                }} disabled={!pricingEditing[h.id]} />
-                                <Button variant="outline" onClick={()=>{
-                                  const next = (pf.specials||[]).filter((_,i)=>i!==idx); setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
-                                }} disabled={!pricingEditing[h.id]}>Remove</Button>
-                              </div>
-                            ))}
-                            <Button size="sm" variant="secondary" onClick={()=>{
-                              const next = (pf.specials||[]).concat({ date:"", price:"" }); setPricingForm({ ...pricingForm, [h.id]: { ...pf, specials: next } })
-                            }} disabled={!pricingEditing[h.id]}>Add Special Day</Button>
-                          </div>
-                        </td>
-                        <td className="p-2 flex gap-2 flex-wrap">
-                          <Button size="sm" variant="outline" onClick={()=>{ const next = !pricingEditing[h.id]; setPricingEditing({ ...pricingEditing, [h.id]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Pricing • Hotel #${h.id}` }) }}>{pricingEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button>
-                          <Button size="sm" onClick={()=>updatePricing.mutate({ hotelId: h.id, normalPrice: pf.normalPrice ? Number(pf.normalPrice) : undefined, weekendPrice: pf.weekendPrice ? Number(pf.weekendPrice) : undefined, seasonal: (pf.seasonal||[]).filter(s=>s.start&&s.end&&s.price).map(s=>({ start:s.start, end:s.end, price:Number(s.price) })), specials: (pf.specials||[]).filter(sp=>sp.date&&sp.price).map(sp=>({ date:sp.date, price:Number(sp.price) })) })} disabled={!pricingEditing[h.id]}>Update</Button>
-                          <Button size="sm" variant="outline" onClick={()=>deletePricing.mutate(h.id)}>Delete</Button>
-                        </td>
-                        </tr>
-                    )}
-                  )}
-                </tbody>
-              </table>
-            </div>
- 
-              </CardContent>
-            </Card>
-          )}
+        
 
           {/* ROOMS */}
           {feature === "rooms" && (
@@ -1398,6 +1200,7 @@ const OwnerDashboard = () => {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
+                        <th className="p-3">S.No</th>
                         <th className="p-3">Hotel</th>
                         <th className="p-3">Type</th>
                         <th className="p-3">Price</th>
@@ -1411,8 +1214,9 @@ const OwnerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="[&_tr:hover]:bg-muted/30">
-                      {roomSummaries.map((g) => (
+                      {roomSummaries.map((g, idx) => (
                         <tr key={g.key} className="border-t">
+                          <td className="p-3">{idx + 1}</td>
                           <td className="p-3">{g.hotelId} • {hotelName(g.hotelId)}</td>
                           <td className="p-3">{g.type}</td>
                           <td className="p-3">
@@ -1893,6 +1697,7 @@ const OwnerDashboard = () => {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
+                        <th className="p-3">S.No</th>
                         <th className="p-3">Guest</th>
                         <th className="p-3">Contact</th>
                         <th className="p-3">ID</th>
@@ -1902,13 +1707,14 @@ const OwnerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="[&_tr:hover]:bg-muted/30">
-                      {guestsTimeFiltered.map((g) => (
+                      {guestsOrdered.map((g, idx) => (
                         <tr
                           key={String(
                             g.user?.id || g.lastBooking?.id || Math.random(),
                           )}
                           className="border-t"
                         >
+                          <td className="p-3">{idx + 1}</td>
                           <td className="p-3">
                             <div className="font-medium">
                               {g.user?.fullName ||
@@ -1916,7 +1722,7 @@ const OwnerDashboard = () => {
                                   g.user?.lastName || ""
                                 }`.trim() ||
                                 `User #${g.user?.id}`}
-                            </div>
+                          </div>
                             <div className="text-xs text-muted-foreground">
                               #{g.user?.id}
                             </div>
@@ -2537,11 +2343,14 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {reviews.map((r) => (
+                  {reviews.map((r, idx) => (
                     <div key={r.id} className="border rounded-lg p-3 bg-card">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium">
-                          Hotel {r.hotelId} • {r.rating}/5
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-1 rounded bg-secondary text-xs">{idx + 1}</span>
+                          <div className="text-sm font-medium">
+                            Hotel {r.hotelId} • {r.rating}/5
+                          </div>
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(r.createdAt).toLocaleDateString()}
