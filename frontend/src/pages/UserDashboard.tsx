@@ -10,6 +10,7 @@ import { apiGet, apiPost } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
 type Booking = { id:number; hotelId:number; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string }
+type Review = { id:number; hotelId:number; rating:number; comment:string; createdAt:string }
 
 const UserDashboard = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
@@ -25,11 +26,13 @@ const UserDashboard = () => {
   const getSet = React.useCallback((type: keyof AddedStore) => new Set<number>((readAB()[type] || []) as number[]), [readAB])
 
   const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/user/bookings?userId=${userId}`), enabled: !!userId, refetchInterval: 8000 })
+  const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: Review[] }>(`/api/user/reviews?userId=${userId}`), enabled: !!userId })
   
 
   const bookingsAll = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
   
   const bookings = React.useMemo(() => bookingsAll, [bookingsAll])
+  const reviews = React.useMemo(() => reviewsQ.data?.reviews ?? [], [reviewsQ.data])
   
   const [dateFilterBookings, setDateFilterBookings] = React.useState<string>('all')
   const inRange = React.useCallback((iso?: string, kind: string = 'all') => {
@@ -83,6 +86,15 @@ const UserDashboard = () => {
       .catch(()=>{})
   }, [bookings, hotelMap])
   const hotelInfo = (id:number) => hotelMap[id]
+
+  const refHotelId = React.useMemo(()=>{
+    const lastRev = [...reviews].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())[0]
+    if (lastRev?.hotelId) return lastRev.hotelId
+    const lastBook = [...bookings].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())[0]
+    return Number(lastBook?.hotelId || 0) || 0
+  }, [reviews, bookings])
+
+  const contactQ = useQuery({ queryKey: ["hotel","contact", refHotelId], queryFn: () => apiGet<{ contact: { hotelName?: string; hotelEmail?: string; ownerName?: string; contact1?: string; contact2?: string }|null; owner?: { fullName?: string; email?: string; phone?: string } }>(`/api/hotels/${refHotelId}/contact`), enabled: !!refHotelId })
 
   const cancelBooking = useMutation({ mutationFn: (id:number) => apiPost(`/api/user/bookings/${id}/cancel`, {}), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","bookings",userId] }); toast({ title: "Booking cancelled", description: `#${vars}` }) }, onError: () => toast({ title: "Cancellation failed", variant: "destructive" }) })
   
@@ -192,6 +204,68 @@ const UserDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="shadow-card hover:shadow-card-hover transition-all">
+          <CardHeader>
+            <CardTitle>Guest Reviews</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reviews.map((r) => (
+                <div key={r.id} className="border rounded-lg p-3 bg-card">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Hotel {r.hotelId} • {r.rating}/5</div>
+                    <div className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">{r.comment}</div>
+                </div>
+              ))}
+              {reviews.length === 0 && (
+                <div className="text-sm text-muted-foreground">No reviews yet</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {refHotelId ? (
+          <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <CardHeader>
+              <CardTitle>Hotel Contact</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const c = contactQ.data?.contact || {}
+                const owner = contactQ.data?.owner || {}
+                const h = hotelInfo(refHotelId)
+                const name = c.hotelName || h?.name || `Hotel ${refHotelId}`
+                const email = c.hotelEmail || owner.email || ''
+                const ownerName = c.ownerName || owner.fullName || ''
+                const phone1 = c.contact1 || owner.phone || ''
+                const phone2 = c.contact2 || ''
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Hotel Name</div>
+                      <div className="text-sm font-medium">{name}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Hotel Email</div>
+                      <div className="text-sm font-medium">{email || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Owner Name</div>
+                      <div className="text-sm font-medium">{ownerName || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Contact Numbers</div>
+                      <div className="text-sm font-medium">{[phone1, phone2].filter(Boolean).join(', ') || '-'}</div>
+                    </div>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        ) : null}
 
         
       </div>

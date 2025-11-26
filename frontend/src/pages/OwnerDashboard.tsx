@@ -115,6 +115,14 @@ type GuestItem = {
   lastBooking: GuestLastBooking | null
 }
 
+type ContactInfo = {
+  hotelName: string
+  hotelEmail: string
+  ownerName: string
+  contact1: string
+  contact2: string
+}
+
 const OwnerDashboard = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
   const auth = raw ? (JSON.parse(raw) as { user?: { id?: number } }) : null
@@ -282,6 +290,43 @@ const OwnerDashboard = () => {
     if (s.startsWith("uploads")) return `${base}/${s}`
     return s
   }
+
+  const [contactForm, setContactForm] = React.useState<{ [hotelId: number]: ContactInfo }>({})
+  const [contactLoading, setContactLoading] = React.useState<boolean>(false)
+
+  React.useEffect(() => {
+    if (feature !== 'contact') return
+    const hs = hotelsQ.data?.hotels || []
+    if (!hs.length) return
+    const missing = hs.filter(h => !contactForm[h.id])
+    if (!missing.length) return
+    setContactLoading(true)
+    Promise.all(missing.map(h => apiGet<{ contact: Partial<ContactInfo>|null, owner?: { fullName?: string; email?: string; phone?: string } }>(`/api/hotels/${h.id}/contact`).catch(()=>({ contact: null, owner: undefined }))))
+      .then(list => {
+        const next = { ...contactForm }
+        list.forEach((res, idx) => {
+          const h = missing[idx]
+          const existing = res.contact || {}
+          next[h.id] = {
+            hotelName: existing.hotelName || h.name || '',
+            hotelEmail: existing.hotelEmail || '',
+            ownerName: existing.ownerName || res.owner?.fullName || '',
+            contact1: existing.contact1 || res.owner?.phone || '',
+            contact2: existing.contact2 || '',
+          }
+        })
+        setContactForm(next)
+      })
+      .finally(() => setContactLoading(false))
+  }, [feature, hotelsQ.data, contactForm])
+
+  const saveContact = useMutation({
+    mutationFn: (payload: { hotelId: number } & ContactInfo) => apiPost(`/api/contact`, payload),
+    onSuccess: (_res, vars) => {
+      toast({ title: 'Contact saved', description: `Hotel #${vars.hotelId}` })
+    },
+    onError: () => toast({ title: 'Save failed', variant: 'destructive' })
+  })
 
   const bookings = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
@@ -2404,6 +2449,65 @@ const OwnerDashboard = () => {
                       No reviews yet
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {feature === "contact" && (
+            <Card className="shadow-card hover:shadow-card-hover transition-all">
+              <CardHeader>
+                <CardTitle>Hotel Contact</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="p-2">Hotel</th>
+                        <th className="p-2">Hotel Name</th>
+                        <th className="p-2">Hotel Email</th>
+                        <th className="p-2">Owner Name</th>
+                        <th className="p-2">Contact #1</th>
+                        <th className="p-2">Contact #2</th>
+                        <th className="p-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(hotels || []).map(h => {
+                        const cf = contactForm[h.id] || ({ hotelName: h.name || '', hotelEmail: '', ownerName: '', contact1: '', contact2: '' } as ContactInfo)
+                        return (
+                          <tr key={h.id} className="border-t">
+                            <td className="p-2">{h.id}</td>
+                            <td className="p-2">
+                              <Input value={cf.hotelName} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), hotelName: e.target.value } }))} />
+                            </td>
+                            <td className="p-2">
+                              <Input value={cf.hotelEmail} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), hotelEmail: e.target.value } }))} />
+                            </td>
+                            <td className="p-2">
+                              <Input value={cf.ownerName} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), ownerName: e.target.value } }))} />
+                            </td>
+                            <td className="p-2">
+                              <Input value={cf.contact1} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), contact1: e.target.value } }))} />
+                            </td>
+                            <td className="p-2">
+                              <Input value={cf.contact2} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), contact2: e.target.value } }))} />
+                            </td>
+                            <td className="p-2">
+                              <Button size="sm" onClick={()=>{
+                                const cur = contactForm[h.id] || cf
+                                saveContact.mutate({ hotelId: h.id, ...cur })
+                              }}>Save</Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {(hotels || []).length===0 && (
+                        <tr><td className="p-3 text-muted-foreground" colSpan={7}>No hotels yet</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>

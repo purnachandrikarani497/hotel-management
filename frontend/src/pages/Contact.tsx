@@ -32,7 +32,7 @@ const Contact = () => {
     },
   ];
 
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", subject: "", message: "" })
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", subject: "", message: "", hotelName: "", hotelEmail: "", contact1: "", contact2: "", ownerName: "" })
   const mutation = useMutation({ mutationFn: () => apiPost("/api/contact", form) })
   return (
     <div className="min-h-screen flex flex-col">
@@ -85,6 +85,31 @@ const Contact = () => {
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Hotel Name</label>
+                      <Input placeholder="Golden Palms Hotel & Spa" value={form.hotelName} onChange={(e) => setForm({ ...form, hotelName: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Owner Name</label>
+                      <Input placeholder="Owner full name" value={form.ownerName} onChange={(e) => setForm({ ...form, ownerName: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Hotel Email</label>
+                      <Input type="email" placeholder="hotel@example.com" value={form.hotelEmail} onChange={(e) => setForm({ ...form, hotelEmail: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Contact Number 1</label>
+                      <Input placeholder="+91 98765 43210" value={form.contact1} onChange={(e) => setForm({ ...form, contact1: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Contact Number 2</label>
+                    <Input placeholder="Alternate contact" value={form.contact2} onChange={(e) => setForm({ ...form, contact2: e.target.value })} />
                   </div>
                   
                   <Button className="w-full" disabled={mutation.isPending}>{mutation.isPending ? "Sending..." : "Send Message"}</Button>

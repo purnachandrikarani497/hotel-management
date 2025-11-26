@@ -29,8 +29,10 @@ const Header = () => {
       { to: "/", label: "Home" },
       { to: "/hotels", label: "Hotels" },
       { to: "/about", label: "About" },
-      { to: "/contact", label: "Contact" },
     ]
+    if (!authed || role !== 'user') {
+      base.push({ to: "/contact", label: "Contact" })
+    }
     if (authed && role === 'user') {
       base.push({ to: "/dashboard/user/details", label: "User Details" })
       base.push({ to: "/dashboard/user", label: "User Dashboard" })
@@ -58,6 +60,7 @@ const Header = () => {
         { to: "/dashboard/owner/guests", label: "Guests" },
         { to: "/dashboard/owner/pricing", label: "Pricing" },
         { to: "/dashboard/owner/reviews", label: "Reviews" },
+        { to: "/dashboard/owner/contact", label: "Contact" },
         { to: "/dashboard/owner/coupons", label: "Coupons" },
       ]
     }
