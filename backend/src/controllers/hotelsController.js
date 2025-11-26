@@ -136,7 +136,50 @@ async function getRooms(req, res) {
     const id = Number(req.params.id);
     const items = await Room.find({ hotelId: id }).lean();
 
-    res.json({ rooms: items });
+    const dateStr = String(req.query.date || '').slice(0, 10);
+    const now = new Date();
+    const d = dateStr ? new Date(dateStr) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const bookings = await Booking.find({ hotelId: id, status: { $in: ['held', 'pending', 'confirmed', 'checked_in'] } }).lean();
+    const roomTypeMap = new Map(items.map(r => [Number(r.id), String(r.type || '')]));
+    const typeUsed = {};
+    for (const b of bookings) {
+      const bCi = new Date(b.checkIn);
+      const bCo = new Date(b.checkOut);
+      const isHeldActive = b.status === 'held' ? (b.holdExpiresAt && new Date(b.holdExpiresAt) > now) : true;
+      if (!isHeldActive) continue;
+      if (d >= bCi && d <= bCo) {
+        const t = roomTypeMap.get(Number(b.roomId || 0)) || String(b.roomType || '');
+        if (!t) continue;
+        typeUsed[t] = (typeUsed[t] || 0) + 1;
+      }
+    }
+
+    const typeTotals = items.reduce((acc, r) => {
+      const t = String(r.type || '');
+      acc[t] = (acc[t] || 0) + 1;
+      return acc;
+    }, {});
+
+    const seen = new Set();
+    const aggregated = [];
+    for (const r of items) {
+      const t = String(r.type || '');
+      if (seen.has(t)) continue;
+      seen.add(t);
+      const total = Number(typeTotals[t] || 0);
+      const used = Math.max(0, Number(typeUsed[t] || 0));
+      const available = Math.max(0, total - used);
+      aggregated.push({
+        ...r,
+        availability: available > 0,
+        total,
+        used,
+        available,
+      });
+    }
+
+    res.json({ rooms: aggregated });
 
   } catch (e) {
     console.error('[hotelsController.getRooms] error:', e);

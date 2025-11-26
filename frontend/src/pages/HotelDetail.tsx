@@ -37,6 +37,9 @@ type RoomInfo = {
   blocked: boolean;
   amenities?: string[];
   photos?: string[];
+  total?: number;
+  used?: number;
+  available?: number;
 };
 
 type Coupon = {
@@ -61,47 +64,6 @@ const HotelDetail = () => {
     queryFn: () => apiGet<{ hotel: Hotel }>(`/api/hotels/${id}`),
     enabled: !!id,
   });
-
-  // fetch rooms
-  const roomsQuery = useQuery({
-    queryKey: ["hotel", "rooms", id],
-    queryFn: () => apiGet<{ rooms: RoomInfo[] }>(`/api/hotels/${id}/rooms`),
-    enabled: !!id,
-  });
-
-  // fetch reviews
-  const reviewsQuery = useQuery({
-    queryKey: ["hotel", "reviews", id],
-    queryFn: () =>
-      apiGet<{
-        reviews: {
-          id: number;
-          userId: number;
-          hotelId: number;
-          rating: number;
-          comment: string;
-          createdAt: string;
-          response?: string;
-          user?: { id: number; email?: string; firstName?: string; lastName?: string; fullName?: string } | null;
-        }[];
-      }>(`/api/hotels/${id}/reviews`),
-    enabled: !!id,
-  });
-
-  const hotel: Hotel | undefined = data?.hotel;
-  const availableRooms = roomsQuery.data?.rooms || [];
-
-  const [roomType, setRoomType] = useState<string>(availableRooms[0]?.type || "Standard");
-  useEffect(() => {
-    const rs = availableRooms;
-    if (rs.length && !rs.find((r) => r.type === roomType)) {
-      setRoomType(rs[0].type);
-    }
-  }, [availableRooms, roomType]);
-
- 
-  const selectedRoom = availableRooms.find((r) => r.type === roomType) || availableRooms[0];
-  const price = Number(selectedRoom?.price ?? hotel?.price ?? 0);
 
   // date/time logic
   const istTZ = "Asia/Kolkata";
@@ -139,6 +101,48 @@ const HotelDetail = () => {
   const [checkInTime, setCheckInTime] = useState<string>(curHMInit);
   const [checkOutTime, setCheckOutTime] = useState<string>(curHMInit);
   const [guests, setGuests] = useState<number>(1);
+
+  // fetch rooms
+  const roomsQuery = useQuery({
+    queryKey: ["hotel", "rooms", id, checkIn],
+    queryFn: () => apiGet<{ rooms: RoomInfo[] }>(`/api/hotels/${id}/rooms?date=${checkIn}`),
+    enabled: !!id && !!checkIn,
+  });
+
+  // fetch reviews
+  const reviewsQuery = useQuery({
+    queryKey: ["hotel", "reviews", id],
+    queryFn: () =>
+      apiGet<{
+        reviews: {
+          id: number;
+          userId: number;
+          hotelId: number;
+          rating: number;
+          comment: string;
+          createdAt: string;
+          response?: string;
+          user?: { id: number; email?: string; firstName?: string; lastName?: string; fullName?: string } | null;
+        }[];
+      }>(`/api/hotels/${id}/reviews`),
+    enabled: !!id,
+  });
+
+  const hotel: Hotel | undefined = data?.hotel;
+  const availableRooms = roomsQuery.data?.rooms || [];
+
+  const [roomType, setRoomType] = useState<string>(availableRooms[0]?.type || "Standard");
+  useEffect(() => {
+    const rs = availableRooms;
+    if (rs.length && !rs.find((r) => r.type === roomType)) {
+      setRoomType(rs[0].type);
+    }
+  }, [availableRooms, roomType]);
+
+ 
+  const selectedRoom = availableRooms.find((r) => r.type === roomType) || availableRooms[0];
+  const price = Number(selectedRoom?.price ?? hotel?.price ?? 0);
+
 
   // auth
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null;
@@ -195,6 +199,7 @@ const HotelDetail = () => {
 
     onSuccess: (res) => {
       toast({ title: "Reservation successful", description: `Booking #${res.id} is on hold` });
+      qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
     },
     onError: () => {
       toast({ title: "Reservation failed", variant: "destructive" });
@@ -211,6 +216,7 @@ const HotelDetail = () => {
     mutationFn: (id: number) => apiPost(`/api/bookings/confirm/${id}`, {}),
     onSuccess: (_res, vars) => {
       toast({ title: "Payment confirmed", description: `Booking #${vars}` });
+      qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
     },
     onError: () => {
       toast({ title: "Payment failed", variant: "destructive" });
@@ -344,8 +350,8 @@ const HotelDetail = () => {
                                 ))}
                               </div>
                               <div className="flex gap-2 mt-2">
-                                <span className={`px-2 py-1 rounded text-xs ${r.availability ? "bg-primary/15 text-primary" : "bg-muted text-foreground"}`}>
-                                  {r.availability ? "Available" : "Unavailable"}
+                                <span className={`px-2 py-1 rounded text-xs ${Number(r?.available || 0) > 0 ? "bg-primary/15 text-primary" : "bg-muted text-foreground"}`}>
+                                  {Number(r?.available || 0) > 0 ? `${Number(r?.used || 0)}/${Number(r?.total || 0)}` : "Unavailable"}
                                 </span>
                                 {r.blocked && <span className="px-2 py-1 rounded text-xs bg-accent/20">Blocked</span>}
                               </div>

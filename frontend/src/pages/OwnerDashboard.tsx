@@ -200,6 +200,68 @@ const OwnerDashboard = () => {
   const roomsRaw = React.useMemo(() => roomsQ.data?.rooms || [], [roomsQ.data])
   const rooms = React.useMemo(() => roomsRaw || [], [roomsRaw])
 
+  const roomGroups = React.useMemo(() => {
+    const map: { [k: string]: { count: number; ids: number[] } } = {}
+    rooms.forEach((r) => {
+      const k = `${r.hotelId}|${r.type}`
+      const cur = map[k] || { count: 0, ids: [] }
+      cur.count += 1
+      cur.ids.push(r.id)
+      map[k] = cur
+    })
+    return map
+  }, [rooms])
+
+  const roomSummaries = React.useMemo(() => {
+    const map: { [k: string]: { key: string; hotelId: number; type: string; ids: number[]; count: number; price: number; members: number; amenities: string[]; photos: string[]; availability: boolean; blocked: boolean } } = {}
+    rooms.forEach((r) => {
+      const k = `${r.hotelId}|${r.type}`
+      const m = map[k]
+      if (!m) {
+        map[k] = { key: k, hotelId: r.hotelId, type: r.type, ids: [r.id], count: 1, price: r.price, members: r.members, amenities: r.amenities || [], photos: r.photos || [], availability: r.availability, blocked: r.blocked }
+      } else {
+        m.ids.push(r.id)
+        m.count += 1
+        m.price = r.price
+        m.members = r.members
+        m.amenities = Array.isArray(r.amenities) && r.amenities.length ? r.amenities : m.amenities
+        if ((r.photos || []).length) m.photos = r.photos || []
+        m.availability = r.availability
+        m.blocked = r.blocked
+      }
+    })
+    return Object.values(map).sort((a, b) => (a.hotelId - b.hotelId) || a.type.localeCompare(b.type))
+  }, [rooms])
+
+  const getRoomById = (id: number) => rooms.find((x) => x.id === id)
+
+  const adjustRoomCount = async (hotelId: number, type: string, target: number, base: Room) => {
+    const k = `${hotelId}|${type}`
+    const cur = roomGroups[k]?.count || 0
+    const safe = Math.max(1, Math.min(20, Number(target) || 1))
+    if (safe > cur) {
+      const payload = {
+        hotelId,
+        type,
+        price: base.price,
+        members: base.members,
+        amenities: base.amenities,
+        photos: base.photos,
+        availability: base.availability,
+      }
+      for (let i = 0; i < safe - cur; i++) {
+        createRoom.mutate(payload)
+      }
+    } else if (safe < cur) {
+      const ids = (roomGroups[k]?.ids || []).slice().sort((a, b) => b - a)
+      const toDelete = ids.slice(0, cur - safe)
+      for (const id of toDelete) {
+        await apiDelete(`/api/owner/rooms/${id}`)
+      }
+      qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
+    }
+  }
+
   const hotelName = (id: number) => {
     const all = hotelsQ.data?.hotels || []
     const h = all.find((x) => x.id === id)
@@ -403,11 +465,26 @@ const OwnerDashboard = () => {
           availability: boolean
         }
       >(`/api/owner/rooms`, { ownerId, ...p }),
-    onSuccess: (res) => {
+    onSuccess: (res, vars) => {
       if (res?.id) {
         addId("rooms", res.id)
         setLastRoomId(res.id)
         toast({ title: "Room added", description: `#${res.id}` })
+        qc.setQueryData(["owner", "rooms", ownerId], (prev: { rooms: Room[] } | undefined) => {
+          const base = prev?.rooms || []
+          const next: Room = {
+            id: res.id,
+            hotelId: vars.hotelId,
+            type: vars.type,
+            price: vars.price,
+            members: vars.members,
+            availability: vars.availability,
+            blocked: false,
+            amenities: Array.isArray(vars.amenities) ? vars.amenities : [],
+            photos: Array.isArray(vars.photos) ? vars.photos : [],
+          }
+          return { rooms: base.concat(next) }
+        })
       }
       qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
     },
@@ -535,6 +612,7 @@ const OwnerDashboard = () => {
     members: 1,
     amenities: "",
     availability: true,
+    count: 1,
   })
 
   const [roomPhotoFiles, setRoomPhotoFiles] = React.useState<File[]>([])
@@ -597,8 +675,12 @@ const OwnerDashboard = () => {
       availability?: boolean
       blocked?: boolean
       type?: string
+      availableRooms?: string
     }
   }>({})
+  const [roomGroupEdit, setRoomGroupEdit] = React.useState<{ [key: string]: { price?: string; members?: string; amenities?: string; availability?: boolean; blocked?: boolean; availableRooms?: string } }>({})
+  const [roomGroupEditing, setRoomGroupEditing] = React.useState<{ [key: string]: boolean }>({})
+  const [roomPhotosByGroup, setRoomPhotosByGroup] = React.useState<{ [key: string]: File[] }>({})
 
   const [roomEditing, setRoomEditing] = React.useState<{ [id: number]: boolean }>({})
   const [roomPhotosById, setRoomPhotosById] = React.useState<{ [id: number]: File[] }>({})
@@ -1157,7 +1239,7 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <RoomTypeManager types={roomTypes} onAddType={addRoomType} />
-                <div className="grid grid-cols-6 gap-3">
+                <div className="grid grid-cols-7 gap-3">
                   <div>
                     <label className="text-sm font-medium mb-2 block">
                       Hotel ID
@@ -1224,6 +1306,18 @@ const OwnerDashboard = () => {
                       }
                     />
                   </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">No. of Rooms</label>
+                    <select
+                      className="w-full px-4 py-2 rounded-lg border bg-background"
+                      value={roomForm.count}
+                      onChange={(e)=>setRoomForm({ ...roomForm, count: Number(e.target.value)||1 })}
+                    >
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                        <option key={`rooms-count-${n}`} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="col-span-2">
                     <label className="text-sm font-medium mb-2 block">
                       Amenities (comma-separated)
@@ -1277,7 +1371,7 @@ const OwnerDashboard = () => {
                         const photos = files.length
                           ? await Promise.all(files.map(toDataUrl))
                           : []
-                        createRoom.mutate({
+                        const payload = {
                           hotelId: roomForm.hotelId,
                           type: roomForm.type,
                           price: roomForm.price,
@@ -1288,7 +1382,11 @@ const OwnerDashboard = () => {
                             .filter(Boolean),
                           photos,
                           availability: roomForm.availability,
-                        })
+                        }
+                        const n = Math.max(1, Math.min(20, Number(roomForm.count)||1))
+                        for (let i = 0; i < n; i++) {
+                          createRoom.mutate(payload)
+                        }
                         setUploadInfo({
                           type: "photos",
                           names: files.map((f) => f.name),
@@ -1308,6 +1406,7 @@ const OwnerDashboard = () => {
                         <th className="p-3">Type</th>
                         <th className="p-3">Price</th>
                         <th className="p-3">Members</th>
+                        <th className="p-3">Rooms Available</th>
                         <th className="p-3">Amenities</th>
                         <th className="p-3">Photos</th>
                         <th className="p-3">Availability</th>
@@ -1316,281 +1415,41 @@ const OwnerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="[&_tr:hover]:bg-muted/30">
-                      {rooms.map((r) => (
-                        <tr key={r.id} className="border-t">
+                      {roomSummaries.map((g) => (
+                        <tr key={g.key} className="border-t">
+                          <td className="p-3">{g.hotelId} • {hotelName(g.hotelId)}</td>
+                          <td className="p-3">{g.type}</td>
                           <td className="p-3">
-                            {r.hotelId} • {hotelName(r.hotelId)}
+                            <Input type="number" className="w-24" placeholder="₹" value={roomGroupEdit[g.key]?.price ?? String(g.price)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), price: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
                           </td>
                           <td className="p-3">
-                            <select
-                              className="px-2 py-1 rounded border bg-background text-sm"
-                              value={roomEdit[r.id]?.type ?? r.type}
-                              onChange={(e) =>
-                                setRoomEdit({
-                                  ...roomEdit,
-                                  [r.id]: {
-                                    ...(roomEdit[r.id] || {}),
-                                    type: e.target.value,
-                                  },
-                                })
-                              }
-                              disabled={!roomEditing[r.id]}
-                            >
-                              {Array.from(
-                                new Set([
-                                  ...roomTypes,
-                                  ...roomsRaw
-                                    .filter((x) => x.hotelId === r.hotelId)
-                                    .map((x) => x.type),
-                                ]),
-                              ).map((t) => (
-                                <option key={`${r.id}-${t}`} value={t}>
-                                  {t}
-                                </option>
-                              ))}
-                            </select>
+                            <Input type="number" className="w-20" placeholder="#" value={roomGroupEdit[g.key]?.members ?? String(g.members)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), members: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
                           </td>
                           <td className="p-3">
-                            <Input
-                              type="number"
-                              className="w-24"
-                              placeholder="₹"
-                              value={roomEdit[r.id]?.price ?? String(r.price)}
-                              onChange={(e) =>
-                                setRoomEdit({
-                                  ...roomEdit,
-                                  [r.id]: {
-                                    ...(roomEdit[r.id] || {}),
-                                    price: e.target.value,
-                                  },
-                                })
-                              }
-                              disabled={!roomEditing[r.id]}
-                            />
+                            {roomGroupEditing[g.key] ? (
+                              <Input type="number" className="w-16" value={roomGroupEdit[g.key]?.availableRooms ?? String(g.count)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availableRooms: e.target.value } })} />
+                            ) : (
+                              <div>{g.count}</div>
+                            )}
                           </td>
                           <td className="p-3">
-                            <Input
-                              type="number"
-                              className="w-20"
-                              placeholder="#"
-                              value={roomEdit[r.id]?.members ?? String(r.members)}
-                              onChange={(e) =>
-                                setRoomEdit({
-                                  ...roomEdit,
-                                  [r.id]: {
-                                    ...(roomEdit[r.id] || {}),
-                                    members: e.target.value,
-                                  },
-                                })
-                              }
-                              disabled={!roomEditing[r.id]}
-                            />
+                            <div className="flex gap-1 flex-wrap mb-2">{g.amenities?.map((a)=> (<span key={`${g.key}-${a}`} className="px-2 py-1 bg-secondary rounded text-xs">{a}</span>))}</div>
+                            <Input placeholder="amenities" value={roomGroupEdit[g.key]?.amenities ?? ""} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), amenities: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
                           </td>
                           <td className="p-3">
-                            <div className="flex gap-1 flex-wrap mb-2">
-                              {r.amenities?.map((a) => (
-                                <span
-                                  key={a}
-                                  className="px-2 py-1 bg-secondary rounded text-xs"
-                                >
-                                  {a}
-                                </span>
-                              ))}
-                            </div>
-                            <Input
-                              placeholder="amenities"
-                              value={roomEdit[r.id]?.amenities ?? ""}
-                              onChange={(e) =>
-                                setRoomEdit({
-                                  ...roomEdit,
-                                  [r.id]: {
-                                    ...(roomEdit[r.id] || {}),
-                                    amenities: e.target.value,
-                                  },
-                                })
-                              }
-                              disabled={!roomEditing[r.id]}
-                            />
+                            <div className="flex gap-2 flex-wrap">{(g.photos || []).map((p)=> (<img key={`${g.key}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div>
+                            <div className="mt-2"><input type="file" multiple accept="image/*" onChange={(e)=> setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: Array.from(e.target.files||[]).slice(0,10) })} disabled={!roomGroupEditing[g.key]} /></div>
                           </td>
                           <td className="p-3">
-                            <div className="flex gap-2 flex-wrap">
-                              {(r.photos || []).map((p) => (
-                                <img
-                                  key={`${r.id}-${p}`}
-                                  src={resolve(p)}
-                                  alt="Room"
-                                  className="h-10 w-10 object-cover rounded"
-                                />
-                              ))}
-                            </div>
-                            <div className="mt-2">
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) =>
-                                  setRoomPhotosById({
-                                    ...roomPhotosById,
-                                    [r.id]: Array.from(
-                                      e.target.files || [],
-                                    ).slice(0, 10),
-                                  })
-                                }
-                                disabled={!roomEditing[r.id]}
-                              />
-                            </div>
+                            <div className="flex items-center gap-2"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${g.availability ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{g.availability ? 'Available' : 'Unavailable'}</span><input type="checkbox" checked={roomGroupEdit[g.key]?.availability ?? g.availability} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availability: e.target.checked } })} disabled={!roomGroupEditing[g.key]} /></div>
                           </td>
                           <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                  r.availability
-                                    ? "bg-primary/15 text-primary"
-                                    : "bg-muted text-foreground"
-                                }`}
-                              >
-                                {r.availability ? "Available" : "Unavailable"}
-                              </span>
-                              <input
-                                type="checkbox"
-                                checked={
-                                  roomEdit[r.id]?.availability ?? r.availability
-                                }
-                                onChange={(e) =>
-                                  setRoomEdit({
-                                    ...roomEdit,
-                                    [r.id]: {
-                                      ...(roomEdit[r.id] || {}),
-                                      availability: e.target.checked,
-                                    },
-                                  })
-                                }
-                                disabled={!roomEditing[r.id]}
-                              />
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                  r.blocked
-                                    ? "bg-muted text-foreground"
-                                    : "bg-primary/15 text-primary"
-                                }`}
-                              >
-                                {r.blocked ? "Blocked" : "Free"}
-                              </span>
-                              <input
-                                type="checkbox"
-                                checked={roomEdit[r.id]?.blocked ?? r.blocked}
-                                onChange={(e) =>
-                                  setRoomEdit({
-                                    ...roomEdit,
-                                    [r.id]: {
-                                      ...(roomEdit[r.id] || {}),
-                                      blocked: e.target.checked,
-                                    },
-                                  })
-                                }
-                                disabled={!roomEditing[r.id]}
-                              />
-                            </div>
+                            <div className="flex items-center gap-2"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${g.blocked ? 'bg-muted text-foreground' : 'bg-primary/15 text-primary'}`}>{g.blocked ? 'Blocked' : 'Free'}</span><input type="checkbox" checked={roomGroupEdit[g.key]?.blocked ?? g.blocked} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), blocked: e.target.checked } })} disabled={!roomGroupEditing[g.key]} /></div>
                           </td>
                           <td className="p-3 flex gap-2 flex-wrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                const next = !roomEditing[r.id]
-                                setRoomEditing({ ...roomEditing, [r.id]: next })
-                                toast({
-                                  title: next
-                                    ? "Edit enabled"
-                                    : "Edit disabled",
-                                  description: `Room #${r.id}`,
-                                })
-                              }}
-                            >
-                              {roomEditing[r.id] ? "Stop Edit" : "Edit"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                const edits = roomEdit[r.id] || {}
-                                const payload: {
-                                  price?: number
-                                  members?: number
-                                  amenities?: string[]
-                                  availability?: boolean
-                                  photos?: string[]
-                                  type?: string
-                                } = {}
-                                if (edits.price !== undefined)
-                                  payload.price = Number(edits.price)
-                                if (edits.members !== undefined)
-                                  payload.members = Number(edits.members)
-                                if (edits.amenities !== undefined)
-                                  payload.amenities = (edits.amenities || "")
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                if (edits.availability !== undefined)
-                                  payload.availability = !!edits.availability
-                                if (edits.type !== undefined)
-                                  payload.type = String(edits.type)
-                                updateRoom.mutate({ id: r.id, ...payload })
-                                if (edits.blocked !== undefined)
-                                  blockRoom.mutate({
-                                    id: r.id,
-                                    blocked: !!edits.blocked,
-                                  })
-                              }}
-                            >
-                              Update
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={async () => {
-                                const files = roomPhotosById[r.id] || []
-                                if (files.length) {
-                                  const toDataUrl = (f: File) =>
-                                    new Promise<string>((resolve, reject) => {
-                                      const reader = new FileReader()
-                                      reader.onload = () =>
-                                        resolve(String(reader.result || ""))
-                                      reader.onerror = reject
-                                      reader.readAsDataURL(f)
-                                    })
-                                  const dataUrls = await Promise.all(
-                                    files.map(toDataUrl),
-                                  )
-                                  updateRoom.mutate({
-                                    id: r.id,
-                                    photos: dataUrls,
-                                  })
-                                  setUploadInfo({
-                                    type: "photos",
-                                    names: files.map((f) => f.name),
-                                  })
-                                }
-                              }}
-                            >
-                              Add
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                apiDelete(`/api/owner/rooms/${r.id}`).then(() =>
-                                  qc.invalidateQueries({
-                                    queryKey: ["owner", "rooms", ownerId],
-                                  }),
-                                )
-                              }
-                            >
-                              Delete
-                            </Button>
+                            <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel #${g.hotelId} • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
+                            <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } const files = roomPhotosByGroup[g.key] || []; if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } }}>Update</Button>
+                            <Button size="sm" variant="outline" onClick={async ()=> { for (const id of g.ids) { await apiDelete(`/api/owner/rooms/${id}`) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) }}>Delete</Button>
                           </td>
                         </tr>
                       ))}

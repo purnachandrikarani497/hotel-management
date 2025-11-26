@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
-      "/api": { target: process.env.VITE_API_URL || "http://localhost:3015", changeOrigin: true },
-      "/uploads": { target: process.env.VITE_API_URL || "http://localhost:3015", changeOrigin: true },
+      "/api": { target: process.env.VITE_API_URL || "http://localhost:5000", changeOrigin: true },
+      "/uploads": { target: process.env.VITE_API_URL || "http://localhost:5000", changeOrigin: true },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

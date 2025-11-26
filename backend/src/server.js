@@ -70,12 +70,13 @@ const port = process.env.PORT ? Number(process.env.PORT) : 5000;
       )
     );
     console.log(`[Server] DB health: ${isConnected()}`);
+  } catch (e) {
+    console.error('[Server] DB init failed', e?.message || e);
+  } finally {
     app.listen(port, () => {
       console.log(`Backend running on http://localhost:${port}`);
       console.log(`[Server] DB connected: ${isConnected()}`);
     });
-  } catch (e) {
-    console.error('[Server] DB init failed', e?.message || e);
   }
 })();
 

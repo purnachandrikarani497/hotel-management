@@ -2,7 +2,7 @@
 
 const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>;
 const primaryBase = env?.VITE_API_URL || env?.VITE_API_BASE || '';
-const fallbacks: string[] = [primaryBase || '', 'http://localhost:3015', 'http://localhost:5000'];
+const fallbacks: string[] = ['', 'http://localhost:5000', primaryBase || ''];
 
 export async function apiGet<T>(path: string): Promise<T> {
   for (const base of fallbacks) {
