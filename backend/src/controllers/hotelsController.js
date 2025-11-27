@@ -1,7 +1,7 @@
 const { connect } = require('../config/db');
 const ensureSeed = require('../seed');
-const { Hotel, Booking, Review, Room, Coupon, User, Contact } = require('../models');
-const BASE_URL = process.env.API_BASE || `http://localhost:5000`;
+const { Hotel, Booking, Review, Room, Coupon, User } = require('../models');
+const BASE_URL = process.env.API_BASE || `http://localhost:${process.env.PORT || 5000}`;
 
 function toPublicUrl(url) {
   if (!url || typeof url !== 'string') return '';
@@ -86,8 +86,22 @@ async function getById(req, res) {
     const resolved = toPublicUrl(primary);
     const gallery = Array.isArray(hotelRaw.images) ? hotelRaw.images.map(toPublicUrl).filter(Boolean) : [];
 
+    let ownerEmail = ''
+    let ownerPhone = ''
+    let ownerName = ''
+    try {
+      const owner = hotelRaw.ownerId ? await User.findOne({ id: Number(hotelRaw.ownerId) }).lean() : null
+      ownerEmail = String(owner?.email || '')
+      ownerPhone = String(owner?.phone || '')
+      ownerName = String((owner?.fullName || `${owner?.firstName || ''} ${owner?.lastName || ''}`.trim()) || '')
+    } catch (_) {}
+
     const hotel = {
       ...hotelRaw,
+      contactEmail: String(hotelRaw.contactEmail || ownerEmail || ''),
+      contactPhone1: String(hotelRaw.contactPhone1 || ownerPhone || ''),
+      contactPhone2: String(hotelRaw.contactPhone2 || ''),
+      ownerName: String(hotelRaw.ownerName || ownerName || ''),
       image: resolved || 'https://placehold.co/800x600?text=Hotel',
       images: gallery
     };
@@ -96,42 +110,6 @@ async function getById(req, res) {
 
   } catch (e) {
     console.error('[hotelsController.getById] error:', e);
-    res.status(503).json({ error: 'Database unavailable' });
-  }
-}
-
-async function getContact(req, res) {
-  try {
-    await connect();
-    await ensureSeed();
-
-    const id = Number(req.params.id);
-    const hotel = await Hotel.findOne({ id }).lean();
-    if (!hotel) return res.status(404).json({ error: 'Not found' });
-
-    let contact = await Contact.findOne({ hotelId: id }).sort({ createdAt: -1 }).lean();
-    if (!contact) {
-      const hname = String(hotel.name || '').trim();
-      if (hname) {
-        contact = await Contact.findOne({ hotelName: hname }).sort({ createdAt: -1 }).lean();
-      }
-    }
-    let owner = null;
-    if (hotel.ownerId) {
-      const o = await User.findOne({ id: Number(hotel.ownerId) }).lean();
-      if (o) {
-        owner = {
-          id: o.id,
-          fullName: o.fullName || `${o.firstName || ''} ${o.lastName || ''}`.trim(),
-          email: o.email || '',
-          phone: o.phone || ''
-        };
-      }
-    }
-    res.json({ contact: contact || null, owner });
-
-  } catch (e) {
-    console.error('[hotelsController.getContact] error:', e);
     res.status(503).json({ error: 'Database unavailable' });
   }
 }
@@ -325,6 +303,5 @@ module.exports = {
   getRooms,
   featured,
   about,
-  getCoupons,
-  getContact
+  getCoupons
 };

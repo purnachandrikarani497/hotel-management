@@ -18,9 +18,13 @@ async function bookings(req, res) {
 async function cancelBooking(req, res) {
   await connect(); await ensureSeed();
   const id = Number(req.params.id)
+  const { reason } = req.body || {}
   const b = await Booking.findOne({ id })
   if (!b) return res.status(404).json({ error: 'Booking not found' })
+  const r = String(reason || '').trim()
+  if (r.length < 3) return res.status(400).json({ error: 'Please select a cancellation reason' })
   b.status = 'cancelled'
+  b.cancelReason = r
   await b.save()
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {
@@ -30,7 +34,7 @@ async function cancelBooking(req, res) {
     thread = await MessageThread.findOne({ id: tid }).lean()
   }
   const mid = await nextIdFor('Message')
-  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by user`, readByUser: true, readByOwner: false })
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by user: ${r}`, readByUser: true, readByOwner: false })
   res.json({ status: 'updated' })
 }
 

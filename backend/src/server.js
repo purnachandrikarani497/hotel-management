@@ -130,10 +130,8 @@ app.get('/api/db/health', async (req, res) => {
 app.post('/api/contact', async (req, res) => {
   await connect();
   await ensureSeed();
-  const { firstName, lastName, email, subject, message, hotelId, hotelName, hotelEmail, contact1, contact2, ownerName } = req.body || {};
-  const hasSupportMsg = !!(email && message);
-  const hasHotelContact = !!(hotelId || (hotelName && (hotelEmail || contact1 || contact2 || ownerName)));
-  if (!hasSupportMsg && !hasHotelContact) {
+  const { firstName, lastName, email, subject, message } = req.body || {};
+  if (!email || !message) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   const id = await nextIdFor('Contact');
@@ -144,12 +142,6 @@ app.post('/api/contact', async (req, res) => {
     email,
     subject,
     message,
-    hotelId: hotelId ? Number(hotelId) : null,
-    hotelName: String(hotelName || ''),
-    hotelEmail: String(hotelEmail || ''),
-    contact1: String(contact1 || ''),
-    contact2: String(contact2 || ''),
-    ownerName: String(ownerName || ''),
   });
   res.json({ status: 'received', id });
 });

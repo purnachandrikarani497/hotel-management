@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -21,10 +21,20 @@ const Hotels = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<string>("Rating")
+  const qc = useQueryClient()
   const { data, isLoading, isError } = useQuery({
     queryKey: ["hotels"],
     queryFn: () => apiGet<{ hotels: Hotel[] }>(`/api/hotels`)
   })
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === 'hotelUpdated' && e.newValue) {
+        qc.invalidateQueries({ queryKey: ["hotels"] })
+      }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [qc])
   const qLower = q.trim().toLowerCase()
   const displayHotels = useMemo(()=>{
     const hotels: Hotel[] = data?.hotels || []

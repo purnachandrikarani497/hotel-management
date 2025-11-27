@@ -158,13 +158,17 @@ async function updateDocs(req, res) {
 async function updateInfo(req, res) {
   await connect(); await ensureSeed();
   const id = Number(req.params.id);
-  const { name, location, price, description, status, featured } = req.body || {};
+  const { name, location, price, description, status, featured, contactEmail, contactPhone1, contactPhone2, ownerName } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
   if (name !== undefined) h.name = String(name);
   if (location !== undefined) h.location = String(location);
   if (price !== undefined) h.price = Number(price) || 0;
   if (description !== undefined) h.description = String(description);
+  if (contactEmail !== undefined) h.contactEmail = String(contactEmail);
+  if (contactPhone1 !== undefined) h.contactPhone1 = String(contactPhone1);
+  if (contactPhone2 !== undefined) h.contactPhone2 = String(contactPhone2);
+  if (ownerName !== undefined) h.ownerName = String(ownerName);
   if (status !== undefined) {
     const allowed = ['approved','rejected','suspended','pending'];
     const s = String(status);
@@ -287,6 +291,7 @@ async function guests(req, res) {
           hotelId: b.hotelId,
           checkIn: b.checkIn,
           checkOut: b.checkOut,
+          guests: Number(b.guests || 0),
           status: b.status,
           createdAt: b.createdAt
         }
@@ -411,13 +416,12 @@ async function cancelBooking(req, res) {
   const { reason } = req.body || {};
   const b = await Booking.findOne({ id });
   if (!b) return res.status(404).json({ error: 'Booking not found' });
-  const ci = new Date(b.checkIn);
-  const msUntilCi = (ci instanceof Date && !isNaN(ci.getTime())) ? (ci.getTime() - Date.now()) : null;
   if (!reason || String(reason).trim().length < 5) {
     return res.status(400).json({ error: 'Cancellation reason required' });
   }
-  if (msUntilCi !== null && msUntilCi < 24*60*60*1000) {
-    return res.status(409).json({ error: 'Owner cancellations must be at least 24 hours before check-in' });
+  const s = String(b.status || '').toLowerCase();
+  if (s === 'checked_in' || s === 'checked_out') {
+    return res.status(409).json({ error: 'Cannot cancel after check-in' });
   }
   b.status = 'cancelled';
   b.cancelReason = String(reason).trim();

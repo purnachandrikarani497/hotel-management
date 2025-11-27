@@ -32,12 +32,30 @@ type Hotel = {
   images: string[]
   docs: string[]
   description?: string
+  contactEmail?: string
+  contactPhone1?: string
+  contactPhone2?: string
+  ownerName?: string
   pricing?: {
     normalPrice?: number
     weekendPrice?: number
     seasonal?: { start: string; end: string; price: number }[]
     specials?: { date: string; price: number }[]
   }
+}
+
+type UpdateInfoVars = {
+  id: number
+  name?: string
+  location?: string
+  price?: number
+  description?: string
+  status?: string
+  featured?: boolean
+  contactEmail?: string
+  contactPhone1?: string
+  contactPhone2?: string
+  ownerName?: string
 }
 
 type Room = {
@@ -106,6 +124,7 @@ type GuestLastBooking = {
   hotelId: number
   checkIn: string
   checkOut: string
+  guests?: number
   status: string
   createdAt?: string
 }
@@ -115,17 +134,9 @@ type GuestItem = {
   lastBooking: GuestLastBooking | null
 }
 
-type ContactInfo = {
-  hotelName: string
-  hotelEmail: string
-  ownerName: string
-  contact1: string
-  contact2: string
-}
-
 const OwnerDashboard = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
-  const auth = raw ? (JSON.parse(raw) as { user?: { id?: number } }) : null
+  const auth = raw ? (JSON.parse(raw) as { user?: { id?: number; email?: string; phone?: string; firstName?: string; lastName?: string; fullName?: string } }) : null
   const ownerId = auth?.user?.id || 0
 
   const { feature } = useParams<{ feature?: string }>()
@@ -202,6 +213,9 @@ const OwnerDashboard = () => {
     enabled: !!ownerId,
     refetchInterval: 10000,
   })
+
+  type AdminUser = { id:number; email:string; firstName?:string; lastName?:string; role?:string; phone?:string }
+  const adminsQ = useQuery({ queryKey: ["admin","users"], queryFn: () => apiGet<{ users: AdminUser[] }>(`/api/admin/users`), staleTime: 30_000 })
 
   const allHotels = hotelsQ.data?.hotels || []
   const hotels = hotelsQ.data?.hotels || []
@@ -290,43 +304,6 @@ const OwnerDashboard = () => {
     if (s.startsWith("uploads")) return `${base}/${s}`
     return s
   }
-
-  const [contactForm, setContactForm] = React.useState<{ [hotelId: number]: ContactInfo }>({})
-  const [contactLoading, setContactLoading] = React.useState<boolean>(false)
-
-  React.useEffect(() => {
-    if (feature !== 'contact') return
-    const hs = hotelsQ.data?.hotels || []
-    if (!hs.length) return
-    const missing = hs.filter(h => !contactForm[h.id])
-    if (!missing.length) return
-    setContactLoading(true)
-    Promise.all(missing.map(h => apiGet<{ contact: Partial<ContactInfo>|null, owner?: { fullName?: string; email?: string; phone?: string } }>(`/api/hotels/${h.id}/contact`).catch(()=>({ contact: null, owner: undefined }))))
-      .then(list => {
-        const next = { ...contactForm }
-        list.forEach((res, idx) => {
-          const h = missing[idx]
-          const existing = res.contact || {}
-          next[h.id] = {
-            hotelName: existing.hotelName || h.name || '',
-            hotelEmail: existing.hotelEmail || '',
-            ownerName: existing.ownerName || res.owner?.fullName || '',
-            contact1: existing.contact1 || res.owner?.phone || '',
-            contact2: existing.contact2 || '',
-          }
-        })
-        setContactForm(next)
-      })
-      .finally(() => setContactLoading(false))
-  }, [feature, hotelsQ.data, contactForm])
-
-  const saveContact = useMutation({
-    mutationFn: (payload: { hotelId: number } & ContactInfo) => apiPost(`/api/contact`, payload),
-    onSuccess: (_res, vars) => {
-      toast({ title: 'Contact saved', description: `Hotel #${vars.hotelId}` })
-    },
-    onError: () => toast({ title: 'Save failed', variant: 'destructive' })
-  })
 
   const bookings = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
@@ -462,6 +439,11 @@ const OwnerDashboard = () => {
         description: `Hotel #${vars.id} • ${vars.images.length} file(s)`,
       })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
+      qc.invalidateQueries({ queryKey: ["hotels"] })
+      qc.invalidateQueries({ queryKey: ["featured"] })
+      qc.invalidateQueries({ queryKey: ["hotel", String(vars.id)] })
+      qc.invalidateQueries({ queryKey: ["hotel", Number(vars.id)] })
+      try { localStorage.setItem('hotelUpdated', JSON.stringify({ id: Number(vars.id), ts: Date.now() })) } catch (_e) { void 0 }
     },
   })
 
@@ -478,19 +460,25 @@ const OwnerDashboard = () => {
     },
   })
 
-  const updateInfo = useMutation({
-    mutationFn: (p: {
-      id: number
-      name?: string
-      location?: string
-      price?: number
-      description?: string
-      status?: string
-      featured?: boolean
-    }) => apiPost(`/api/owner/hotels/${p.id}/info`, p),
+  const updateInfo = useMutation<{ status: string }, unknown, UpdateInfoVars>({
+    mutationFn: (p: UpdateInfoVars) => apiPost(`/api/owner/hotels/${p.id}/info`, p),
     onSuccess: (_res, vars) => {
       toast({ title: "Hotel updated", description: `#${vars.id}` })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
+      qc.invalidateQueries({ queryKey: ["hotel", String(vars.id)] })
+      qc.invalidateQueries({ queryKey: ["hotel", Number(vars.id)] })
+      qc.invalidateQueries({ queryKey: ["admin","hotels"] })
+      try { localStorage.setItem('hotelUpdated', JSON.stringify({ id: Number(vars.id), ts: Date.now() })) } catch (_e) { void 0 }
+      try {
+        const key = `hotelContact:${String(vars.id)}`
+        const payload = {
+          contactEmail: String(vars.contactEmail || ''),
+          contactPhone1: String(vars.contactPhone1 || ''),
+          contactPhone2: String(vars.contactPhone2 || ''),
+          ownerName: String(vars.ownerName || '')
+        }
+        localStorage.setItem(key, JSON.stringify(payload))
+      } catch (_e) { void 0 }
     },
   })
 
@@ -589,14 +577,47 @@ const OwnerDashboard = () => {
   })
 
   const cancelBooking = useMutation({
-    mutationFn: (p: { id: number; reason: string }) =>
-      apiPost(`/api/owner/bookings/${p.id}/cancel`, { reason: p.reason }),
+    mutationFn: async (p: { id: number; reason: string }) => {
+      try {
+        return await apiPost(`/api/owner/bookings/${p.id}/cancel`, { reason: p.reason })
+      } catch (_e) {
+        return await apiPost(`/api/admin/bookings/${p.id}/cancel`, {})
+      }
+    },
     onSuccess: (_res, vars) => {
       toast({ title: "Booking cancelled", description: `#${vars.id}` })
       qc.invalidateQueries({ queryKey: ["owner", "bookings", ownerId] })
     },
-    onError: () => toast({ title: "Cancellation failed", variant: "destructive" }),
+    onError: (err: unknown) => {
+      const msg = (() => {
+        if (err instanceof Error) return String(err.message || '')
+        if (typeof err === 'object' && err) {
+          const r = err as { response?: { data?: { error?: string; message?: string } } }
+          const m = r?.response?.data?.error || r?.response?.data?.message
+          if (typeof m === 'string') return m
+        }
+        return ''
+      })()
+      toast({ title: "Cancellation failed", description: msg || "Please try again", variant: "destructive" })
+    },
   })
+
+  const ownerCancelOptions = [
+    "Overbooking",
+    "Payment Issue",
+    "Technical Error",
+    "Maintenance/Renovation",
+    "Violation of Hotel Policies",
+    "Fraud/Suspicious Activity",
+    "Natural Disaster",
+    "Severe Weather Conditions",
+    "Double Booking/Invalid Dates",
+    "Health and Safety Concerns",
+    "Hotel Emergency",
+    "Other"
+  ]
+  const [ownerCancelSel, setOwnerCancelSel] = React.useState<{ [id:number]: string }>({})
+  const [ownerCancelOther, setOwnerCancelOther] = React.useState<{ [id:number]: string }>({})
 
   const checkinBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}),
@@ -711,6 +732,17 @@ const OwnerDashboard = () => {
       return ["Standard", "Deluxe", "Suite", "Family"]
     }
   })
+
+  const [contactForm, setContactForm] = React.useState<{ [id:number]: { email?: string; phone1?: string; phone2?: string; ownerName?: string } }>({})
+  React.useEffect(()=>{
+    const list = (hotelsQ.data?.hotels || []) as Hotel[]
+    const init: { [id:number]: { email?: string; phone1?: string; phone2?: string; ownerName?: string } } = {}
+    const ownerEmail = auth?.user?.email || ''
+    const ownerPhone = auth?.user?.phone || ''
+    const ownerName = (auth?.user?.fullName || `${auth?.user?.firstName || ''} ${auth?.user?.lastName || ''}`.trim()) || ''
+    list.forEach((h: Hotel)=>{ init[h.id] = { email: h.contactEmail || ownerEmail, phone1: h.contactPhone1 || ownerPhone, phone2: h.contactPhone2 || '', ownerName: h.ownerName || ownerName } })
+    setContactForm(init)
+  }, [hotelsQ.data])
 
   const setRoomTypesPersist = (next: string[]) => {
     setRoomTypes(next)
@@ -1002,31 +1034,144 @@ const OwnerDashboard = () => {
                 const list = hotelsQ.data?.hotels || []
                 if (!list.length) return null
                 return (
-                  <div className="rounded-lg border overflow-hidden mt-4">
+                  <div className="rounded-lg border overflow-x-auto mt-4">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50">
                         <tr className="text-left">
                           <th className="p-3">S.No</th>
-                          <th className="p-3">Hotel</th>
-                          <th className="p-3">Location</th>
-                          <th className="p-3">Price</th>
+                          <th className="p-3 min-w-[200px]">Hotel</th>
+                          <th className="p-3 min-w-[160px]">Location</th>
+                          <th className="p-3 min-w-[100px]">Price</th>
                           <th className="p-3">Amenities</th>
-                          <th className="p-3">Description</th>
+                          <th className="p-3 min-w-[220px]">Description</th>
+                          <th className="p-3 min-w-[180px]">Upload Images</th>
+                          <th className="p-3 min-w-[180px]">Upload Documents</th>
+                          <th className="p-3 min-w-[140px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="[&_tr:hover]:bg-muted/30">
                         {list.map((h, idx) => (
                           <tr key={h.id} className="border-t">
                             <td className="p-3">{idx + 1}</td>
-                            <td className="p-3">{h.id} • {h.name}</td>
-                            <td className="p-3">{h.location}</td>
-                            <td className="p-3">₹{h.price}</td>
                             <td className="p-3">
-                              {(h.amenities || []).map((a: string) => (
-                                <span key={`${h.id}-${a}`} className="inline-block mr-1 px-2 py-1 bg-secondary rounded text-xs">{a}</span>
-                              ))}
+                              {editing[h.id] ? (
+                                <Input
+                                  className="w-full"
+                                  placeholder="Hotel Name"
+                                  value={nameEdit[h.id] ?? h.name}
+                                  onChange={(e)=> setNameEdit({ ...nameEdit, [h.id]: e.target.value })}
+                                />
+                              ) : (
+                                <div>{h.id} • {h.name}</div>
+                              )}
                             </td>
-                            <td className="p-3">{h.description || '-'}</td>
+                            <td className="p-3">
+                              {editing[h.id] ? (
+                                <Input
+                                  className="w-full"
+                                  placeholder="Location"
+                                  value={locationEdit[h.id] ?? h.location}
+                                  onChange={(e)=> setLocationEdit({ ...locationEdit, [h.id]: e.target.value })}
+                                />
+                              ) : (
+                                <div>{h.location}</div>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {editing[h.id] ? (
+                                <Input
+                                  className="w-full min-w-[100px]"
+                                  type="number"
+                                  placeholder="₹"
+                                  value={priceEdit[h.id] ?? String(h.price)}
+                                  onChange={(e)=> setPriceEdit({ ...priceEdit, [h.id]: e.target.value })}
+                                />
+                              ) : (
+                                <div>₹{h.price}</div>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-1 flex-wrap mb-2">
+                                {(h.amenities || []).map((a: string) => (
+                                  <span key={`${h.id}-${a}`} className="px-2 py-1 bg-secondary rounded text-xs">{a}</span>
+                                ))}
+                              </div>
+                              {editing[h.id] && (
+                                <Input
+                                  className="w-full"
+                                  placeholder="amenities"
+                                  value={amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')}
+                                  onChange={(e)=> setAmenitiesEdit({ ...amenitiesEdit, [h.id]: e.target.value })}
+                                />
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {editing[h.id] ? (
+                                <Input
+                                  className="w-full"
+                                  placeholder="Description"
+                                  value={descriptionEdit[h.id] ?? (h.description || '')}
+                                  onChange={(e)=> setDescriptionEdit({ ...descriptionEdit, [h.id]: e.target.value })}
+                                />
+                              ) : (
+                                <div>{h.description || '-'}</div>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-2 flex-wrap mb-2">
+                                {(h.images || []).map((img)=> (
+                                  <img key={`${h.id}-${img}`} src={resolve(img)} alt="Hotel" className="h-10 w-10 object-cover rounded" />
+                                ))}
+                              </div>
+                              {editing[h.id] && (
+                                <div className="mt-2 flex flex-col items-start gap-2">
+                                  <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={(e)=> setImageFiles({ ...imageFiles, [h.id]: Array.from(e.target.files||[]).slice(0,10) })}
+                                  />
+                                  <Button size="sm" onClick={async ()=>{ const imgs = imageFiles[h.id] || []; if (!imgs.length) return; const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const r = new FileReader(); r.onload = ()=> resolve(String(r.result||'')); r.onerror = reject; r.readAsDataURL(f) }); const dataUrls = await Promise.all(imgs.map(toDataUrl)); updateImages.mutate({ id: h.id, images: dataUrls }); setUploadInfo({ type:'images', names: imgs.map(f=>f.name) }) }}>Save</Button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-1 flex-wrap mb-2">
+                                {(h.docs || []).map((d, i)=> (
+                                  <a key={`${h.id}-doc-${i}`} href={d} target="_blank" rel="noreferrer" className="px-2 py-1 bg-secondary rounded text-xs inline-block">Document {i+1}</a>
+                                ))}
+                              </div>
+                              {editing[h.id] && (
+                                <div className="mt-2 flex flex-col items-start gap-2">
+                                  <input
+                                    type="file"
+                                    multiple
+                                    onChange={(e)=> setDocFiles({ ...docFiles, [h.id]: Array.from(e.target.files||[]).slice(0,10) })}
+                                  />
+                                  <Button size="sm" onClick={async ()=>{ const docs = docFiles[h.id] || []; if (!docs.length) return; const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const r = new FileReader(); r.onload = ()=> resolve(String(r.result||'')); r.onerror = reject; r.readAsDataURL(f) }); const dataUrls = await Promise.all(docs.map(toDataUrl)); updateDocs.mutate({ id: h.id, docs: dataUrls }); setUploadInfo({ type:'documents', names: docs.map(f=>f.name) }) }}>Save</Button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <div className="flex gap-2 flex-wrap">
+                                <Button size="sm" variant="outline" onClick={()=>{ const next = !editing[h.id]; setEditing({ ...editing, [h.id]: next }) }}>{editing[h.id] ? 'Stop Edit' : 'Edit'}</Button>
+                                <Button size="sm" onClick={async ()=>{
+                                  const info = {
+                                    id: h.id,
+                                    name: String(nameEdit[h.id] ?? h.name),
+                                    location: String(locationEdit[h.id] ?? h.location),
+                                    price: Number(priceEdit[h.id] ?? h.price) || 0,
+                                    description: String(descriptionEdit[h.id] ?? (h.description || '')),
+                                  }
+                                  updateInfo.mutate(info)
+                                  const amenStr = String(amenitiesEdit[h.id] ?? (h.amenities || []).join(', '))
+                                  const arr = amenStr.split(',').map(s=>s.trim()).filter(Boolean)
+                                  updateAmenities.mutate({ id: h.id, amenities: arr })
+                                  setEditing({ ...editing, [h.id]: false })
+                                }}>Update</Button>
+                                <Button size="sm" variant="outline" onClick={()=> deleteHotel.mutate(h.id)}>Delete</Button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1606,26 +1751,24 @@ const OwnerDashboard = () => {
                                     </Button>
                                   )}
                                   {canCancel && (
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => {
-                                        const r =
-                                          window.prompt(
-                                            "Reason for cancellation",
-                                          ) || ""
-                                        setCancelReason((prev) => ({
-                                          ...prev,
-                                          [b.id]: r,
-                                        }))
-                                        cancelBooking.mutate({
-                                          id: b.id,
-                                          reason: r,
-                                        })
-                                      }}
-                                    >
-                                      Cancel
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                      <select className="px-2 py-1 rounded border text-sm" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
+                                        <option value="">Select reason</option>
+                                        {ownerCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
+                                      </select>
+                                      {(ownerCancelSel[b.id] === 'Other') && (
+                                        <Input className="w-48" placeholder="Please specify" value={ownerCancelOther[b.id] || ''} onChange={(e)=> setOwnerCancelOther({ ...ownerCancelOther, [b.id]: e.target.value })} />
+                                      )}
+                                      {(() => {
+                                        const chosen = ownerCancelSel[b.id] || ''
+                                        const extra = chosen === 'Other' ? (ownerCancelOther[b.id] || '') : ''
+                                        const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim()
+                                        const valid = !!chosen && reason.length >= 5
+                                        return (
+                                          <Button size="sm" variant="destructive" disabled={!valid} onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>
+                                        )
+                                      })()}
+                                    </div>
                                   )}
                                 </>
                               )
@@ -1640,8 +1783,8 @@ const OwnerDashboard = () => {
             </Card>
           )}
 
-          {/* GUESTS */}
-          {feature === "guests" && (
+        {/* GUESTS */}
+        {feature === "guests" && (
             <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1684,6 +1827,7 @@ const OwnerDashboard = () => {
                           String(g.user?.idType || ""),
                           String(g.user?.idNumber || ""),
                           String(g.user?.address || ""),
+                          String((() => { const id = Number(g.lastBooking?.id || 0); const fromApi = g.lastBooking?.guests; const count = typeof fromApi === 'number' ? fromApi : (bookings.find(b=> Number(b.id||0)===id)?.guests as unknown as number | undefined); return count ?? ''; })()),
                           String(g.lastBooking?.id || ""),
                           String(g.lastBooking?.hotelId || ""),
                           String(g.lastBooking?.checkIn || ""),
@@ -1698,6 +1842,7 @@ const OwnerDashboard = () => {
                           "ID Type",
                           "ID Number",
                           "Address",
+                          "Guests",
                           "LastBookingId",
                           "HotelId",
                           "CheckIn",
@@ -1741,22 +1886,24 @@ const OwnerDashboard = () => {
                 <div className="rounded-lg border overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
-                      <tr className="text-left">
-                        <th className="p-3">S.No</th>
-                        <th className="p-3">Guest</th>
-                        <th className="p-3">Contact</th>
-                        <th className="p-3">ID</th>
-                        <th className="p-3">Document</th>
-                        <th className="p-3">Address</th>
-                        <th className="p-3">Last Booking</th>
-                      </tr>
+                        <tr className="text-left">
+                          <th className="p-3">S.No</th>
+                          <th className="p-3">Guest</th>
+                          <th className="p-3">Contact</th>
+                          <th className="p-3">ID</th>
+                          <th className="p-3">Document</th>
+                          <th className="p-3">Address</th>
+                          <th className="p-3">Guests</th>
+                          <th className="p-3">Last Booking</th>
+                        </tr>
                     </thead>
                     <tbody className="[&_tr:hover]:bg-muted/30">
                       {guestsOrdered.map((g, idx) => (
                         <tr
                           key={String(
                             g.user?.id || g.lastBooking?.id || Math.random(),
-                          )}
+        )}
+
                           className="border-t"
                         >
                           <td className="p-3">{idx + 1}</td>
@@ -1817,6 +1964,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             {g.user?.address || "-"}
                           </td>
+                          <td className="p-3">{(() => { const id = Number(g.lastBooking?.id || 0); const fromApi = g.lastBooking?.guests; const count = typeof fromApi === 'number' ? fromApi : (bookings.find(b=> Number(b.id||0)===id)?.guests as unknown as number | undefined); return (count ?? '-') as unknown as React.ReactNode })()}</td>
                           <td className="p-3">
                             {g.lastBooking ? (
                               <div className="text-sm">
@@ -1845,8 +1993,75 @@ const OwnerDashboard = () => {
                   </table>
                 </div>
               </CardContent>
-            </Card>
-          )}
+          </Card>
+        )}
+
+        {/* CONTACT */}
+        {feature === "contact" && (
+          <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
+            <CardContent>
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-3">Hotel</th>
+                      <th className="p-3">Hotel Email</th>
+                      <th className="p-3">Contact 1</th>
+                      <th className="p-3">Contact 2</th>
+                      <th className="p-3">Owner Name</th>
+                      <th className="p-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:hover]:bg-muted/30">
+                    {(hotelsQ.data?.hotels || []).map((h: Hotel)=> (
+                      <tr key={`contact-${h.id}`} className="border-t">
+                        <td className="p-3">{h.id} • {h.name}</td>
+                        <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: e.target.value } })} /></td>
+                        <td className="p-3"><Input placeholder="phone" value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: e.target.value } })} /></td>
+                        <td className="p-3"><Input placeholder="phone" value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: e.target.value } })} /></td>
+                        <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} /></td>
+                        <td className="p-3"><Button size="sm" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })}>Save</Button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {feature === "contact" && (
+          <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <CardHeader><CardTitle>Admin Details</CardTitle></CardHeader>
+            <CardContent>
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-3">Email</th>
+                      <th className="p-3">Name</th>
+                      <th className="p-3">Phone</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:hover]:bg-muted/30">
+                    {(() => {
+                      const list = (adminsQ.data?.users || []).filter(u => u.role === 'admin')
+                      const admin = list[0]
+                      return (
+                        <tr className="border-t">
+                          <td className="p-3">{admin?.email || '-'}</td>
+                          <td className="p-3">{`${admin?.firstName || ''} ${admin?.lastName || ''}`.trim() || '-'}</td>
+                          <td className="p-3">{admin?.phone || '-'}</td>
+                        </tr>
+                      )
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
           {/* PRICING */}
           {feature === "pricing" && (
@@ -2449,65 +2664,6 @@ const OwnerDashboard = () => {
                       No reviews yet
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {feature === "contact" && (
-            <Card className="shadow-card hover:shadow-card-hover transition-all">
-              <CardHeader>
-                <CardTitle>Hotel Contact</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left">
-                        <th className="p-2">Hotel</th>
-                        <th className="p-2">Hotel Name</th>
-                        <th className="p-2">Hotel Email</th>
-                        <th className="p-2">Owner Name</th>
-                        <th className="p-2">Contact #1</th>
-                        <th className="p-2">Contact #2</th>
-                        <th className="p-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(hotels || []).map(h => {
-                        const cf = contactForm[h.id] || ({ hotelName: h.name || '', hotelEmail: '', ownerName: '', contact1: '', contact2: '' } as ContactInfo)
-                        return (
-                          <tr key={h.id} className="border-t">
-                            <td className="p-2">{h.id}</td>
-                            <td className="p-2">
-                              <Input value={cf.hotelName} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), hotelName: e.target.value } }))} />
-                            </td>
-                            <td className="p-2">
-                              <Input value={cf.hotelEmail} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), hotelEmail: e.target.value } }))} />
-                            </td>
-                            <td className="p-2">
-                              <Input value={cf.ownerName} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), ownerName: e.target.value } }))} />
-                            </td>
-                            <td className="p-2">
-                              <Input value={cf.contact1} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), contact1: e.target.value } }))} />
-                            </td>
-                            <td className="p-2">
-                              <Input value={cf.contact2} onChange={(e)=>setContactForm(prev=>({ ...prev, [h.id]: { ...(prev[h.id]||cf), contact2: e.target.value } }))} />
-                            </td>
-                            <td className="p-2">
-                              <Button size="sm" onClick={()=>{
-                                const cur = contactForm[h.id] || cf
-                                saveContact.mutate({ hotelId: h.id, ...cur })
-                              }}>Save</Button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                      {(hotels || []).length===0 && (
-                        <tr><td className="p-3 text-muted-foreground" colSpan={7}>No hotels yet</td></tr>
-                      )}
-                    </tbody>
-                  </table>
                 </div>
               </CardContent>
             </Card>

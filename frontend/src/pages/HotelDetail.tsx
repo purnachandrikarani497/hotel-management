@@ -18,6 +18,7 @@ type Hotel = {
   id: number;
   name: string;
   location: string;
+  ownerId?: number;
   rating: number;
   reviews: number;
   price: number;
@@ -25,6 +26,10 @@ type Hotel = {
   images?: string[];
   amenities?: string[];
   description?: string;
+  contactEmail?: string;
+  contactPhone1?: string;
+  contactPhone2?: string;
+  ownerName?: string;
 };
 
 type RoomInfo = {
@@ -64,6 +69,7 @@ const HotelDetail = () => {
     queryKey: ["hotel", id],
     queryFn: () => apiGet<{ hotel: Hotel }>(`/api/hotels/${id}`),
     enabled: !!id,
+    refetchInterval: 3000,
   });
 
   // date/time logic
@@ -131,7 +137,58 @@ const HotelDetail = () => {
 
   const hotel: Hotel | undefined = data?.hotel;
   const availableRooms = roomsQuery.data?.rooms || [];
-  const allUnavailable = availableRooms.length > 0 && availableRooms.every((r) => Number(r?.available || 0) === 0);
+  const adminHotelsQ = useQuery({
+    queryKey: ["admin","hotels"],
+    queryFn: () => apiGet<{ hotels: { id:number; contactEmail?:string; contactPhone1?:string; contactPhone2?:string; ownerName?:string }[] }>(`/api/admin/hotels`),
+    enabled: true,
+    staleTime: 15_000,
+    refetchInterval: 3000,
+  });
+  const contactInfo = (() => {
+    const h = hotel
+    const list = adminHotelsQ.data?.hotels || []
+    const fromOwner = list.find(x => x.id === Number(id))
+    return {
+      email: h?.contactEmail || fromOwner?.contactEmail || '',
+      phone1: h?.contactPhone1 || fromOwner?.contactPhone1 || '',
+      phone2: h?.contactPhone2 || fromOwner?.contactPhone2 || '',
+      ownerName: h?.ownerName || fromOwner?.ownerName || ''
+    }
+  })()
+
+  const [contactOverride, setContactOverride] = useState<{ email?: string; phone1?: string; phone2?: string; ownerName?: string } | null>(null)
+  useEffect(()=>{
+    try {
+      const key = `hotelContact:${String(id)}`
+      const raw = localStorage.getItem(key)
+      if (raw) {
+        const p = JSON.parse(raw)
+        setContactOverride({ email: p.contactEmail, phone1: p.contactPhone1, phone2: p.contactPhone2, ownerName: p.ownerName })
+      }
+    } catch (_e) { void 0 }
+  }, [id])
+  const finalContact = {
+    email: contactOverride?.email ?? contactInfo.email,
+    phone1: contactOverride?.phone1 ?? contactInfo.phone1,
+    phone2: contactOverride?.phone2 ?? contactInfo.phone2,
+    ownerName: contactOverride?.ownerName ?? contactInfo.ownerName
+  }
+
+  useEffect(() => {
+    const key = 'hotelUpdated'
+    const handler = (e: StorageEvent) => {
+      try {
+        if (e.key !== key || !e.newValue) return
+        const payload = JSON.parse(e.newValue)
+        if (String(payload?.id || '') === String(id)) {
+          qc.invalidateQueries({ queryKey: ["hotel", id] })
+          qc.invalidateQueries({ queryKey: ["admin","hotels"] })
+        }
+      } catch (_e) { void 0 }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [qc, id])
 
   const [roomType, setRoomType] = useState<string>(availableRooms[0]?.type || "Standard");
   useEffect(() => {
@@ -185,12 +242,6 @@ const HotelDetail = () => {
     queryKey: ["hotel", "coupons", id, checkIn],
     queryFn: () => apiGet<{ coupons: Coupon[] }>(`/api/hotels/${id}/coupons?date=${checkIn}`),
     enabled: !!id && !!checkIn,
-  });
-
-  const contactQ = useQuery({
-    queryKey: ["hotel", "contact", id],
-    queryFn: () => apiGet<{ contact: { hotelName?: string; hotelEmail?: string; contact1?: string; contact2?: string; ownerName?: string } | null; owner?: { fullName?: string; email?: string; phone?: string } | null }>(`/api/hotels/${id}/contact`),
-    enabled: !!id,
   });
 
   // reservation mutation
@@ -374,11 +425,9 @@ const HotelDetail = () => {
                             </div>
                             <div className="col-span-4 text-right">
                               <div className="text-primary font-bold mb-2">₹{r.price}</div>
-                              {Number(r?.available || 0) > 0 && !allUnavailable ? (
-                                <Button variant={roomType === r.type ? "default" : "outline"} size="sm" onClick={() => setRoomType(r.type)}>
-                                  {roomType === r.type ? "Selected" : "Show price"}
-                                </Button>
-                              ) : null}
+                              <Button variant={roomType === r.type ? "default" : "outline"} size="sm" onClick={() => setRoomType(r.type)}>
+                                {roomType === r.type ? "Selected" : "Show price"}
+                              </Button>
                             </div>
                           </div>
                         );
@@ -423,32 +472,16 @@ const HotelDetail = () => {
                         <div className="text-sm text-muted-foreground">No reviews yet</div>
                       )}
                     </div>
-                    <div className="mt-8">
-                      <h3 className="text-xl font-bold mb-3">Hotel Contact</h3>
-                      {contactQ.isLoading && <div className="text-sm text-muted-foreground">Loading contact…</div>}
-                      {contactQ.isError && <div className="text-sm text-muted-foreground">Failed to load contact</div>}
-                      {!contactQ.isLoading && !contactQ.isError && (
-                        contactQ.data?.contact || contactQ.data?.owner ? (
-                          <div className="grid grid-cols-12 gap-4 items-center p-4 rounded-lg border bg-card">
-                            <div className="col-span-3">
-                              <div className="h-24 w-full rounded-lg overflow-hidden border">
-                                <img src={resolveImage(hotel?.image)} alt="Hotel" className="w-full h-full object-cover" onError={(e)=>{ e.currentTarget.src = "https://placehold.co/160x120?text=Hotel" }} />
-                              </div>
-                            </div>
-                            <div className="col-span-9">
-                              <div className="text-sm">
-                                <div><span className="font-medium">Hotel:</span> {contactQ.data?.contact?.hotelName || hotel?.name}</div>
-                                <div><span className="font-medium">Owner:</span> {contactQ.data?.contact?.ownerName || contactQ.data?.owner?.fullName || ""}</div>
-                                <div><span className="font-medium">Email:</span> {contactQ.data?.contact?.hotelEmail || contactQ.data?.owner?.email || ""}</div>
-                                <div><span className="font-medium">Contact 1:</span> {contactQ.data?.contact?.contact1 || contactQ.data?.owner?.phone || ""}</div>
-                                {contactQ.data?.contact?.contact2 ? (<div><span className="font-medium">Contact 2:</span> {contactQ.data.contact.contact2}</div>) : null}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">No contact information available</div>
-                        )
-                      )}
+                  </div>
+
+                  <div className="mt-8">
+                    <h2 className="text-2xl font-bold mb-4">Owner Contact</h2>
+                    <div className="rounded-xl border p-6">
+                      <div className="text-sm mb-1">{hotel?.name}</div>
+                      <div className="text-sm">Email: {finalContact.email || '-'}</div>
+                      <div className="text-sm">Phone 1: {finalContact.phone1 || '-'}</div>
+                      <div className="text-sm">Phone 2: {finalContact.phone2 || '-'}</div>
+                      <div className="text-sm">Owner: {finalContact.ownerName || '-'}</div>
                     </div>
                   </div>
                 </div>
@@ -493,9 +526,7 @@ const HotelDetail = () => {
  
  
 
-                    {!allUnavailable ? (
-                    <div>
-                      <div className="space-y-4 mb-6">
+                    <div className="space-y-4 mb-6">
                       <div>
                         <label className="text-sm font-medium mb-2 block">Check-in</label>
                         <input
@@ -561,7 +592,7 @@ const HotelDetail = () => {
                           <option value={4}>4+ Guests</option>
                         </select>
                       </div>
-                      </div>
+                    </div>
 
                     <Button
                       className="w-full h-12 bg-accent hover:bg-accent/90 text-white mb-4"
@@ -602,6 +633,7 @@ const HotelDetail = () => {
                       <div className="text-sm text-muted-foreground mb-4">Selected room type is unavailable for the chosen date.</div>
                     )}
                     {reserve.isError && <div className="text-red-600 text-sm">Reservation failed</div>}
+
                     <div className="space-y-2 pt-4 border-t">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">₹{price} × {stayDays} days</span>
@@ -624,10 +656,6 @@ const HotelDetail = () => {
                         <span>₹{grandTotal}</span>
                       </div>
                     </div>
-                    </div>
-                    ) : (
-                      <div className="p-4 rounded-lg bg-muted text-sm text-foreground">All rooms are fully booked for {checkIn}. Please select another date.</div>
-                    )}
                   </div>
                 </div>
               </div>
