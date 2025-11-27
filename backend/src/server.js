@@ -58,7 +58,7 @@ app.get('/uploads/:name', (req, res) => {
 
 app.use('/uploads', express.static(uploadsDir));
 
-const port = Number(process.env.PORT || 5000);
+const port =  5000 ;
 
 (async () => {
   try {

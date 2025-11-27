@@ -18,6 +18,7 @@ type SignInResponse = {
     email: string;
     role: "admin" | "user" | "owner";
     isApproved?: boolean;
+    blocked?: boolean;
   };
 };
 
@@ -49,8 +50,10 @@ const SignIn = () => {
       } catch (_e) { void 0 }
       navigate("/dashboard/user")
     },
-    onError: () => {
-      toast({ title: "Sign in failed", variant: "destructive" })
+    onError: (err) => {
+      const msg = err instanceof Error ? String(err.message || '') : ''
+      try { localStorage.removeItem('auth') } catch { /* ignore */ }
+      toast({ title: "Account blocked", description: msg ? msg : "Please contact support", variant: "destructive" })
     }
   })
   return (
@@ -96,11 +99,7 @@ const SignIn = () => {
 
               <Button className="w-full" disabled={mutation.isPending}>{mutation.isPending ? "Signing in..." : "Sign In"}</Button>
               {mutation.isError && (
-                <div className="text-red-600 text-sm">
-                  {(mutation.error as Error | undefined)?.message?.includes("401")
-                    ? "Invalid email or password"
-                    : "Sign in failed"}
-                </div>
+                <div className="text-red-600 text-sm">Account blocked</div>
               )}
               {mutation.isSuccess && <div className="text-green-600 text-sm">Signed in</div>}
 

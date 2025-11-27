@@ -9,6 +9,7 @@ async function create(req, res) {
   if (!hotelId || !checkIn || !checkOut || !guests) return res.status(400).json({ error: 'Missing booking fields' })
   const hotel = await Hotel.findOne({ id: Number(hotelId) })
   if (!hotel) return res.status(404).json({ error: 'Hotel not found' })
+  if (String(hotel.status || '') !== 'approved' || hotel.ownerId == null) return res.status(403).json({ error: 'Hotel not available' })
   const ci = new Date(checkIn)
   let co = new Date(checkOut)
   if (!(ci instanceof Date) || isNaN(ci.getTime())) return res.status(400).json({ error: 'Invalid check-in' })

@@ -15,7 +15,8 @@ async function signin(req, res) {
     if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
     const user = await User.findOne({ email }).lean()
     if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid credentials' })
-    res.json({ token: 'mock-token', user: { id: user.id, email: user.email, role: user.role, isApproved: user.isApproved !== false } })
+    if (user.blocked) return res.status(403).json({ error: 'User is blocked' })
+    res.json({ token: 'mock-token', user: { id: user.id, email: user.email, role: user.role, isApproved: user.isApproved !== false, blocked: !!user.blocked } })
   } catch (e) {
     const { email, password } = req.body || {}
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@staybook.com'

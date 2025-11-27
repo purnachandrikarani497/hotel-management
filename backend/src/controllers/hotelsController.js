@@ -81,6 +81,9 @@ async function getById(req, res) {
     if (!hotelRaw) {
       return res.status(404).json({ error: 'Not found' });
     }
+    if (String(hotelRaw.status || '') !== 'approved' || hotelRaw.ownerId == null) {
+      return res.status(404).json({ error: 'Not found' });
+    }
 
     const primary = hotelRaw.image || (Array.isArray(hotelRaw.images) && hotelRaw.images.length > 0 ? hotelRaw.images[0] : '');
     const resolved = toPublicUrl(primary);
