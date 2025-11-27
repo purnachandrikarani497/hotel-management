@@ -23,7 +23,7 @@ const MessageInbox = () => {
     queryKey: ["inbox","threads",role,userId],
     queryFn: () => role === 'owner' ? apiGet<{ threads: Thread[] }>(`/api/messages/threads?ownerId=${userId}`) : apiGet<{ threads: Thread[] }>(`/api/messages/threads?userId=${userId}`),
     enabled: !!userId,
-    refetchInterval: 8000,
+    refetchInterval: 2000,
     refetchOnWindowFocus: true
   })
   const threads = React.useMemo(() => threadsQ.data?.threads ?? [], [threadsQ.data])
@@ -40,7 +40,7 @@ const MessageInbox = () => {
   React.useEffect(() => {
     if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
   }, [threads, activeId])
-  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 6000, refetchOnWindowFocus: true })
+  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 1500, refetchOnWindowFocus: true })
   const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
   const orderedMessages = React.useMemo(() => {
     const arr = [...messages]
@@ -53,7 +53,7 @@ const MessageInbox = () => {
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
-  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 10000 })
+  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 3000 })
   const threadBooking = React.useMemo(() => {
     const t = (threads||[]).find(x=>x.id===activeId)
     const bid = t?.bookingId
