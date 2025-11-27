@@ -88,7 +88,7 @@ const UserDetails = () => {
                 </div>
                 <div className="col-span-1">
                   <Label>Phone Number</Label>
-                  <Input placeholder="Phone" value={form.phone||""} onChange={e=>setForm({ ...(form as User), phone: e.target.value })} />
+                  <Input placeholder="Phone" maxLength={10} value={form.phone||""} onChange={e=>{ const v=(e.target.value||'').replace(/\D/g,'').slice(0,10); setForm({ ...(form as User), phone: v }) }} />
                 </div>
                 <div>
                   <Label>First Name</Label>

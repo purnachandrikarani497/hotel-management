@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-type Booking = { id:number; hotelId:number; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string }
+type Booking = { id:number; hotelId:number; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string; extraHours?: number; extraCharges?: number; cancellationFee?: number }
 
 const UserDashboard = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
@@ -202,14 +202,14 @@ const UserDashboard = () => {
                   a.click()
                   setTimeout(()=>URL.revokeObjectURL(url), 2000)
                 }}>Download Excel</Button>
-                <Button variant="destructive" onClick={() => { try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; bookingsTimeFiltered.forEach(b => { map[b.id] = true }); localStorage.setItem('deletedUserBookings', JSON.stringify(map)) } catch { void 0 } }}>Delete</Button>
+                <Button variant="destructive" onClick={() => { try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; bookingsTimeFiltered.forEach(b => { map[b.id] = true }); localStorage.setItem('deletedUserBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${bookingsTimeFiltered.length} item(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
@@ -229,9 +229,12 @@ const UserDashboard = () => {
                         </td>
                         <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                         <td className="p-3">{b.guests}</td>
+                        <td className="p-3">{Number(b.extraHours||0) > 0 ? `${Number(b.extraHours||0)}h` : '-'}</td>
+                        <td className="p-3">{Number(b.extraCharges||0) > 0 ? `₹${Number(b.extraCharges||0)}` : '-'}</td>
+                        <td className="p-3">{String(b.status).toLowerCase()==='cancelled' && Number(b.cancellationFee||0) > 0 ? `₹${Number(b.cancellationFee||0)}` : '-'}</td>
                         <td className="p-3">₹{b.total}</td>
                         <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}</span></td>
-                        <td className="p-3 flex gap-2">
+                        <td className="p-3 flex gap-2 flex-wrap">
                           {(['pending','confirmed'].includes(String(b.status||''))) && (
                             <>
                               <Button size="sm" variant="outline" onClick={() => setUserCancelVisible({ ...userCancelVisible, [b.id]: !(userCancelVisible[b.id] || false) })}>Cancel</Button>

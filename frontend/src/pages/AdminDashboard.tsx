@@ -47,7 +47,28 @@ const AdminDashboard = () => {
   const setHotelStatus = useMutation({ mutationFn: (p: { id:number; status:Hotel["status"] }) => apiPost("/api/admin/hotels/"+p.id+"/status", { status: p.status }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel status updated", description: `#${vars.id} → ${vars.status}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const setHotelFeatured = useMutation({ mutationFn: (p: { id:number; featured:boolean }) => apiPost("/api/admin/hotels/"+p.id+"/feature", { featured: p.featured }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: vars.featured ? "Featured" : "Unfeatured", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   
-  const deleteHotelOwner = useMutation({ mutationFn: (id:number) => apiDelete(`/api/owner/hotels/${id}`), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel deleted", description: `#${vars}` }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
+  const [deletingHotelId, setDeletingHotelId] = React.useState<number|null>(null)
+  const deleteHotelOwner = useMutation({
+    mutationFn: (id:number) => apiDelete(`/api/owner/hotels/${id}`),
+    onMutate: async (id:number) => {
+      setDeletingHotelId(id)
+      await qc.cancelQueries({ queryKey: ["admin","hotels"] })
+      const prev = qc.getQueryData<{ hotels: Hotel[] }>(["admin","hotels"]) || { hotels: [] }
+      qc.setQueryData(["admin","hotels"], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => h.id !== id) }))
+      return { prev }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["admin","hotels"], ctx.prev)
+      toast({ title: "Delete failed", variant: "destructive" })
+    },
+    onSuccess: (_res, vars) => {
+      toast({ title: "Hotel deleted", description: `#${vars}` })
+    },
+    onSettled: () => {
+      setDeletingHotelId(null)
+      qc.invalidateQueries({ queryKey: ["admin","hotels"] })
+    }
+  })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); toast({ title: "Settings updated" }) }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
@@ -78,6 +99,7 @@ const AdminDashboard = () => {
   const [contactPhone1, setContactPhone1] = React.useState("")
   const [contactPhone2, setContactPhone2] = React.useState("")
   const [contactEmail, setContactEmail] = React.useState("")
+  const [contactEditing, setContactEditing] = React.useState(false)
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem('adminContact') || ''
@@ -174,7 +196,7 @@ const AdminDashboard = () => {
                 const rows = data.map(u=>({ id:u.id, email:u.email, role:u.role, blocked:u.blocked, createdAt:u.createdAt }))
                 downloadCsv(`users-${usersPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))); data.forEach(u=>{ map[u.id] = true }); localStorage.setItem('deletedAdminUsers', JSON.stringify(map)) } catch { void 0 } }}>Delete</Button>
+              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))); data.forEach(u=>{ map[u.id] = true }); localStorage.setItem('deletedAdminUsers', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} user(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
@@ -215,7 +237,7 @@ const AdminDashboard = () => {
                 const rows = data.map(h=>({ id:h.id, name:h.name, location:h.location, status:h.status, featured:h.featured, createdAt:h.createdAt }))
                 downloadCsv(`hotels-${hotelsPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" onClick={()=>{ const src = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))); if (src.length && window.confirm(`Delete ${src.length} hotel(s) in current filter?`)) { src.forEach(h=> deleteHotelOwner.mutate(h.id)) } }}>Delete</Button>
+              <Button variant="destructive" onClick={async ()=>{ const src = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))); if (src.length && window.confirm(`Delete ${src.length} hotel(s) in current filter?`)) { const ids = src.map(h=>h.id); await qc.cancelQueries({ queryKey: ["admin","hotels"] }); const prev = qc.getQueryData<{ hotels: Hotel[] }>(["admin","hotels"]) || { hotels: [] }; qc.setQueryData(["admin","hotels"], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => !ids.includes(h.id)) })); Promise.all(ids.map(id => deleteHotelOwner.mutateAsync(id))).finally(()=> qc.invalidateQueries({ queryKey: ["admin","hotels"] })) } }}>Delete</Button>
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
@@ -230,7 +252,7 @@ const AdminDashboard = () => {
                       <td className="p-3 flex gap-2 flex-wrap">
                         <Button size="sm" variant={h.status === 'suspended' ? 'outline' : 'destructive'} onClick={() => setHotelStatus.mutate({ id: h.id, status: h.status === 'suspended' ? 'approved' : 'suspended' })}>{h.status === 'suspended' ? 'Unblock' : 'Block'}</Button>
                         <Button size="sm" variant="outline" onClick={() => setHotelFeatured.mutate({ id: h.id, featured: !h.featured })}>{h.featured ? 'Unfeature' : 'Feature'}</Button>
-                        <Button size="sm" variant="destructive" onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>Delete</Button>
+                        <Button size="sm" variant="destructive" disabled={deletingHotelId===h.id || deleteHotelOwner.isPending} onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>{deletingHotelId===h.id || deleteHotelOwner.isPending ? 'Deleting…' : 'Delete'}</Button>
                       </td>
                     </tr>
                   ))}
@@ -259,7 +281,7 @@ const AdminDashboard = () => {
                 const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
                 downloadCsv(`bookings-${bookingsPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)) } catch { void 0 } }}>Delete</Button>
+              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} booking(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
@@ -294,12 +316,16 @@ const AdminDashboard = () => {
             <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Full Name" value={contactName} onChange={e=>setContactName(e.target.value)} />
-                <Input placeholder="Email" value={contactEmail} onChange={e=>setContactEmail(e.target.value)} />
-                <Input placeholder="Phone 1" value={contactPhone1} onChange={e=>setContactPhone1(e.target.value)} />
-                <Input placeholder="Phone 2" value={contactPhone2} onChange={e=>setContactPhone2(e.target.value)} />
+                <Input placeholder="Full Name" value={contactName} onChange={e=>setContactName(e.target.value)} disabled={!contactEditing} />
+                <Input placeholder="Email" value={contactEmail} onChange={e=>setContactEmail(e.target.value)} disabled={!contactEditing} />
+                <Input placeholder="Phone 1" value={contactPhone1} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactPhone1(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 2" value={contactPhone2} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactPhone2(v) }} disabled={!contactEditing} />
               </div>
-              <Button onClick={() => { try { const obj = { fullName: contactName, phone1: contactPhone1, phone2: contactPhone2, email: contactEmail }; localStorage.setItem('adminContact', JSON.stringify(obj)); toast({ title: 'Contact saved' }) } catch { toast({ title: 'Save failed', variant: 'destructive' }) } }}>Save Contact</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
+                <Button onClick={() => { if (!contactEditing) return; try { const obj = { fullName: contactName, phone1: contactPhone1, phone2: contactPhone2, email: contactEmail }; localStorage.setItem('adminContact', JSON.stringify(obj)); toast({ title: 'Contact saved' }) } catch { toast({ title: 'Save failed', variant: 'destructive' }) } }} disabled={!contactEditing}>Save Contact</Button>
+                <Button variant="destructive" onClick={() => { try { localStorage.removeItem('adminContact'); setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); toast({ title: 'Contact deleted' }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold mb-2">Support Inbox</h3>
                 <div className="space-y-2">

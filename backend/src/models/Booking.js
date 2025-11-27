@@ -16,6 +16,11 @@ const BookingSchema = new mongoose.Schema({
   paid: { type: Boolean, default: false },
   refundIssued: { type: Boolean, default: false },
   cancelReason: { type: String, default: '' },
+  checkinAt: Date,
+  checkoutAt: Date,
+  extraHours: { type: Number, default: 0 },
+  extraCharges: { type: Number, default: 0 },
+  cancellationFee: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 })
 

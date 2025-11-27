@@ -41,6 +41,8 @@ type Hotel = {
     weekendPrice?: number
     seasonal?: { start: string; end: string; price: number }[]
     specials?: { date: string; price: number }[]
+    extraHourRate?: number
+    cancellationHourRate?: number
   }
 }
 
@@ -80,6 +82,9 @@ type Booking = {
   total: number
   status: string
   createdAt?: string
+  extraHours?: number
+  extraCharges?: number
+  cancellationFee?: number
   user?: {
     id: number
     email?: string
@@ -501,12 +506,19 @@ const OwnerDashboard = () => {
     },
   })
 
+  const [deletingHotelId, setDeletingHotelId] = React.useState<number|null>(null)
   const deleteHotel = useMutation({
     mutationFn: (id: number) => apiDelete(`/api/owner/hotels/${id}`),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Hotel deleted", description: `#${vars}` })
-      qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
+    onMutate: async (id:number) => {
+      setDeletingHotelId(id)
+      await qc.cancelQueries({ queryKey: ["owner","hotels", ownerId] })
+      const prev = qc.getQueryData<{ hotels: Hotel[] }>(["owner","hotels", ownerId]) || { hotels: [] }
+      qc.setQueryData(["owner","hotels", ownerId], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => h.id !== id) }))
+      return { prev }
     },
+    onError: (_err,_id,ctx) => { if (ctx?.prev) qc.setQueryData(["owner","hotels", ownerId], ctx.prev); toast({ title: "Delete failed", variant: "destructive" }) },
+    onSuccess: (_res, vars) => { toast({ title: "Hotel deleted", description: `#${vars}` }) },
+    onSettled: () => { setDeletingHotelId(null); qc.invalidateQueries({ queryKey: ["owner","hotels", ownerId] }) },
   })
 
   const [lastRoomId, setLastRoomId] = React.useState<number | null>(null)
@@ -660,6 +672,8 @@ const OwnerDashboard = () => {
       hotelId: number
       normalPrice?: number
       weekendPrice?: number
+      extraHourRate?: number
+      cancellationHourRate?: number
       seasonal?: { start: string; end: string; price: number }[]
       specials?: { date: string; price: number }[]
     }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p),
@@ -730,6 +744,8 @@ const OwnerDashboard = () => {
     [id: number]: {
       normalPrice: string
       weekendPrice: string
+      extraHourRate?: string
+      cancellationHourRate?: string
       seasonal: { start: string; end: string; price: string }[]
       specials: { date: string; price: string }[]
     }
@@ -754,6 +770,7 @@ const OwnerDashboard = () => {
   })
 
   const [contactForm, setContactForm] = React.useState<{ [id:number]: { email?: string; phone1?: string; phone2?: string; ownerName?: string } }>({})
+  const [contactEditing, setContactEditing] = React.useState<{ [id:number]: boolean }>({})
   React.useEffect(()=>{
     const list = (hotelsQ.data?.hotels || []) as Hotel[]
     const init: { [id:number]: { email?: string; phone1?: string; phone2?: string; ownerName?: string } } = {}
@@ -806,6 +823,8 @@ const OwnerDashboard = () => {
       [id: number]: {
         normalPrice: string
         weekendPrice: string
+        extraHourRate?: string
+        cancellationHourRate?: string
         seasonal: { start: string; end: string; price: string }[]
         specials: { date: string; price: string }[]
       }
@@ -830,6 +849,8 @@ const OwnerDashboard = () => {
             price: String(sp.price ?? ""),
           }))
         : []
+      const extraHourRate = String(p?.extraHourRate ?? "")
+      const cancellationHourRate = String(p?.cancellationHourRate ?? "")
 
       let np = normalPrice || ""
       if (!np) {
@@ -849,6 +870,8 @@ const OwnerDashboard = () => {
       next[h.id] = {
         normalPrice: np,
         weekendPrice: weekendPrice || "",
+        extraHourRate,
+        cancellationHourRate,
         seasonal,
         specials,
       }
@@ -873,9 +896,11 @@ const OwnerDashboard = () => {
         const rrGlobal = roomsRaw.find((r) => r.type.trim().toLowerCase() === selNorm)
         const anyR = roomsRaw.find((r) => r.hotelId === h.id)
         const cur =
-          next[h.id] || ({ normalPrice: "", weekendPrice: "", seasonal: [], specials: [] } as {
+          next[h.id] || ({ normalPrice: "", weekendPrice: "", extraHourRate: "", cancellationHourRate: "", seasonal: [], specials: [] } as {
             normalPrice: string
             weekendPrice: string
+            extraHourRate?: string
+            cancellationHourRate?: string
             seasonal: { start: string; end: string; price: string }[]
             specials: { date: string; price: string }[]
           })
@@ -1189,7 +1214,7 @@ const OwnerDashboard = () => {
                                   updateAmenities.mutate({ id: h.id, amenities: arr })
                                   setEditing({ ...editing, [h.id]: false })
                                 }}>Update</Button>
-                                <Button size="sm" variant="outline" onClick={()=> deleteHotel.mutate(h.id)}>Delete</Button>
+                                <Button size="sm" variant="outline" disabled={deletingHotelId===h.id || deleteHotel.isPending} onClick={()=> deleteHotel.mutate(h.id)}>{deletingHotelId===h.id || deleteHotel.isPending ? 'Deleting…' : 'Delete'}</Button>
                               </div>
                             </td>
                           </tr>
@@ -1459,7 +1484,7 @@ const OwnerDashboard = () => {
                           <td className="p-3 flex gap-2 flex-wrap">
                             <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel #${g.hotelId} • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
                             <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } const files = roomPhotosByGroup[g.key] || []; if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } }}>Update</Button>
-                            <Button size="sm" variant="outline" onClick={async ()=> { for (const id of g.ids) { await apiDelete(`/api/owner/rooms/${id}`) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) }}>Delete</Button>
+                            <Button size="sm" variant="outline" onClick={async ()=> { try { await qc.cancelQueries({ queryKey: ['owner','rooms', ownerId] }); const prev = qc.getQueryData<{ rooms: Room[] }>(['owner','rooms', ownerId]) || { rooms: [] }; const gone = new Set(g.ids); qc.setQueryData(['owner','rooms', ownerId], (data?: { rooms: Room[] }) => ({ rooms: (data?.rooms || []).filter(r => !gone.has(r.id)) })); await Promise.all(g.ids.map(id => apiDelete(`/api/owner/rooms/${id}`))); toast({ title: 'Rooms deleted', description: `${g.ids.length} item(s)` }); } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } finally { qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } }}>Delete</Button>
                           </td>
                         </tr>
                       ))}
@@ -1744,6 +1769,26 @@ const OwnerDashboard = () => {
                           <td className="p-3">{b.roomId ?? "-"}</td>
                           <td className="p-3">
                             {b.checkIn} → {b.checkOut}
+                            {(() => {
+                              const eh = Number(b?.extraHours || 0)
+                              const ec = Number(b?.extraCharges || 0)
+                              const cf = Number(b?.cancellationFee || 0)
+                              if (eh > 0) {
+                                return (
+                                  <div className="text-xs mt-1">
+                                    <span className="px-1 py-0.5 rounded bg-secondary">Extra {eh}h • ₹{ec}</span>
+                                  </div>
+                                )
+                              }
+                              if (cf > 0 && String(b.status).toLowerCase() === 'cancelled') {
+                                return (
+                                  <div className="text-xs mt-1">
+                                    <span className="px-1 py-0.5 rounded bg-secondary">Cancellation Fee • ₹{cf}</span>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </td>
                           <td className="p-3">{b.guests}</td>
                           <td className="p-3">₹{b.total}</td>
@@ -2070,11 +2115,11 @@ const OwnerDashboard = () => {
                     {(hotelsQ.data?.hotels || []).map((h: Hotel)=> (
                       <tr key={`contact-${h.id}`} className="border-t">
                         <td className="p-3">{h.id} • {h.name}</td>
-                        <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: e.target.value } })} /></td>
-                        <td className="p-3"><Input placeholder="phone" value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: e.target.value } })} /></td>
-                        <td className="p-3"><Input placeholder="phone" value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: e.target.value } })} /></td>
-                        <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} /></td>
-                        <td className="p-3"><Button size="sm" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })}>Save</Button></td>
+                        <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id]}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2143,6 +2188,8 @@ const OwnerDashboard = () => {
                         <th className="p-2">Hotel</th>
                         <th className="p-2">Normal ₹</th>
                         <th className="p-2">Weekend ₹</th>
+                        <th className="p-2">Extra Hour ₹</th>
+                        <th className="p-2">Cancellation Hour ₹</th>
                         <th className="p-2">Seasonal</th>
                         <th className="p-2">Special Days</th>
                         <th className="p-2">Actions</th>
@@ -2154,11 +2201,15 @@ const OwnerDashboard = () => {
                           pricingForm[h.id] || ({
                             normalPrice: "",
                             weekendPrice: "",
+                            extraHourRate: "",
+                            cancellationHourRate: "",
                             seasonal: [],
                             specials: [],
                           } as {
                             normalPrice: string
                             weekendPrice: string
+                            extraHourRate?: string
+                            cancellationHourRate?: string
                             seasonal: {
                               start: string
                               end: string
@@ -2238,22 +2289,54 @@ const OwnerDashboard = () => {
                                 disabled={!pricingEditing[h.id]}
                               />
                             </td>
-                            <td className="p-2">
-                              <Input
-                                placeholder=""
-                                value={pf.weekendPrice}
-                                onChange={(e) =>
-                                  setPricingForm({
-                                    ...pricingForm,
-                                    [h.id]: {
-                                      ...pf,
-                                      weekendPrice: e.target.value,
-                                    },
-                                  })
-                                }
-                                disabled={!pricingEditing[h.id]}
-                              />
-                            </td>
+                          <td className="p-2">
+                            <Input
+                              placeholder=""
+                              value={pf.weekendPrice}
+                              onChange={(e) =>
+                                setPricingForm({
+                                  ...pricingForm,
+                                  [h.id]: {
+                                    ...pf,
+                                    weekendPrice: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={!pricingEditing[h.id]}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              placeholder=""
+                              value={pf.extraHourRate || ""}
+                              onChange={(e) =>
+                                setPricingForm({
+                                  ...pricingForm,
+                                  [h.id]: {
+                                    ...pf,
+                                    extraHourRate: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={!pricingEditing[h.id]}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              placeholder=""
+                              value={pf.cancellationHourRate || ""}
+                              onChange={(e) =>
+                                setPricingForm({
+                                  ...pricingForm,
+                                  [h.id]: {
+                                    ...pf,
+                                    cancellationHourRate: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={!pricingEditing[h.id]}
+                            />
+                          </td>
                             <td className="p-2">
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
@@ -2617,6 +2700,12 @@ const OwnerDashboard = () => {
                                       : undefined,
                                     weekendPrice: pf.weekendPrice
                                       ? Number(pf.weekendPrice)
+                                      : undefined,
+                                    extraHourRate: (pf.extraHourRate || "").trim()
+                                      ? Number(pf.extraHourRate)
+                                      : undefined,
+                                    cancellationHourRate: (pf.cancellationHourRate || "").trim()
+                                      ? Number(pf.cancellationHourRate)
                                       : undefined,
                                     seasonal: (pf.seasonal || [])
                                       .filter(

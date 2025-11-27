@@ -25,6 +25,23 @@ async function cancelBooking(req, res) {
   if (r.length < 3) return res.status(400).json({ error: 'Please select a cancellation reason' })
   b.status = 'cancelled'
   b.cancelReason = r
+  try {
+    const h = await Hotel.findOne({ id: Number(b.hotelId) }).lean()
+    const rate = Number(h?.pricing?.cancellationHourRate || 0)
+    const now = new Date()
+    const ciStr = String(b.checkIn || '')
+    const ci = new Date(ciStr)
+    if (ci instanceof Date && !isNaN(ci.getTime())) {
+      const oneHourMs = 60 * 60 * 1000
+      const withinOneHour = (ci.getTime() - now.getTime()) <= oneHourMs
+      if (withinOneHour) {
+        const fallback = Math.round((Number(h?.price || 0)) / 24)
+        const fee = rate > 0 ? rate : fallback
+        b.cancellationFee = fee
+        if (fee > 0) b.total = Number(b.total || 0) + fee
+      }
+    }
+  } catch (_e) { /* ignore */ }
   await b.save()
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {
@@ -34,7 +51,7 @@ async function cancelBooking(req, res) {
     thread = await MessageThread.findOne({ id: tid }).lean()
   }
   const mid = await nextIdFor('Message')
-  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by user: ${r}`, readByUser: true, readByOwner: false })
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by user: ${r}` + (Number(b.cancellationFee||0) > 0 ? ` • Cancellation Fee ₹${Number(b.cancellationFee||0)}` : ''), readByUser: true, readByOwner: false })
   res.json({ status: 'updated' })
 }
 
@@ -133,7 +150,7 @@ async function updateDetails(req, res) {
   if (!u) return res.status(404).json({ error: 'User not found' })
   if (firstName !== undefined) u.firstName = String(firstName)
   if (lastName !== undefined) u.lastName = String(lastName)
-  if (phone !== undefined) u.phone = String(phone)
+  if (phone !== undefined) u.phone = String(String(phone).replace(/\D/g,'').slice(0,10))
   if (fullName !== undefined) u.fullName = String(fullName)
   if (dob !== undefined) u.dob = String(dob)
   if (address !== undefined) u.address = String(address)

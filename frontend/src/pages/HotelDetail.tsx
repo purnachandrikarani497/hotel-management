@@ -459,11 +459,11 @@ const HotelDetail = () => {
                               <span className="font-bold">{r.rating.toFixed(1)}</span>
                             </div>
                           </div>
-                          <p className="text-muted-foreground">{r.comment}</p>
+                          <p className="text-muted-foreground break-all">{r.comment}</p>
                           {r.response && (
                             <div className="mt-3 p-3 rounded bg-muted">
                               <div className="text-xs text-muted-foreground mb-1">Owner Response</div>
-                              <div className="text-sm">{r.response}</div>
+                              <div className="text-sm break-all">{r.response}</div>
                             </div>
                           )}
                         </div>

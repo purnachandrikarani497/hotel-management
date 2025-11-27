@@ -166,8 +166,8 @@ async function updateInfo(req, res) {
   if (price !== undefined) h.price = Number(price) || 0;
   if (description !== undefined) h.description = String(description);
   if (contactEmail !== undefined) h.contactEmail = String(contactEmail);
-  if (contactPhone1 !== undefined) h.contactPhone1 = String(contactPhone1);
-  if (contactPhone2 !== undefined) h.contactPhone2 = String(contactPhone2);
+  if (contactPhone1 !== undefined) h.contactPhone1 = String(String(contactPhone1).replace(/\D/g,'').slice(0,10));
+  if (contactPhone2 !== undefined) h.contactPhone2 = String(String(contactPhone2).replace(/\D/g,'').slice(0,10));
   if (ownerName !== undefined) h.ownerName = String(ownerName);
   if (status !== undefined) {
     const allowed = ['approved','rejected','suspended','pending'];
@@ -350,6 +350,7 @@ async function checkinBooking(req, res) {
   const b = await Booking.findOne({ id });
   if (!b) return res.status(404).json({ error: 'Booking not found' });
   b.status = 'checked_in';
+  b.checkinAt = new Date();
   await b.save();
   let thread = await MessageThread.findOne({ bookingId: id });
   if (!thread) {
@@ -382,7 +383,30 @@ async function checkoutBooking(req, res) {
   const id = Number(req.params.id);
   const b = await Booking.findOne({ id });
   if (!b) return res.status(404).json({ error: 'Booking not found' });
+  const now = new Date();
   b.status = 'checked_out';
+  b.checkoutAt = now;
+  try {
+    const h = await Hotel.findOne({ id: Number(b.hotelId) }).lean();
+    const pricing = h?.pricing || {};
+    const rate = Number(pricing?.extraHourRate || 0);
+    const plannedDateStr = String(b.checkOut || '');
+    let planned = new Date(plannedDateStr);
+    if (!(planned instanceof Date) || isNaN(planned.getTime())) {
+      planned = new Date(plannedDateStr);
+    }
+    // Assume standard checkout hour at 10:00 local time
+    if (planned instanceof Date && !isNaN(planned.getTime())) {
+      planned.setHours(10, 0, 0, 0);
+      const diffMs = now.getTime() - planned.getTime();
+      const extra = diffMs > 0 ? Math.ceil(diffMs / (1000 * 60 * 60)) : 0;
+      const hourlyRate = rate > 0 ? rate : Math.round((Number(h?.price || 0)) / 24);
+      const extraAmount = extra > 0 ? extra * hourlyRate : 0;
+      b.extraHours = extra;
+      b.extraCharges = extraAmount;
+      if (extraAmount > 0) b.total = Number(b.total || 0) + extraAmount;
+    }
+  } catch (_e) { /* ignore */ }
   await b.save();
   let thread = await MessageThread.findOne({ bookingId: id });
   if (!thread) {
@@ -458,7 +482,7 @@ async function cancelBooking(req, res) {
 async function pricing(req, res) {
   await connect(); await ensureSeed();
   const hotelId = Number(req.params.hotelId);
-  const { normalPrice, weekendPrice, seasonal, specials } = req.body || {};
+  const { normalPrice, weekendPrice, seasonal, specials, extraHourRate, cancellationHourRate } = req.body || {};
   const h = await Hotel.findOne({ id: hotelId });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
   if (!h.pricing) {
@@ -466,7 +490,9 @@ async function pricing(req, res) {
       normalPrice: Number(h.price) || 0,
       weekendPrice: Number(h.price) || 0,
       seasonal: [],
-      specials: []
+      specials: [],
+      extraHourRate: 0,
+      cancellationHourRate: 0
     };
   }
   if (normalPrice !== undefined) h.pricing.normalPrice = Number(normalPrice);
@@ -484,6 +510,8 @@ async function pricing(req, res) {
       price: Number(sp.price) || 0
     }));
   }
+  if (extraHourRate !== undefined) h.pricing.extraHourRate = Number(extraHourRate) || 0;
+  if (cancellationHourRate !== undefined) h.pricing.cancellationHourRate = Number(cancellationHourRate) || 0;
   await h.save();
   res.json({ status: 'updated' });
 }
@@ -497,7 +525,9 @@ async function deletePricing(req, res) {
     normalPrice: Number(h.price) || 0,
     weekendPrice: Number(h.price) || 0,
     seasonal: [],
-    specials: []
+    specials: [],
+    extraHourRate: 0,
+    cancellationHourRate: 0
   };
   await h.save();
   res.json({ status: 'deleted' });
