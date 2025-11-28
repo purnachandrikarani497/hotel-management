@@ -152,10 +152,7 @@ const UserDashboard = () => {
               <User className="h-8 w-8" />
               <h1 className="text-3xl md:text-4xl font-bold">User Dashboard</h1>
             </div>
-            <div className="flex items-center gap-3">
-              <p className="opacity-90">View and manage your bookings</p>
-              <Link to="/dashboard/user/details" className="text-sm underline">User Details</Link>
-            </div>
+            
           </div>
         </section>
         <div className="container py-8 space-y-8">

@@ -263,7 +263,6 @@ async function about(req, res) {
     const stats = [
       { label: 'Hotels', value: String(totalHotels) },
       { label: 'Happy Customers', value: String(totalBookings) },
-      { label: 'Awards Won', value: '25+' },
       { label: 'Countries', value: '180+' }
     ];
 

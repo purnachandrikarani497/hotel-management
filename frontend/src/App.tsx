@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Hotels from "./pages/Hotels";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Help from "./pages/Help.tsx";
+import Cancellation from "./pages/Cancellation.tsx";
 import SignIn from "./pages/SignIn";
 import Register from "./pages/Register";
 import HotelDetail from "./pages/HotelDetail";
@@ -34,6 +36,8 @@ const App = () => (
           <Route path="/hotels" element={<Hotels />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/cancellation" element={<Cancellation />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/register" element={<Register />} />
           <Route path="/hotel/:id" element={<HotelDetail />} />
