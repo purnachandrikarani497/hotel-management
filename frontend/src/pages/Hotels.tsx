@@ -26,6 +26,17 @@ const Hotels = () => {
     queryKey: ["hotels"],
     queryFn: () => apiGet<{ hotels: Hotel[] }>(`/api/hotels`)
   })
+  const maxPriceAll = useMemo(() => {
+    const hotels: Hotel[] = data?.hotels || []
+    const max = Math.max(100000, ...hotels.map(h => Number(h.price || 0)))
+    return max
+  }, [data?.hotels])
+  useEffect(() => {
+    const curMax = price[1]
+    if (maxPriceAll && maxPriceAll !== curMax) {
+      setPrice([0, maxPriceAll])
+    }
+  }, [maxPriceAll])
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === 'hotelUpdated' && e.newValue) {
@@ -91,7 +102,7 @@ const Hotels = () => {
                   <label className="text-sm font-medium mb-3 block">
                     Price Range
                   </label>
-                  <Slider defaultValue={[0, 100000]} max={100000} step={100} onValueChange={(v) => setPrice([v[0], v[1]])} />
+                  <Slider defaultValue={[0, maxPriceAll]} max={maxPriceAll} step={100} onValueChange={(v) => setPrice([v[0], v[1]])} />
                 </div>
 
                 {/* Rating */}

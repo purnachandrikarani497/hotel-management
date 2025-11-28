@@ -21,6 +21,8 @@ const BookingSchema = new mongoose.Schema({
   extraHours: { type: Number, default: 0 },
   extraCharges: { type: Number, default: 0 },
   cancellationFee: { type: Number, default: 0 },
+  ownerActionToken: { type: String, default: '' },
+  userActionToken: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 })
 

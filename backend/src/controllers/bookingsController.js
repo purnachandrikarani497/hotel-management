@@ -1,7 +1,9 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
-const { Booking, Hotel, Room, Settings, MessageThread, Message, Coupon } = require('../models')
+const { Booking, Hotel, Room, Settings, MessageThread, Message, Coupon, User } = require('../models')
+let mailer = null
+try { mailer = require('nodemailer') } catch { mailer = null }
 
 async function create(req, res) {
   await connect(); await ensureSeed();
@@ -155,7 +157,9 @@ async function create(req, res) {
   }
   const id = await nextIdFor('Booking')
   const holdExpiresAt = new Date(Date.now() + holdMinutes * 60 * 1000)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), checkIn, checkOut, guests: Number(guests), total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'held', holdExpiresAt, paid: false })
+  const ownerActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+  const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), checkIn, checkOut, guests: Number(guests), total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'held', holdExpiresAt, paid: false, ownerActionToken, userActionToken })
   // Do not hard-block room for all dates; overlap logic prevents conflicts
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {
@@ -167,6 +171,37 @@ async function create(req, res) {
   }
   const mid = await nextIdFor('Message')
   await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Reservation #${id} created`, readByUser: true, readByOwner: false })
+
+  try {
+    const owner = hotel.ownerId ? await User.findOne({ id: Number(hotel.ownerId) }).lean() : null
+    const user = userId ? await User.findOne({ id: Number(userId) }).lean() : null
+    const base = process.env.API_BASE || `http://localhost:${process.env.PORT || 5001}`
+    const ownerConfirmLink = `${base}/api/bookings/email/owner-confirm/${id}?token=${ownerActionToken}`
+    const ownerCancelLink = `${base}/api/bookings/email/owner-cancel-query?id=${id}&token=${ownerActionToken}`
+    const userCancelLink = `${base}/api/bookings/email/user-cancel-query?id=${id}&token=${userActionToken}`
+    if (mailer && owner?.email) {
+      try {
+        const transporter = mailer.createTransport({ host: process.env.SMTP_HOST, service: /gmail\.com$/i.test(String(process.env.SMTP_HOST||'')) ? 'gmail' : undefined, port: Number(process.env.SMTP_PORT || 587), secure: String(process.env.SMTP_SECURE||'false') === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+        const ownerHtml = `
+          <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto">
+            <h2>New booking received: #${id}</h2>
+            <p>Hotel: <b>${hotel.name}</b> (#${hotel.id})</p>
+            <p>Dates: ${checkIn} → ${checkOut}</p>
+            <p>Guests: ${guests}</p>
+            <p>Total: ₹${computedTotal}</p>
+            <hr/>
+            <p>User details:</p>
+            <p>Name: ${user?.fullName || `${user?.firstName||''} ${user?.lastName||''}`.trim() || ''}<br/>
+               Email: ${user?.email || ''}<br/>
+               Phone: ${user?.phone || ''}</p>
+            <p style="margin-top:16px">Status: Booked</p>
+          </div>`
+        await transporter.sendMail({ from: process.env.SMTP_USER, to: owner.email, subject: `New booking #${id} • ${hotel.name}`, html: ownerHtml })
+      } catch (e) { console.warn('[BookingCreate] owner email send failed', e?.message || e) }
+    }
+    // Do not send reservation emails to the user on booking creation
+  } catch (_e) { /* ignore */ }
+
   res.json({ status: 'reserved', id, roomId: chosenRoomId, holdExpiresAt })
 }
 
@@ -206,7 +241,127 @@ async function confirm(req, res) {
   const thread = await MessageThread.findOne({ bookingId: id })
   const mid = await nextIdFor('Message')
   await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} confirmed`, readByUser: true, readByOwner: true })
+  try {
+    const hotel = await Hotel.findOne({ id: Number(b.hotelId) }).lean()
+    const user = b.userId ? await User.findOne({ id: Number(b.userId) }).lean() : null
+    const base = process.env.API_BASE || `http://localhost:${process.env.PORT || 5001}`
+    const userCancelLink = `${base}/api/bookings/email/user-cancel-query?id=${id}&token=${b.userActionToken || ''}`
+    if (mailer && user?.email) {
+      try {
+        const transporter = mailer.createTransport({ host: process.env.SMTP_HOST, service: /gmail\.com$/i.test(String(process.env.SMTP_HOST||'')) ? 'gmail' : undefined, port: Number(process.env.SMTP_PORT || 587), secure: String(process.env.SMTP_SECURE||'false') === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+        const html = `<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto"><h2>Your room is confirmed</h2><p>Booking #${id} • ${hotel?.name || ''}</p><p>Check-in: ${b.checkIn} • Check-out: ${b.checkOut} • Guests: ${b.guests}</p><p>Status: Confirmed</p></div>`
+        await transporter.sendMail({ from: process.env.SMTP_USER, to: user.email, subject: `Booking confirmed #${id} • ${hotel?.name || ''}`, html })
+      } catch (e) { console.warn('[BookingConfirm] user email send failed', e?.message || e) }
+    }
+  } catch (_e) { /* ignore */ }
   res.json({ status: 'confirmed' })
 }
 
-module.exports = { create, invoice, confirm }
+async function ownerConfirmEmail(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const token = String(req.query.token || '')
+  const b = await Booking.findOne({ id })
+  if (!b) return res.status(404).send('Booking not found')
+  if (!b.ownerActionToken || b.ownerActionToken !== token) return res.status(403).send('Invalid token')
+  req.params.id = String(id)
+  return confirm(req, res)
+}
+
+async function ownerCancelEmail(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const token = String(req.query.token || req.body?.token || '')
+  const reasonRaw = String(req.query.reason || req.body?.reason || '')
+  const b = await Booking.findOne({ id })
+  if (!b) return res.status(404).send('Booking not found')
+  if (!b.ownerActionToken || b.ownerActionToken !== token) return res.status(403).send('Invalid token')
+  const extra = String(req.query.other || req.body?.other || '').trim()
+  const defaultReason = 'Owner cancelled via email'
+  const reason = reasonRaw ? (reasonRaw === 'Other' ? (extra ? `Other: ${extra}` : 'Other') : decodeURIComponent(reasonRaw)) : defaultReason
+  b.status = 'cancelled'
+  b.cancelReason = reason
+  await b.save()
+  const thread = await MessageThread.findOne({ bookingId: id })
+  const mid = await nextIdFor('Message')
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by owner: ${reason}`, readByUser: false, readByOwner: true })
+  try {
+    const hotel = await Hotel.findOne({ id: Number(b.hotelId) }).lean()
+    const user = b.userId ? await User.findOne({ id: Number(b.userId) }).lean() : null
+    if (mailer && user?.email) {
+      try {
+        const transporter = mailer.createTransport({ host: process.env.SMTP_HOST, service: /gmail\.com$/i.test(String(process.env.SMTP_HOST||'')) ? 'gmail' : undefined, port: Number(process.env.SMTP_PORT || 587), secure: String(process.env.SMTP_SECURE||'false') === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+        const owner = hotel?.ownerId ? await User.findOne({ id: Number(hotel.ownerId) }).lean() : null
+        const html = `<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:auto\"><h2>Your reservation was cancelled</h2><p>Booking #${id} • ${hotel?.name || ''}</p><p>Status: Cancelled</p><p>Reason: ${reason}</p><p>Owner: ${owner?.fullName || `${owner?.firstName||''} ${owner?.lastName||''}`.trim() || ''} • ${owner?.email || ''} • ${owner?.phone || ''}</p></div>`
+        await transporter.sendMail({ from: process.env.SMTP_USER, to: user.email, subject: `Booking cancelled by owner #${id} • ${hotel?.name || ''}`, html })
+      } catch (e) { console.warn('[OwnerCancelEmail] user email failed', e?.message || e) }
+    }
+  } catch (_e) { /* ignore */ }
+  res.send('Cancelled')
+}
+
+async function userCancelEmail(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.params.id)
+  const token = String(req.query.token || req.body?.token || '')
+  const reasonRaw = String(req.query.reason || req.body?.reason || '')
+  const b = await Booking.findOne({ id })
+  if (!b) return res.status(404).send('Booking not found')
+  if (!b.userActionToken || b.userActionToken !== token) return res.status(403).send('Invalid token')
+  const extra = String(req.query.other || req.body?.other || '').trim()
+  const defaultReason = 'User cancelled via email'
+  const reason = reasonRaw ? (reasonRaw === 'Other' ? (extra ? `Other: ${extra}` : 'Other') : decodeURIComponent(reasonRaw)) : defaultReason
+  req.params.id = String(id)
+  req.body = { ...(req.body || {}), reason }
+  return require('./userController').cancelBooking(req, res)
+}
+
+async function userCancelEmailQuery(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.query.id)
+  const token = String(req.query.token || req.body?.token || '')
+  const reasonRaw = String(req.query.reason || req.body?.reason || '')
+  const b = await Booking.findOne({ id })
+  if (!b) return res.status(404).send('Booking not found')
+  if (!b.userActionToken || b.userActionToken !== token) return res.status(403).send('Invalid token')
+  const extra = String(req.query.other || req.body?.other || '').trim()
+  const defaultReason = 'User cancelled via email'
+  const reason = reasonRaw ? (reasonRaw === 'Other' ? (extra ? `Other: ${extra}` : 'Other') : decodeURIComponent(reasonRaw)) : defaultReason
+  req.params.id = String(id)
+  req.body = { ...(req.body || {}), reason }
+  return require('./userController').cancelBooking(req, res)
+}
+
+async function ownerCancelEmailQuery(req, res) {
+  await connect(); await ensureSeed();
+  const id = Number(req.query.id)
+  const token = String(req.query.token || req.body?.token || '')
+  const reasonRaw = String(req.query.reason || req.body?.reason || '')
+  const b = await Booking.findOne({ id })
+  if (!b) return res.status(404).send('Booking not found')
+  if (!b.ownerActionToken || b.ownerActionToken !== token) return res.status(403).send('Invalid token')
+  const extra = String(req.query.other || req.body?.other || '').trim()
+  const defaultReason = 'Owner cancelled via email'
+  const reason = reasonRaw ? (reasonRaw === 'Other' ? (extra ? `Other: ${extra}` : 'Other') : decodeURIComponent(reasonRaw)) : defaultReason
+  b.status = 'cancelled'
+  b.cancelReason = reason
+  await b.save()
+  const thread = await MessageThread.findOne({ bookingId: id })
+  const mid = await nextIdFor('Message')
+  await Message.create({ id: mid, threadId: Number(thread?.id || 0), senderRole: 'system', senderId: null, content: `Booking #${id} cancelled by owner: ${reason}`, readByUser: false, readByOwner: true })
+  try {
+    const hotel = await Hotel.findOne({ id: Number(b.hotelId) }).lean()
+    const user = b.userId ? await User.findOne({ id: Number(b.userId) }).lean() : null
+    if (mailer && user?.email) {
+      try {
+        const transporter = mailer.createTransport({ host: process.env.SMTP_HOST, service: /gmail\.com$/i.test(String(process.env.SMTP_HOST||'')) ? 'gmail' : undefined, port: Number(process.env.SMTP_PORT || 587), secure: String(process.env.SMTP_SECURE||'false') === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+        const owner = hotel?.ownerId ? await User.findOne({ id: Number(hotel.ownerId) }).lean() : null
+        const html = `<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:auto\"><h2>Your reservation was cancelled</h2><p>Booking #${id} • ${hotel?.name || ''}</p><p>Status: Cancelled</p><p>Reason: ${reason}</p><p>Owner: ${owner?.fullName || `${owner?.firstName||''} ${owner?.lastName||''}`.trim() || ''} • ${owner?.email || ''} • ${owner?.phone || ''}</p></div>`
+        await transporter.sendMail({ from: process.env.SMTP_USER, to: user.email, subject: `Booking cancelled by owner #${id} • ${hotel?.name || ''}`, html })
+      } catch (e) { console.warn('[OwnerCancelEmailQuery] user email failed', e?.message || e) }
+    }
+  } catch (_e) { /* ignore */ }
+  res.send('Cancelled')
+}
+
+module.exports = { create, invoice, confirm, ownerConfirmEmail, ownerCancelEmail, userCancelEmail, userCancelEmailQuery, ownerCancelEmailQuery }
