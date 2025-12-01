@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Wifi } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/api";
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -142,16 +143,16 @@ const HotelDetail = () => {
         }[];
       }>(`/api/hotels/${id}/reviews`),
     enabled: !!id,
+    staleTime: 60_000,
   });
 
   const hotel: Hotel | undefined = data?.hotel;
-  const availableRooms = roomsQuery.data?.rooms || [];
+  const availableRooms = React.useMemo(() => roomsQuery.data?.rooms || [], [roomsQuery.data?.rooms]);
   const adminHotelsQ = useQuery({
     queryKey: ["admin","hotels"],
     queryFn: () => apiGet<{ hotels: { id:number; contactEmail?:string; contactPhone1?:string; contactPhone2?:string; ownerName?:string }[] }>(`/api/admin/hotels`),
     enabled: true,
-    staleTime: 15_000,
-    refetchInterval: 3000,
+    staleTime: 60_000,
   });
   const contactInfo = (() => {
     const h = hotel
@@ -212,7 +213,7 @@ const HotelDetail = () => {
   const maxGuests = Math.max(1, Number(selectedRoom?.members || 1));
   useEffect(() => {
     if (guests > maxGuests) setGuests(maxGuests);
-  }, [maxGuests]);
+  }, [maxGuests, guests]);
   const price = Number(selectedRoom?.price ?? hotel?.price ?? 0);
 
   const dynPricing = hotel?.pricing || {};
@@ -299,6 +300,7 @@ const HotelDetail = () => {
     queryKey: ["hotel", "coupons", id, checkIn],
     queryFn: () => apiGet<{ coupons: Coupon[] }>(`/api/hotels/${id}/coupons?date=${checkIn}`),
     enabled: !!id && !!checkIn,
+    staleTime: 60_000,
   });
 
   // reservation mutation
@@ -356,6 +358,7 @@ const HotelDetail = () => {
       const i = setInterval(tick, 1000);
       return () => clearInterval(i);
     }
+    return undefined;
   }, [reserve.isSuccess, holdUntil]);
 
   const resolveImage = (src?: string) => {

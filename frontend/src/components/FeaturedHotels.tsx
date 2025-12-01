@@ -4,7 +4,7 @@ import { apiGet } from "@/lib/api";
 
 const FeaturedHotels = () => {
   type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[] }
-  const { data, isLoading, isError } = useQuery({ queryKey: ["featured"], queryFn: () => apiGet<{ hotels: Hotel[] }>("/api/featured") })
+  const { data, isLoading, isError } = useQuery({ queryKey: ["featured"], queryFn: () => apiGet<{ hotels: Hotel[] }>("/api/featured"), staleTime: 60_000, refetchOnWindowFocus: false })
   const hotels: Hotel[] = data?.hotels || []
   return (
     <section className="py-16 bg-background">

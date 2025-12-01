@@ -381,7 +381,7 @@ const OwnerDashboard = () => {
 
   const reviews = reviewsQ.data?.reviews || []
 
-  const guests = guestsQ.data?.guests || []
+  const guests = React.useMemo(() => guestsQ.data?.guests || [], [guestsQ.data?.guests])
   const [dateFilterGuests, setDateFilterGuests] = React.useState<string>("all")
   const guestsTimeFiltered = React.useMemo(
     () => guests
@@ -786,7 +786,7 @@ const OwnerDashboard = () => {
     const ownerName = (auth?.user?.fullName || `${auth?.user?.firstName || ''} ${auth?.user?.lastName || ''}`.trim()) || ''
     list.forEach((h: Hotel)=>{ init[h.id] = { email: h.contactEmail || ownerEmail, phone1: h.contactPhone1 || ownerPhone, phone2: h.contactPhone2 || '', ownerName: h.ownerName || ownerName } })
     setContactForm(init)
-  }, [hotelsQ.data])
+  }, [hotelsQ.data, auth?.user?.email, auth?.user?.phone, auth?.user?.fullName, auth?.user?.firstName, auth?.user?.lastName])
 
   const setRoomTypesPersist = (next: string[]) => {
     setRoomTypes(next)

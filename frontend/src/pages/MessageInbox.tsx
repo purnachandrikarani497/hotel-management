@@ -49,7 +49,7 @@ const MessageInbox = () => {
   }, [messages])
   const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) }, onError: () => {} , retry: false })
   const lastReadRef = React.useRef<number>(0)
-  React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId) } }, [activeId, markRead.isPending])
+  React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId) } }, [activeId, markRead.isPending, markRead])
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 

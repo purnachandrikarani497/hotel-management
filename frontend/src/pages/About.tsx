@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 
 const About = () => {
-  const { data, isLoading, isError } = useQuery({ queryKey: ["about"], queryFn: () => apiGet<{ stats: { label: string; value: string }[]; ourStory?: string; ourMission?: string; contact?: { name?: string; email?: string; phone1?: string; phone2?: string } }>("/api/about"), refetchOnWindowFocus: true })
+  const { data, isLoading, isError } = useQuery({ queryKey: ["about"], queryFn: () => apiGet<{ stats: { label: string; value: string }[]; ourStory?: string; ourMission?: string; contact?: { name?: string; email?: string; phone1?: string; phone2?: string } }>("/api/about"), staleTime: 60_000, refetchOnWindowFocus: false })
   const stats = data?.stats || []
   const ourStory = data?.ourStory || ""
   const ourMission = data?.ourMission || ""
