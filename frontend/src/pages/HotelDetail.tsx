@@ -574,17 +574,17 @@ const HotelDetail = () => {
                       {couponsQ.isError && <div className="text-xs text-muted-foreground mt-2">Failed to load coupons</div>}
                       {!couponsQ.isLoading && !couponsQ.isError && (
                         (couponsQ.data?.coupons || []).length ? (
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="mt-3 space-y-2">
                             {(couponsQ.data?.coupons || []).map((c) => (
-                              <span
-                                key={c.id}
-                                onClick={() => setAppliedCoupon(appliedCoupon?.id === c.id ? null : c)}
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs cursor-pointer ${
-                                  appliedCoupon?.id === c.id ? "bg-primary text-primary-foreground" : "bg-secondary"
-                                }`}
-                              >
-                                {c.code} • {c.discount}%
-                              </span>
+                              <div key={c.id} className="grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 bg-card">
+                                <div className="text-sm">{c.code}</div>
+                                <div className="text-sm">{c.discount}%</div>
+                                <div className="text-right">
+                                  <Button size="sm" variant={appliedCoupon?.id === c.id ? "default" : "outline"} onClick={() => setAppliedCoupon(appliedCoupon?.id === c.id ? null : c)}>
+                                    {appliedCoupon?.id === c.id ? "Remove" : "Apply"}
+                                  </Button>
+                                </div>
+                              </div>
                             ))}
                           </div>
                         ) : (
@@ -592,26 +592,34 @@ const HotelDetail = () => {
                         )
                       )}
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <div className={`flex items-center gap-3 rounded border px-3 py-2 ${rateSelection==='normal' ? 'bg-secondary' : 'bg-card'}`}>
-                          <div className="text-xs">Normal</div>
-                          <div className="text-xs">₹{Number(dynPricing.normalPrice ?? hotel?.price ?? 0)}</div>
-                          <Button size="sm" variant={rateSelection==='normal' ? 'default' : 'outline'} onClick={() => setRateSelection(rateSelection==='normal' ? null : 'normal')}>Apply</Button>
+                      <div className="mt-3 space-y-2">
+                        <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${rateSelection==='normal' ? 'bg-secondary' : 'bg-card'}`}>
+                          <div className="text-sm">Normal</div>
+                          <div className="text-sm">₹{Number(dynPricing.normalPrice ?? hotel?.price ?? 0)}</div>
+                          <div className="text-right">
+                            <Button size="sm" variant={rateSelection==='normal' ? 'default' : 'outline'} onClick={() => setRateSelection(rateSelection==='normal' ? null : 'normal')}>{rateSelection==='normal' ? 'Remove' : 'Apply'}</Button>
+                          </div>
                         </div>
-                        <div className={`flex items-center gap-3 rounded border px-3 py-2 ${rateSelection==='weekend' ? 'bg-secondary' : 'bg-card'}`}>
-                          <div className="text-xs">Weekend</div>
-                          <div className="text-xs">₹{Number(dynPricing.weekendPrice ?? hotel?.price ?? 0)}</div>
-                          <Button size="sm" variant={rateSelection==='weekend' ? 'default' : 'outline'} onClick={() => setRateSelection(rateSelection==='weekend' ? null : 'weekend')}>Apply</Button>
+                        <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${rateSelection==='weekend' ? 'bg-secondary' : 'bg-card'}`}>
+                          <div className="text-sm">Weekend</div>
+                          <div className="text-sm">₹{Number(dynPricing.weekendPrice ?? hotel?.price ?? 0)}</div>
+                          <div className="text-right">
+                            <Button size="sm" variant={rateSelection==='weekend' ? 'default' : 'outline'} onClick={() => setRateSelection(rateSelection==='weekend' ? null : 'weekend')}>{rateSelection==='weekend' ? 'Remove' : 'Apply'}</Button>
+                          </div>
                         </div>
-                        <div className={`flex items-center gap-3 rounded border px-3 py-2 ${rateSelection==='seasonal' ? 'bg-secondary' : 'bg-card'}`}>
-                          <div className="text-xs">Seasonal</div>
-                          <div className="text-xs">₹{seasonalPrice !== undefined ? Number(seasonalPrice) : 0}</div>
-                          <Button size="sm" variant={rateSelection==='seasonal' ? 'default' : 'outline'} disabled={seasonalPrice === undefined} onClick={() => setRateSelection(rateSelection==='seasonal' ? null : 'seasonal')}>Apply</Button>
+                        <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${rateSelection==='seasonal' ? 'bg-secondary' : 'bg-card'}`}>
+                          <div className="text-sm">Seasonal</div>
+                          <div className="text-sm">₹{seasonalPrice !== undefined ? Number(seasonalPrice) : 0}</div>
+                          <div className="text-right">
+                            <Button size="sm" variant={rateSelection==='seasonal' ? 'default' : 'outline'} disabled={seasonalPrice === undefined} onClick={() => setRateSelection(rateSelection==='seasonal' ? null : 'seasonal')}>{rateSelection==='seasonal' ? 'Remove' : 'Apply'}</Button>
+                          </div>
                         </div>
-                        <div className={`flex items-center gap-3 rounded border px-3 py-2 ${rateSelection==='special' ? 'bg-secondary' : 'bg-card'}`}>
-                          <div className="text-xs">Special Day</div>
-                          <div className="text-xs">₹{specialPrice !== undefined ? Number(specialPrice) : 0}</div>
-                          <Button size="sm" variant={rateSelection==='special' ? 'default' : 'outline'} disabled={specialPrice === undefined} onClick={() => setRateSelection(rateSelection==='special' ? null : 'special')}>Apply</Button>
+                        <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${rateSelection==='special' ? 'bg-secondary' : 'bg-card'}`}>
+                          <div className="text-sm">Special Day</div>
+                          <div className="text-sm">₹{specialPrice !== undefined ? Number(specialPrice) : 0}</div>
+                          <div className="text-right">
+                            <Button size="sm" variant={rateSelection==='special' ? 'default' : 'outline'} disabled={specialPrice === undefined} onClick={() => setRateSelection(rateSelection==='special' ? null : 'special')}>{rateSelection==='special' ? 'Remove' : 'Apply'}</Button>
+                          </div>
                         </div>
                       </div>
                     </div>
