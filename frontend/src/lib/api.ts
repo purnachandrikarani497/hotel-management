@@ -3,7 +3,14 @@
 const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>;
 const primaryBase = env?.VITE_API_URL || env?.VITE_API_BASE || '';
 const originBase = (typeof window !== 'undefined' && window?.location?.origin) ? window.location.origin : '';
-const fallbacks: string[] = [primaryBase || '', originBase || '', '', 'http://localhost:8080', 'http://localhost:5000', 'http://localhost:5001'];
+const fallbacks: string[] = [
+  primaryBase || '',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  originBase || '',
+  'http://localhost:8080',
+  'http://localhost:5001'
+];
 
 export async function apiGet<T>(path: string): Promise<T> {
   for (const base of fallbacks) {

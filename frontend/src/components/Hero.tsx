@@ -7,13 +7,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-resort.jpg";
-import GuestSelector from "./GuestSelector";
+import GuestSelector, { type GuestCounts } from "./GuestSelector";
 import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [query, setQuery] = useState("");
+  const [guests, setGuests] = useState<GuestCounts>({ adults: 1, children: 0, rooms: 1, pets: false });
   const navigate = useNavigate();
 
   return (
@@ -114,7 +115,7 @@ const Hero = () => {
               <label className="text-sm font-medium text-muted-foreground mb-2 block text-left">
                 Guests & Rooms
               </label>
-              <GuestSelector />
+              <GuestSelector value={guests} onChange={setGuests} />
             </div>
           </div>
           
@@ -123,6 +124,10 @@ const Hero = () => {
             if (query) params.set('q', query)
             if (checkIn) params.set('checkIn', checkIn.toISOString().slice(0,10))
             if (checkOut) params.set('checkOut', checkOut.toISOString().slice(0,10))
+            if (guests.adults) params.set('adults', String(guests.adults))
+            if (guests.children) params.set('children', String(guests.children))
+            if (guests.rooms) params.set('rooms', String(guests.rooms))
+            if (guests.pets) params.set('pets', 'true')
             navigate(`/hotels?${params.toString()}`)
           }}>
             <Search className="mr-2 h-5 w-5" />

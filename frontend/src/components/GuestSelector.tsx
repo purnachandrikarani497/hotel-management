@@ -3,26 +3,32 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Users, Plus, Minus } from "lucide-react";
 
-interface GuestCounts {
+export interface GuestCounts {
   adults: number;
   children: number;
   rooms: number;
   pets: boolean;
 }
 
-const GuestSelector = () => {
-  const [guests, setGuests] = useState<GuestCounts>({
-    adults: 2,
-    children: 0,
-    rooms: 1,
-    pets: false,
-  });
+type Props = {
+  value?: GuestCounts;
+  onChange?: (g: GuestCounts) => void;
+};
+
+const GuestSelector = ({ value, onChange }: Props) => {
+  const [guests, setGuests] = useState<GuestCounts>(
+    value || { adults: 2, children: 0, rooms: 1, pets: false }
+  );
+
+  const setGuestsSync = (next: GuestCounts) => {
+    setGuests(next);
+    if (onChange) onChange(next);
+  };
 
   const updateCount = (key: keyof Omit<GuestCounts, 'pets'>, delta: number) => {
-    setGuests(prev => ({
-      ...prev,
-      [key]: Math.max(key === 'adults' || key === 'rooms' ? 1 : 0, prev[key] + delta)
-    }));
+    const current = key === 'adults' ? guests.adults : key === 'children' ? guests.children : guests.rooms;
+    const nextVal = Math.max(key === 'adults' || key === 'rooms' ? 1 : 0, current + delta);
+    setGuestsSync({ ...guests, [key]: nextVal });
   };
 
   const guestSummary = `${guests.adults} adult${guests.adults > 1 ? 's' : ''}${
@@ -131,7 +137,7 @@ const GuestSelector = () => {
             <Button
               size="sm"
               variant={guests.pets ? "default" : "outline"}
-              onClick={() => setGuests(prev => ({ ...prev, pets: !prev.pets }))}
+              onClick={() => setGuestsSync({ ...guests, pets: !guests.pets })}
             >
               {guests.pets ? "Yes" : "No"}
             </Button>

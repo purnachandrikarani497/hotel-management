@@ -12,9 +12,10 @@ interface HotelCardProps {
   amenities?: string[];
   rating?: number;
   reviews?: number;
+  availableTypes?: { type: string; members?: number; available?: number }[];
 }
 
-const HotelCard = ({ id, name, location, price, image, amenities = [], rating, reviews }: HotelCardProps) => {
+const HotelCard = ({ id, name, location, price, image, amenities = [], rating, reviews, availableTypes = [] }: HotelCardProps) => {
   const resolveImage = (src?: string) => {
     const s = String(src||'')
     if (!s) return 'https://placehold.co/800x600?text=Hotel'
@@ -62,10 +63,20 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
           ) : null}
         </div>
         
-        <div className="flex items-center text-muted-foreground mb-4">
+        <div className="flex items-center text-muted-foreground mb-2">
           <MapPin className="h-4 w-4 mr-1" />
           <span className="text-sm">{location}</span>
       </div>
+
+        {availableTypes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {availableTypes.slice(0, 2).map((rt, idx) => (
+              <Badge key={`${id}-${rt.type}-${idx}`} variant="secondary" className="text-xs">
+                {rt.type} • {Number(rt.members||0)} • {Number(rt.available||0)} left
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {amenities.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">

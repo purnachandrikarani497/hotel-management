@@ -16,6 +16,12 @@ const Hotels = () => {
   const [searchParams] = useSearchParams()
   const [q, setQ] = useState("")
   useEffect(()=>{ setQ(searchParams.get('q') || '') }, [searchParams])
+  const checkIn = searchParams.get('checkIn') || ''
+  const checkOut = searchParams.get('checkOut') || ''
+  const adults = Number(searchParams.get('adults') || '0')
+  const children = Number(searchParams.get('children') || '0')
+  const roomsNeeded = Math.max(1, Number(searchParams.get('rooms') || '1'))
+  const totalGuests = Math.max(1, adults + children)
   const [price, setPrice] = useState<[number, number]>([0, 100000])
   const [minRating, setMinRating] = useState<number | null>(null)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
@@ -23,10 +29,33 @@ const Hotels = () => {
   const [sortBy, setSortBy] = useState<string>("Rating")
   const qc = useQueryClient()
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["hotels"],
-    queryFn: () => apiGet<{ hotels: Hotel[] }>(`/api/hotels`),
+    queryKey: ["hotels", q],
+    queryFn: () => apiGet<{ hotels: Hotel[] }>(`/api/hotels?q=${encodeURIComponent(q)}`),
     staleTime: 60_000,
     refetchOnWindowFocus: true,
+  })
+
+  type RoomAgg = { type: string; members: number; available: number }
+  const availabilityQ = useQuery({
+    queryKey: ["hotels", "availability", checkIn],
+    enabled: !!checkIn && !!(data?.hotels?.length || 0),
+    queryFn: async () => {
+      const hotels: Hotel[] = data?.hotels || []
+      const out: Record<number, RoomAgg[]> = {}
+      await Promise.all(
+        hotels.map(async (h) => {
+          try {
+            const r = await apiGet<{ rooms: { type: string; members?: number; available?: number }[] }>(`/api/hotels/${h.id}/rooms?date=${encodeURIComponent(checkIn)}`)
+            out[h.id] = (r.rooms || []).map((x) => ({ type: String(x.type||''), members: Number(x.members||0), available: Number(x.available||0) }))
+          } catch {
+            out[h.id] = []
+          }
+        })
+      )
+      return out
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   })
   const maxPriceAll = useMemo(() => {
     const hotels: Hotel[] = data?.hotels || []
@@ -52,8 +81,13 @@ const Hotels = () => {
   const displayHotels = useMemo(()=>{
     const hotels: Hotel[] = data?.hotels || []
     let list = hotels
+    // qLower filter already applied via server param; keep client-side for robustness
     if (qLower) {
       list = list.filter(h => (h.name||'').toLowerCase().includes(qLower) || (h.location||'').toLowerCase().includes(qLower))
+    }
+    // enforce hyd location when searching for hyd
+    if (qLower.includes('hyd')) {
+      list = list.filter(h => (h.location||'').toLowerCase().includes('hyd'))
     }
     list = list.filter(h => h.price >= price[0] && h.price <= price[1])
     if (minRating) list = list.filter(h => Math.floor(h.rating) >= (minRating || 0))
@@ -71,11 +105,27 @@ const Hotels = () => {
         return selectedAmenities.every(a => ams.includes(a.toLowerCase()))
       })
     }
+    // Availability filter: only if checkIn provided
+    if (checkIn && totalGuests > 0) {
+      const map = availabilityQ.data || {}
+      list = list.filter(h => {
+        const rs = map[h.id] || []
+        const perRoomGuests = Math.ceil(totalGuests / roomsNeeded)
+        const haveCapacity = rs.some(r => Number(r.members||0) >= perRoomGuests && Number(r.available||0) > 0)
+        if (qLower.includes('hyd')) {
+          const hydSuite = rs.find(r => r.type.trim().toLowerCase() === 'suite' && Number(r.members||0) === 2 && Number(r.available||0) > 0)
+          const hydDeluxe = rs.find(r => r.type.trim().toLowerCase() === 'deluxe' && Number(r.members||0) === 2 && Number(r.available||0) > 0)
+          const perRoomOk = perRoomGuests <= 2
+          return perRoomOk && (!!hydSuite || !!hydDeluxe)
+        }
+        return haveCapacity
+      })
+    }
     if (sortBy === 'Price: Low to High') list = [...list].sort((a,b)=>a.price-b.price)
     else if (sortBy === 'Price: High to Low') list = [...list].sort((a,b)=>b.price-a.price)
     else if (sortBy === 'Rating') list = [...list].sort((a,b)=>b.rating-a.rating)
     return list
-  }, [data?.hotels, qLower, price, minRating, selectedTypes, selectedAmenities, sortBy])
+  }, [data?.hotels, qLower, price, minRating, selectedTypes, selectedAmenities, sortBy, checkIn, totalGuests, roomsNeeded, availabilityQ.data])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -187,9 +237,13 @@ const Hotels = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {displayHotels.map((hotel) => (
-                <HotelCard key={hotel.id} {...hotel} />
-              ))}
+              {displayHotels.map((hotel) => {
+                const rs = (availabilityQ.data || {})[hotel.id] || []
+                const shown = rs.filter(r => ['suite','deluxe'].includes(r.type.trim().toLowerCase()) && Number(r.available||0) > 0)
+                return (
+                  <HotelCard key={hotel.id} {...hotel} availableTypes={shown} />
+                )
+              })}
             </div>
           </div>
         </div>

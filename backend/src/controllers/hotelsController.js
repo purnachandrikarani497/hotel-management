@@ -21,7 +21,13 @@ async function list(req, res) {
     const filter = { ownerId: { $ne: null }, status: 'approved' };
 
     if (q && typeof q === 'string') {
-      filter.name = { $regex: q, $options: 'i' };
+      const qstr = String(q).trim();
+      if (qstr) {
+        filter.$or = [
+          { name: { $regex: qstr, $options: 'i' } },
+          { location: { $regex: qstr, $options: 'i' } },
+        ];
+      }
     }
     if (minPrice || maxPrice) {
       filter.price = {};
