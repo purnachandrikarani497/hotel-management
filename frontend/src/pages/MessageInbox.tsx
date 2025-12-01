@@ -23,8 +23,9 @@ const MessageInbox = () => {
     queryKey: ["inbox","threads",role,userId],
     queryFn: () => role === 'owner' ? apiGet<{ threads: Thread[] }>(`/api/messages/threads?ownerId=${userId}`) : apiGet<{ threads: Thread[] }>(`/api/messages/threads?userId=${userId}`),
     enabled: !!userId,
-    refetchInterval: 2000,
-    refetchOnWindowFocus: true
+    refetchInterval: 1500,
+    refetchOnWindowFocus: true,
+    staleTime: 1000,
   })
   const threads = React.useMemo(() => threadsQ.data?.threads ?? [], [threadsQ.data])
   const orderedThreads = React.useMemo(() => {
@@ -49,7 +50,7 @@ const MessageInbox = () => {
   }, [messages])
   const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) }, onError: () => {} , retry: false })
   const lastReadRef = React.useRef<number>(0)
-  React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId) } }, [activeId, markRead.isPending, markRead])
+  React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId); qc.setQueryData(["inbox","threads",role,userId], (data?: { threads: Thread[] }) => { const arr = (data?.threads||[]).map(t => t.id===activeId ? { ...t, unreadForUser: 0, unreadForOwner: 0 } : t); return { threads: arr } }) } }, [activeId, markRead.isPending, markRead, qc, role, userId])
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
@@ -80,7 +81,7 @@ const MessageInbox = () => {
     if (ownerId) qc.invalidateQueries({ queryKey: ["owner","reviews", ownerId] })
   }, onError: () => { toast({ title: "Review submission failed", variant: "destructive" }) } })
 
-  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || ''; if (s.startsWith('/uploads')) return `${base}${s}`; if (s.startsWith('uploads')) return `${base}/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
+  const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || 'http://localhost:5000'; if (s.startsWith('/uploads')) return `${base}${s}`; if (s.startsWith('uploads')) return `${base}/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
   const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
   React.useEffect(() => {
     const ids = Array.from(new Set(threads.map(t=>t.hotelId))).filter(Boolean)
@@ -115,14 +116,14 @@ const MessageInbox = () => {
               <CardContent>
                 <div className="rounded border overflow-hidden">
                   {(orderedThreads||[]).map(t => (
-                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-muted/40' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={()=>setActiveId(t.id)}>
+                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={()=>setActiveId(t.id)}>
                       <div className="flex items-center gap-3">
                         <img src={resolveImage(hotelMap[t.hotelId]?.image)} alt={hotelMap[t.hotelId]?.name||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
                         <div className="flex-1">
                           <div className="font-medium">{hotelMap[t.hotelId]?.name || `Hotel ${t.hotelId}`}</div>
                           <div className="text-xs text-muted-foreground">Booking #{t.bookingId}</div>
                         </div>
-                        {(() => { const c = role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0); return c ? (<span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{c}</span>) : null })()}
+                        {(() => { const c = role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0); return (c && activeId !== t.id) ? (<span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{c}</span>) : null })()}
                       </div>
                       {t.lastMessage && (
                         <div className="text-xs text-muted-foreground mt-1">

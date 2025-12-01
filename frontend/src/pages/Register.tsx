@@ -45,6 +45,7 @@ const Register = () => {
   const phoneRe = /^[6-9]\d{9}$/
   const validate = (): boolean => {
     if (!firstName || !lastName || !email || !phone || !password || !confirm || !fullName || !dob || !address || !idType || !idNumber) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (!idDocImage) { toast({ title: "Document required", description: "Please upload your ID document", variant: "destructive" }); return false }
     if (!phoneRe.test(String(phone).trim())) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
     if (password !== confirm) { toast({ title: "Passwords do not match", variant: "destructive" }); return false }
     const pat = idPatterns[idType]
@@ -53,7 +54,22 @@ const Register = () => {
     return true
   }
   const { toast } = useToast()
-  const mutation = useMutation({ mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage }), onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) }, onError: () => { toast({ title: "Registration failed", variant: "destructive" }) } })
+  const mutation = useMutation({
+    mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage }),
+    onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) },
+    onError: (err: unknown) => {
+      const msg = (() => {
+        if (err instanceof Error) return String(err.message || '')
+        const r = err as { response?: { status?: number; data?: { error?: string } } }
+        const status = r?.response?.status || 0
+        const e = String(r?.response?.data?.error || '')
+        if (status === 409 || /exists/i.test(e)) return 'Email already exists — try another email'
+        if (/Missing fields/i.test(e)) return 'Missing required fields'
+        return 'Registration failed'
+      })()
+      toast({ title: msg.includes('Registration failed') ? 'Registration failed' : 'Registration error', description: msg, variant: 'destructive' })
+    }
+  })
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -140,7 +156,7 @@ const Register = () => {
                   <div className="text-xs text-muted-foreground mt-1">Format: {idHints[idType]}</div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Document Upload</label>
+                  <label className="text-sm font-medium mb-2 block">Document Upload *</label>
                   <Input type="file" accept="image/*" onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} />
                 </div>
               </div>

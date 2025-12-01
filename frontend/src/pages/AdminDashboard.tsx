@@ -48,6 +48,19 @@ const AdminDashboard = () => {
   const setHotelStatus = useMutation({ mutationFn: (p: { id:number; status:Hotel["status"] }) => apiPost("/api/admin/hotels/"+p.id+"/status", { status: p.status }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel status updated", description: `#${vars.id} → ${vars.status}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const setHotelFeatured = useMutation({ mutationFn: (p: { id:number; featured:boolean }) => apiPost("/api/admin/hotels/"+p.id+"/feature", { featured: p.featured }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: vars.featured ? "Featured" : "Unfeatured", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   
+  const adminCancelBooking = useMutation({
+    mutationFn: (id: number) => apiPost(`/api/admin/bookings/${id}/cancel`, {}),
+    onSuccess: (_res, vars) => { toast({ title: "Booking cancelled", description: `#${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+  })
+  const ownerCheckinBooking = useMutation({
+    mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}),
+    onSuccess: (_res, vars) => { toast({ title: "Checked in", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+  })
+  const ownerCheckoutBooking = useMutation({
+    mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}),
+    onSuccess: (_res, vars) => { toast({ title: "Checked out", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+  })
+
   const [deletingHotelId, setDeletingHotelId] = React.useState<number|null>(null)
   const deleteHotelOwner = useMutation({
     mutationFn: (id:number) => apiDelete(`/api/owner/hotels/${id}`),
@@ -331,7 +344,7 @@ const AdminDashboard = () => {
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const hotelsArr = hotels.data?.hotels || []
@@ -346,6 +359,27 @@ const AdminDashboard = () => {
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{b.refundIssued ? ' • Refunded' : ''}</span></td>
+                      <td className="p-3">
+                        {(() => {
+                          const s = String(b.status || '').trim().toLowerCase()
+                          const canCancel = s === 'confirmed'
+                          const canCheckin = s === 'confirmed'
+                          const canCheckout = s === 'confirmed' || s === 'checked_in'
+                          return (
+                            <div className="flex gap-2 flex-wrap items-center">
+                              {canCheckin && (
+                                <Button size="sm" onClick={() => ownerCheckinBooking.mutate(b.id)}>Check-in</Button>
+                              )}
+                              {canCheckout && (
+                                <Button size="sm" variant="outline" onClick={() => ownerCheckoutBooking.mutate(b.id)}>Check-out</Button>
+                              )}
+                              {canCancel && (
+                                <Button size="sm" variant="destructive" onClick={() => adminCancelBooking.mutate(b.id)}>Cancel</Button>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </td>
                     </tr>
                   ))
                 })()}

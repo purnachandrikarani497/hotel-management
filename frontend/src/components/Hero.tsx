@@ -7,14 +7,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-resort.jpg";
-import GuestSelector, { type GuestCounts } from "./GuestSelector";
+// Guests & Rooms selection removed per request
 import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [query, setQuery] = useState("");
-  const [guests, setGuests] = useState<GuestCounts>({ adults: 1, children: 0, rooms: 1, pets: false });
+  // Removed guests/rooms state
   const navigate = useNavigate();
 
   return (
@@ -35,7 +35,7 @@ const Hero = () => {
         </p>
 
         <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
               <label className="text-sm font-medium text-muted-foreground mb-2 block text-left">
                 Where
@@ -111,12 +111,7 @@ const Hero = () => {
               </Popover>
             </div>
             
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block text-left">
-                Guests & Rooms
-              </label>
-              <GuestSelector value={guests} onChange={setGuests} />
-            </div>
+            {/* Guests & Rooms selector intentionally removed */}
           </div>
           
           <Button className="w-full md:w-auto mt-6 h-12 px-8" onClick={()=>{
@@ -124,10 +119,7 @@ const Hero = () => {
             if (query) params.set('q', query)
             if (checkIn) params.set('checkIn', checkIn.toISOString().slice(0,10))
             if (checkOut) params.set('checkOut', checkOut.toISOString().slice(0,10))
-            if (guests.adults) params.set('adults', String(guests.adults))
-            if (guests.children) params.set('children', String(guests.children))
-            if (guests.rooms) params.set('rooms', String(guests.rooms))
-            if (guests.pets) params.set('pets', 'true')
+            // No guests/rooms params
             navigate(`/hotels?${params.toString()}`)
           }}>
             <Search className="mr-2 h-5 w-5" />
