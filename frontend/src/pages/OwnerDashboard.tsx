@@ -597,6 +597,17 @@ const OwnerDashboard = () => {
       qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
       qc.invalidateQueries({ queryKey: ["owner", "stats", ownerId] })
     },
+    onError: (err) => {
+      const msg = (() => {
+        if (err instanceof Error) return String(err.message || '')
+        if (typeof err === 'object' && err) {
+          const r = err as { response?: { data?: { error?: string; message?: string } } }
+          return r?.response?.data?.error || r?.response?.data?.message || 'Add room failed'
+        }
+        return 'Add room failed'
+      })()
+      toast({ title: 'Add room failed', description: msg, variant: 'destructive' })
+    }
   })
 
   const updateRoom = useMutation({
@@ -1308,23 +1319,26 @@ const OwnerDashboard = () => {
                 <RoomTypeManager types={roomTypes} onAddType={addRoomType} />
                 <div className="grid grid-cols-7 gap-3">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Hotel ID
-                    </label>
-                    <Input
-                      type="number"
+                    <label className="text-sm font-medium mb-2 block">Hotel</label>
+                    <select
+                      className="w-full px-4 py-2 rounded-lg border bg-background"
                       value={roomForm.hotelId}
                       onChange={(e) =>
                         setRoomForm({
                           ...roomForm,
-                          hotelId: Number(e.target.value),
+                          hotelId: Number(e.target.value || 0),
                         })
                       }
-                    />
+                    >
+                      <option value={0}>Select hotel</option>
+                      {hotels.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.id} • {h.name}
+                        </option>
+                      ))}
+                    </select>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {roomForm.hotelId
-                        ? hotelName(resolveOwnerHotelId(roomForm.hotelId)) || "Unknown hotel"
-                        : ""}
+                      {roomForm.hotelId ? hotelName(roomForm.hotelId) : ""}
                     </div>
                   </div>
                   <div>
@@ -1446,9 +1460,9 @@ const OwnerDashboard = () => {
                         const photos = files.length
                           ? await Promise.all(files.map(toDataUrl))
                           : []
-                        const resolvedId = resolveOwnerHotelId(roomForm.hotelId)
+                        const resolvedId = roomForm.hotelId
                         if (!resolvedId) {
-                          toast({ title: 'Invalid Hotel ID', description: 'Enter your owner S.No shown in Register page.' })
+                          toast({ title: 'Select a hotel', description: 'Please choose one of your hotels.' })
                           return
                         }
                         const payloadBase = {
@@ -1475,7 +1489,7 @@ const OwnerDashboard = () => {
                           names: files.map((f) => f.name),
                         })
                       }}
-                      disabled={!resolveOwnerHotelId(roomForm.hotelId) || !roomForm.type}
+                      disabled={!roomForm.hotelId || !roomForm.type}
                     >
                       Add Room
                     </Button>

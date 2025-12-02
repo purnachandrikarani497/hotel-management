@@ -49,7 +49,7 @@ async function stats(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
   const hotels = await Hotel.find({ ownerId }).lean();
-  const hotelIds = hotels.map(h => h.id);
+  const hotelIds = hotels.map(h => Number(h.id)).filter(Boolean);
   const ownerBookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean();
   const totalBookings = ownerBookings.length;
   const revenueStatuses = ['checked_out'];
@@ -207,7 +207,7 @@ async function remapHotelId(req, res) {
 async function rooms(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
-  const hotelIds = (await Hotel.find({ ownerId }).lean()).map(h => h.id);
+  const hotelIds = (await Hotel.find({ ownerId }).lean()).map(h => Number(h.id)).filter(Boolean);
   const rooms = await Room.find({ hotelId: { $in: hotelIds } }).lean();
   res.json({ rooms });
 }
@@ -215,7 +215,15 @@ async function rooms(req, res) {
 async function createRoom(req, res) {
   await connect(); await ensureSeed();
   const { ownerId, hotelId, type, price, amenities, photos, availability, members, roomNumber } = req.body || {};
-  const h = await Hotel.findOne({ id: Number(hotelId) });
+  const hidN = Number(hotelId);
+  const hidS = String(hotelId);
+  let h = await Hotel.findOne({ id: hidN });
+  if (!h) {
+    const raw = await Hotel.collection.findOne({ id: hidS });
+    if (raw && raw._id) {
+      h = await Hotel.findById(raw._id);
+    }
+  }
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
   if (h.ownerId == null && ownerId) {
     h.ownerId = Number(ownerId);
@@ -228,7 +236,7 @@ async function createRoom(req, res) {
   const savedUrls = saveImagesFromDataUrls('room', id, Array.isArray(photos) ? photos : []);
   await Room.create({
     id,
-    hotelId: Number(hotelId),
+    hotelId: Number(h?.id || hidN),
     type: String(type || 'Standard'),
     roomNumber: String(roomNumber || ''),
     price: Number(price) || 0,
@@ -290,7 +298,7 @@ async function deleteRoom(req, res) {
 async function ownerBookings(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
-  const hotelIds = (await Hotel.find({ ownerId }).lean()).map(h => h.id);
+  const hotelIds = (await Hotel.find({ ownerId }).lean()).map(h => Number(h.id)).filter(Boolean);
   const bookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean();
   const userIds = Array.from(new Set(bookings.map(b => Number(b.userId || 0)).filter(Boolean)));
   const users = userIds.length ? await User.find({ id: { $in: userIds } }).lean() : [];
@@ -306,7 +314,7 @@ async function guests(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
   const hotels = await Hotel.find({ ownerId }).lean();
-  const hotelIds = hotels.map(h => h.id);
+  const hotelIds = hotels.map(h => Number(h.id)).filter(Boolean);
   const bookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean();
   const byUser = {};
   bookings.forEach(b => {
