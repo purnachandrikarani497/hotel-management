@@ -340,11 +340,11 @@ const AdminDashboard = () => {
                 const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
                 downloadCsv(`bookings-${bookingsPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} booking(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
+              
             </div>
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const hotelsArr = hotels.data?.hotels || []
@@ -359,27 +359,6 @@ const AdminDashboard = () => {
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{b.refundIssued ? ' • Refunded' : ''}</span></td>
-                      <td className="p-3">
-                        {(() => {
-                          const s = String(b.status || '').trim().toLowerCase()
-                          const canCancel = s === 'confirmed'
-                          const canCheckin = s === 'confirmed'
-                          const canCheckout = s === 'confirmed' || s === 'checked_in'
-                          return (
-                            <div className="flex gap-2 flex-wrap items-center">
-                              {canCheckin && (
-                                <Button size="sm" onClick={() => ownerCheckinBooking.mutate(b.id)}>Check-in</Button>
-                              )}
-                              {canCheckout && (
-                                <Button size="sm" variant="outline" onClick={() => ownerCheckoutBooking.mutate(b.id)}>Check-out</Button>
-                              )}
-                              {canCancel && (
-                                <Button size="sm" variant="destructive" onClick={() => adminCancelBooking.mutate(b.id)}>Cancel</Button>
-                              )}
-                            </div>
-                          )
-                        })()}
-                      </td>
                     </tr>
                   ))
                 })()}

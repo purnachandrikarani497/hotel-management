@@ -275,7 +275,16 @@ const OwnerDashboard = () => {
         if (r.roomNumber) m.roomNumbers.push(r.roomNumber)
       }
     })
-    return Object.values(map).sort((a, b) => {
+    const ordered = Object.values(map).map(g => ({
+      ...g,
+      roomNumbers: (g.roomNumbers || []).slice().sort((a,b)=>{
+        const na = /^\d+$/.test(String(a)) ? Number(a) : Number.MAX_SAFE_INTEGER
+        const nb = /^\d+$/.test(String(b)) ? Number(b) : Number.MAX_SAFE_INTEGER
+        if (na !== nb) return na - nb
+        return String(a).localeCompare(String(b))
+      })
+    }))
+    return ordered.sort((a, b) => {
       const aMaxId = Math.max(...a.ids)
       const bMaxId = Math.max(...b.ids)
       return bMaxId - aMaxId
@@ -854,7 +863,7 @@ const OwnerDashboard = () => {
       availableRooms?: string
     }
   }>({})
-  const [roomGroupEdit, setRoomGroupEdit] = React.useState<{ [key: string]: { price?: string; members?: string; amenities?: string; availability?: boolean; blocked?: boolean; availableRooms?: string } }>({})
+  const [roomGroupEdit, setRoomGroupEdit] = React.useState<{ [key: string]: { price?: string; members?: string; amenities?: string; availability?: boolean; blocked?: boolean; availableRooms?: string; roomNumbers?: string } }>({})
   const [roomGroupEditing, setRoomGroupEditing] = React.useState<{ [key: string]: boolean }>({})
   const [roomPhotosByGroup, setRoomPhotosByGroup] = React.useState<{ [key: string]: File[] }>({})
 
@@ -1532,14 +1541,24 @@ const OwnerDashboard = () => {
                             )}
                           </td>
                           <td className="p-3">
-                            {g.roomNumbers && g.roomNumbers.length ? (
-                              <div className="flex gap-1 flex-wrap">
-                                {g.roomNumbers.map((rn) => (
-                                  <span key={`${g.key}-${rn}`} className="px-2 py-1 bg-secondary rounded text-xs">{rn}</span>
-                                ))}
-                              </div>
+                            {roomGroupEditing[g.key] ? (
+                              <Input
+                                placeholder="e.g., 501, 502, 503"
+                                value={roomGroupEdit[g.key]?.roomNumbers ?? (g.roomNumbers || []).join(", ")}
+                                onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), roomNumbers: e.target.value } })}
+                              />
                             ) : (
-                              <div className="text-xs text-muted-foreground">-</div>
+                              <>
+                                {g.roomNumbers && g.roomNumbers.length ? (
+                                  <div className="flex gap-1 flex-wrap">
+                                    {g.roomNumbers.map((rn) => (
+                                      <span key={`${g.key}-${rn}`} className="px-2 py-1 bg-secondary rounded text-xs">{rn}</span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">-</div>
+                                )}
+                              </>
                             )}
                           </td>
                           <td className="p-3">
@@ -1556,7 +1575,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             <div className="flex gap-2 justify-end">
                               <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel #${g.hotelId} • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
-                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } const files = roomPhotosByGroup[g.key] || []; if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } }}>Update</Button>
+                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } const files = roomPhotosByGroup[g.key] || []; if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } }}>Update</Button>
                               <Button size="sm" variant="outline" onClick={async ()=> { try { await qc.cancelQueries({ queryKey: ['owner','rooms', ownerId] }); const prev = qc.getQueryData<{ rooms: Room[] }>(['owner','rooms', ownerId]) || { rooms: [] }; const gone = new Set(g.ids); qc.setQueryData(['owner','rooms', ownerId], (data?: { rooms: Room[] }) => ({ rooms: (data?.rooms || []).filter(r => !gone.has(r.id)) })); await Promise.all(g.ids.map(id => apiDelete(`/api/owner/rooms/${id}`))); toast({ title: 'Rooms deleted', description: `${g.ids.length} item(s)` }); } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } finally { qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } }}>Delete</Button>
                             </div>
                           </td>
