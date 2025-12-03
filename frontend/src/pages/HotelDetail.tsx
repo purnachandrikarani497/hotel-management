@@ -260,7 +260,11 @@ const HotelDetail = () => {
       const startOfToday = new Date(`${todayIso}T00:00:00+05:30`);
       const notBeforeToday = ci2 >= startOfToday;
       const notAfter = co2 > ci2;
-      return notBeforeToday && notAfter;
+      const nowHM = hmIST(new Date());
+      const toMin = (s: string) => { const [h, m] = s.split(":").map(Number); return (h || 0) * 60 + (m || 0) };
+      const ciBeforeNow = checkIn === todayIso && toMin(checkInTime) < toMin(nowHM);
+      const sameDayMinOk = checkIn !== checkOut ? true : (toMin(checkOutTime) - toMin(checkInTime)) >= 1;
+      return notBeforeToday && notAfter && !ciBeforeNow && sameDayMinOk;
     })();
 
   const ci = hasDateTime ? new Date(`${checkIn}T${checkInTime}:00+05:30`) : null;
@@ -628,6 +632,7 @@ const HotelDetail = () => {
                           min={checkIn === todayIso ? hmIST(new Date()) : undefined}
                           onChange={(e) => setCheckInTime(e.target.value)}
                         />
+                        {(() => { const nowHM = hmIST(new Date()); const toMin = (s: string) => { const [h, m] = s.split(":").map(Number); return (h || 0) * 60 + (m || 0) }; const invalid = checkIn === todayIso && toMin(checkInTime) < toMin(nowHM); return invalid ? (<div className="text-xs text-destructive mt-1">Check-in time must be later than now</div>) : null })()}
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">Check-out</label>
@@ -642,9 +647,10 @@ const HotelDetail = () => {
                           type="time"
                           className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
                           value={checkOutTime}
-                          min={checkOut === checkIn && checkInTime ? checkInTime : undefined}
+                          min={checkOut === checkIn && checkInTime ? (()=>{ const [h,m] = checkInTime.split(':').map(Number); const mins=(h||0)*60+(m||0)+1; const hh=String(Math.floor(mins/60)).padStart(2,'0'); const mm=String(mins%60).padStart(2,'0'); return `${hh}:${mm}` })() : undefined}
                           onChange={(e) => setCheckOutTime(e.target.value)}
                         />
+                        {(() => { const toMin = (s: string) => { const [h,m]=s.split(':').map(Number); return (h||0)*60+(m||0) }; const invalid = checkOut === checkIn && toMin(checkOutTime) <= toMin(checkInTime); return invalid ? (<div className="text-xs text-destructive mt-1">Check-out must be at least 1 minute after check-in</div>) : null })()}
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">Selected Room</label>
