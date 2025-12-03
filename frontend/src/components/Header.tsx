@@ -66,15 +66,16 @@ const Header = () => {
   })()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          {(() => {
+    <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-blue-50 via-purple-100 via-cyan-100 to-pink-100 border-purple-200 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-purple-200/30 to-cyan-200/30 animate-pulse"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-transparent via-white/10 to-purple-100/20"></div>
+      <div className="container flex h-16 items-center justify-between relative z-10">
+        <Link to="/" className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300">
+          <img src={(() => {
             const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>
-            const logo = env?.VITE_LOGO_URL || "/logo.svg";
-            return <img src={logo} alt="Sana Stayz" className="h-8 w-8 rounded-full object-cover" onError={(e)=>{ e.currentTarget.src = "https://placehold.co/64x64?text=S" }} />
-          })()}
-          <span className="text-xl font-bold">Sana Stayz</span>
+            return env?.VITE_LOGO_URL || "/logo.svg";
+          })()} alt="Sana Stayz" className="h-8 w-8 rounded-full object-cover ring-3 ring-purple-400 shadow-lg animate-bounce" onError={(e) => { e.currentTarget.src = "https://placehold.co/64x64?text=S" }} />
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent drop-shadow-md">Sana Stayz</span>
         </Link>
 
         {(!hideNavLinks) ? (
@@ -83,7 +84,7 @@ const Header = () => {
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-sm font-medium transition-colors hover:text-primary"
+                className="text-sm font-medium text-purple-700 transition-colors hover:text-pink-600 hover:scale-110 transform duration-300 relative after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-gradient-to-r after:from-purple-500 after:to-pink-500 after:left-0 after:bottom-0 hover:after:w-full after:transition-all after:duration-300"
               >
                 {link.label}
               </Link>
@@ -95,7 +96,7 @@ const Header = () => {
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-sm font-medium transition-colors hover:text-primary"
+                className="text-sm font-medium text-purple-700 transition-colors hover:text-pink-600 hover:scale-110 transform duration-300 relative after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-gradient-to-r after:from-purple-500 after:to-pink-500 after:left-0 after:bottom-0 hover:after:w-full after:transition-all after:duration-300"
               >
                 {link.label}
               </Link>
@@ -111,18 +112,18 @@ const Header = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="hidden md:flex"
+                  className="hidden md:flex border-purple-400 text-purple-600 bg-white/80 backdrop-blur-sm hover:bg-purple-50 hover:border-purple-500 hover:scale-105 transition-all duration-300"
                   onClick={() => navigate("/inbox")}
                 >
                   Inbox
                     {unread.data?.count ? (
-                      <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{unread.data.count}</span>
+                      <span className="ml-2 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-red-400 to-red-500 text-white text-[10px] h-5 min-w-5 shadow-lg animate-pulse">{unread.data.count}</span>
                     ) : null}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hidden md:flex"
+                    className="hidden md:flex border-pink-400 text-pink-600 bg-white/80 backdrop-blur-sm hover:bg-pink-50 hover:border-pink-500 hover:scale-105 transition-all duration-300"
                     onClick={() => {
                       localStorage.removeItem("auth");
                       navigate("/signin");
@@ -139,7 +140,7 @@ const Header = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="hidden md:flex"
+                  className="hidden md:flex text-purple-700 hover:bg-purple-100 hover:scale-105 transition-all duration-300"
                   onClick={() => navigate("/signin")}
                 >
                   <User className="h-4 w-4 mr-2" />
@@ -147,7 +148,7 @@ const Header = () => {
                 </Button>
                 <Button
                   size="sm"
-                  className="hidden md:flex"
+                  className="hidden md:flex bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white hover:from-purple-600 hover:via-pink-600 hover:to-blue-600 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                   onClick={() => navigate("/register")}
                 >
                   Register

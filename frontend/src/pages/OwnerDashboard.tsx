@@ -967,58 +967,72 @@ const OwnerDashboard = () => {
   }, [pricingType, roomsRaw, hotelsQ.data])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 bg-gradient-to-b from-transparent via-purple-50/20 to-green-50/20">
         {!feature && (
-          <section className="bg-hero-gradient text-primary-foreground py-10">
-            <div className="container">
-              <div className="flex items-center gap-3 mb-2">
-                <Building2 className="h-8 w-8" />
-                <h1 className="text-3xl md:text-4xl font-bold">Hotel Owner Dashboard</h1>
+          <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent animate-pulse"></div>
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/5 to-black/20"></div>
+            <div className="container relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm border border-white/30">
+                  <Building2 className="h-8 w-8 animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500 bg-clip-text text-transparent drop-shadow-lg">
+                    Hotel Owner Dashboard
+                  </h1>
+                  <p className="opacity-90 text-lg mt-1">Elegant management of your exceptional properties</p>
+                </div>
               </div>
-              <p className="opacity-90">Manage your properties and reservations</p>
-              <div className="mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-                <Card className="shadow-card hover:shadow-card-hover transition-all">
+              <div className="mt-8 grid gap-6 md:grid-cols-3 lg:grid-cols-5">
+                <Card className="group shadow-2xl hover:shadow-cyan-500/25 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-105 hover:rotate-1 transition-all duration-700 ease-out cursor-pointer backdrop-blur-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Rooms</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-cyan-700">Total Rooms</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats.data?.totalRooms ?? 0}</div>
+                    <div className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-purple-600 transition-colors duration-500">
+                      {stats.data?.totalRooms ?? 0}
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="shadow-card hover:shadow-card-hover transition-all">
+                <Card className="group shadow-2xl hover:shadow-purple-500/25 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-105 hover:rotate-1 transition-all duration-700 ease-out cursor-pointer backdrop-blur-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Bookings</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-purple-700">Total Bookings</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{stats.data?.totalBookings ?? 0}</div>
+                    <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent group-hover:from-pink-600 group-hover:to-rose-600 transition-colors duration-500">
+                      {stats.data?.totalBookings ?? 0}
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="shadow-card hover:shadow-card-hover transition-all">
+                <Card className="group shadow-2xl hover:shadow-green-500/25 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-105 hover:rotate-1 transition-all duration-700 ease-out cursor-pointer backdrop-blur-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Revenue</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-green-700">Total Revenue</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">₹{stats.data?.totalRevenue ?? 0}</div>
+                    <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent group-hover:from-emerald-600 group-hover:to-teal-600 transition-colors duration-500">
+                      ₹{stats.data?.totalRevenue ?? 0}
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="shadow-card hover:shadow-card-hover transition-all">
+                <Card className="group shadow-2xl hover:shadow-orange-500/25 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-105 hover:rotate-1 transition-all duration-700 ease-out cursor-pointer backdrop-blur-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Pending Bookings</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-orange-700">Pending</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent group-hover:from-yellow-600 group-hover:to-amber-600 transition-colors duration-500">
                       {stats.data?.pendingBookings ?? 0}
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="shadow-card hover:shadow-card-hover transition-all">
+                <Card className="group shadow-2xl hover:shadow-red-500/25 bg-gradient-to-br from-white via-red-50 to-rose-100 border-0 hover:scale-105 hover:rotate-1 transition-all duration-700 ease-out cursor-pointer backdrop-blur-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Hotel Status</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-red-700">Status</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent group-hover:from-rose-600 group-hover:to-pink-600 transition-colors duration-500">
                       {stats.data?.hotelStatus ?? "pending"}
                     </div>
                   </CardContent>
@@ -2891,26 +2905,39 @@ const OwnerDashboard = () => {
 
           {/* REVIEWS */}
           {feature === "reviews" && (
-            <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <Card className="shadow-2xl hover:shadow-orange-500/20 bg-gradient-to-br from-white via-orange-50 to-pink-50 border-0 scale-100 hover:scale-102 transition-all duration-500 ease-out">
               <CardHeader>
-                <CardTitle>Review Management</CardTitle>
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-pink-700 bg-clip-text text-transparent drop-shadow-sm">
+                  Review Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {reviews.map((r, idx) => (
-                    <div key={r.id} className="border rounded-lg p-3 bg-card">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="px-2 py-1 rounded bg-secondary text-xs">{idx + 1}</span>
-                          <div className="text-sm font-medium">
-                            Hotel {r.hotelId} • {r.rating}/5
+                    <div key={r.id} className="group border-0 rounded-xl p-6 bg-gradient-to-r from-white via-yellow-50 to-orange-50 shadow-lg hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 transition-all duration-500 ease-out cursor-pointer relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-pink-500"></div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold shadow-md">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <div className="text-lg font-semibold text-gray-800">
+                              Hotel {r.hotelId}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-2xl text-yellow-500">
+                                {'★'.repeat(Math.floor(r.rating))}{'☆'.repeat(5 - Math.floor(r.rating))}
+                              </div>
+                              <span className="text-sm text-gray-600">({r.rating}/5)</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(r.createdAt).toLocaleDateString()}
+                        <div className="text-xs text-gray-500 bg-white/80 px-3 py-1 rounded-full">
+                          {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
                       </div>
-                      <div className="text-sm mt-1">
+                      <div className="text-base font-medium text-gray-700 mb-2">
                         {r.user?.fullName ||
                           `${r.user?.firstName || ""} ${
                             r.user?.lastName || ""
@@ -2918,20 +2945,20 @@ const OwnerDashboard = () => {
                           r.user?.email ||
                           `Guest #${r.user?.id || ""}`}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {r.comment}
+                      <div className="text-sm text-gray-600 leading-relaxed mb-4 italic">
+                        "{r.comment}"
                       </div>
                       {r.response && (
-                        <div className="mt-2 p-2 rounded bg-muted">
-                          <div className="text-xs text-muted-foreground">
-                            Owner Response
+                        <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-300">
+                          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
+                            Your Response
                           </div>
-                          <div className="text-sm">{r.response}</div>
+                          <div className="text-sm text-gray-800">{r.response}</div>
                         </div>
                       )}
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-3 mt-4">
                         <Input
-                          placeholder="Response"
+                          placeholder="Write your response..."
                           value={reviewReply[r.id] || ""}
                           onChange={(e) =>
                             setReviewReply({
@@ -2939,6 +2966,7 @@ const OwnerDashboard = () => {
                               [r.id]: e.target.value,
                             })
                           }
+                          className="flex-1 bg-white/90 border-gray-300 focus:border-orange-400 focus:ring-orange-400"
                         />
                         <Button
                           onClick={() =>
@@ -2947,6 +2975,7 @@ const OwnerDashboard = () => {
                               response: reviewReply[r.id] || "",
                             })
                           }
+                          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
                         >
                           Respond
                         </Button>
@@ -2954,8 +2983,10 @@ const OwnerDashboard = () => {
                     </div>
                   ))}
                   {reviews.length === 0 && (
-                    <div className="text-sm text-muted-foreground">
-                      No reviews yet
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4 text-gray-300">★</div>
+                      <div className="text-lg text-gray-500 font-medium">No reviews yet</div>
+                      <div className="text-sm text-gray-400 mt-2">Wait for your first guest feedback!</div>
                     </div>
                   )}
                 </div>
