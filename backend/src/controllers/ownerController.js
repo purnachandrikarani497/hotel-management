@@ -67,6 +67,9 @@ async function stats(req, res) {
     else if (statuses.has('rejected')) hotelStatus = 'rejected';
     else if (statuses.has('suspended')) hotelStatus = 'suspended';
     else hotelStatus = String(hotels[0].status || 'pending');
+  } else {
+    const owner = await User.findOne({ id: ownerId }).lean();
+    hotelStatus = owner?.isApproved ? 'approved' : 'pending';
   }
   res.json({ totalRooms, totalBookings, totalRevenue, pendingBookings, hotelStatus });
 }
