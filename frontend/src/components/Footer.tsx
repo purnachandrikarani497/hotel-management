@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 const Footer = () => {
   const location = useLocation();
   const isOwnerDashboard = location.pathname.startsWith("/dashboard/owner");
+  const isAdminDashboard = location.pathname.startsWith("/dashboard/admin");
   return (
     <footer className="bg-gradient-to-br from-cyan-50 via-purple-100 via-pink-50 to-blue-50 border-t border-purple-200 text-gray-800 relative overflow-hidden animate-gradient-y">
       {/* Animated Background Effects */}
@@ -74,7 +75,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {!isOwnerDashboard && (
+          {!isOwnerDashboard && !isAdminDashboard && (
             <div className="space-y-4">
               <h4 className="font-bold text-xl text-pink-700 mb-6 relative">
                 Support

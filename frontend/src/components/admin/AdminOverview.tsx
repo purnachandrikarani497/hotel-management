@@ -31,7 +31,7 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
 
   return (
     <>
-      <section className="bg-hero-gradient text-primary-foreground py-10">
+      <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
         <div className="container">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="h-8 w-8" />
@@ -39,19 +39,19 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
           </div>
           <p className="opacity-90">Super Admin controls for the platform</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Hotels</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalHotels ?? 0}</div></CardContent></Card>
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalBookings ?? 0}</div></CardContent></Card>
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings Today</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsToday}</div></CardContent></Card>
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings This Month</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsThisMonth}</div></CardContent></Card>
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Revenue</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">₹{stats?.totalRevenue ?? 0}</div></CardContent></Card>
-            <Card className="shadow-card"><CardHeader className="pb-2"><CardTitle className="text-sm">Cities</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{citiesCount}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Hotels</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalHotels ?? 0}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalBookings ?? 0}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings Today</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsToday}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-yellow-50 to-orange-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings This Month</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsThisMonth}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Revenue</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">₹{stats?.totalRevenue ?? 0}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Cities</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{citiesCount}</div></CardContent></Card>
           </div>
         </div>
       </section>
 
       <div className="container py-8 space-y-8">
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="shadow-card hover:shadow-card-hover transition-all">
+          <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Monthly Bookings</CardTitle>
               <BarChart3 className="h-5 w-5 text-primary" />
@@ -68,7 +68,7 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-card hover:shadow-card-hover transition-all">
+          <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
             <CardHeader className="flex-row items-center justify-between"><CardTitle>City-wise Growth</CardTitle><Building2 className="h-5 w-5 text-primary" /></CardHeader>
             <CardContent>
               <div className="space-y-2">

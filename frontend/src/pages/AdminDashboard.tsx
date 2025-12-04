@@ -188,10 +188,21 @@ const AdminDashboard = () => {
         {!feature && (
           <AdminOverview stats={stats.data} bookings={(bookings.data?.bookings || [])} />
         )}
+        {feature && (
+          <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
+            <div className="container">
+              <div className="flex items-center gap-3 mb-2">
+                <Shield className="h-8 w-8" />
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{(() => { const f = String(feature||''); if (f==='users') return 'User Management'; if (f==='hotels') return 'Hotel Management'; if (f==='bookings') return 'Booking Management'; if (f==='settings') return 'About Us'; if (f==='contact') return 'Contact'; return 'Admin'; })()}</h1>
+              </div>
+              <p className="opacity-90">{(() => { const f = String(feature||''); if (f==='users') return 'Add owners, manage roles and statuses'; if (f==='hotels') return 'Approve, feature, or remove hotels'; if (f==='bookings') return 'Review bookings and update statuses'; if (f==='settings') return 'Edit platform story, mission and contact'; if (f==='contact') return 'Manage public contact information'; return 'Administration controls'; })()}</p>
+            </div>
+          </section>
+        )}
         <div className="container py-8 space-y-8">
 
         {feature === 'users' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
+        <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
           <CardHeader><CardTitle>User Management</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -259,7 +270,7 @@ const AdminDashboard = () => {
         )}
 
         {feature === 'hotels' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
+        <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
           <CardHeader><CardTitle>Hotel Management</CardTitle></CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 mb-3">
@@ -302,7 +313,7 @@ const AdminDashboard = () => {
         )}
 
         {feature === 'settings' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
+        <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
           <CardHeader><CardTitle>About Us</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -331,7 +342,7 @@ const AdminDashboard = () => {
         )}
 
         {feature === 'bookings' && (
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
+        <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
           <CardHeader><CardTitle>Booking Management</CardTitle></CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 mb-3">
@@ -350,10 +361,10 @@ const AdminDashboard = () => {
               }}>Download</Button>
               
             </div>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-2xl border overflow-hidden shadow-md">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Hotel</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Total</th><th className="p-3">Status</th></tr></thead>
-                <tbody className="[&_tr:hover]:bg-muted/30">
+                <thead className="bg-gradient-to-r from-purple-50 to-pink-50"><tr className="text-left"><th className="p-3 font-semibold">S.No</th><th className="p-3 font-semibold">Hotel</th><th className="p-3 font-semibold">Dates</th><th className="p-3 font-semibold">Guests</th><th className="p-3 font-semibold">Total</th><th className="p-3 font-semibold">Status</th></tr></thead>
+                <tbody className="[&_tr:hover]:bg-muted/30 [&_tr:nth-child(even)]:bg-muted/10">
                   {(() => {
                     const hotelsArr = hotels.data?.hotels || []
                     const hmap: Record<number, Hotel> = {}
@@ -366,7 +377,11 @@ const AdminDashboard = () => {
                       <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>
-                      <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}{b.refundIssued ? ' • Refunded' : ''}</span></td>
+                      <td className="p-3">{(() => {
+                        const s = String(b.status||'').trim().toLowerCase()
+                        const cls = s==='confirmed' ? 'bg-green-100 text-green-700' : (s==='checked_in' ? 'bg-blue-100 text-blue-700' : (s==='checked_out' ? 'bg-indigo-100 text-indigo-700' : (s==='cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-secondary')))
+                        return (<span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${cls}`}>{b.status}{b.refundIssued ? ' • Refunded' : ''}</span>)
+                      })()}</td>
                     </tr>
                   ))
                 })()}
@@ -379,8 +394,10 @@ const AdminDashboard = () => {
 
 
         {feature === 'contact' && (
-          <Card className="shadow-card hover:shadow-card-hover transition-all">
-            <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
+          <Card className="shadow-2xl hover:shadow-orange-500/20 bg-gradient-to-br from-white via-orange-50 to-pink-50 border-0 scale-100 hover:scale-[1.01] transition-all duration-300 ease-out rounded-2xl p-0">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-pink-700 bg-clip-text text-transparent drop-shadow-sm">Contact</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Input placeholder="Full Name" value={contactName} onChange={e=>setContactName(e.target.value)} disabled={!contactEditing} />
@@ -390,19 +407,52 @@ const AdminDashboard = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
-                <Button onClick={() => { if (!contactEditing) return; updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) }} disabled={!contactEditing || updateSettings.isPending}>Save Contact</Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { if (!contactEditing) return; updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) }} disabled={!contactEditing || updateSettings.isPending}>Save</Button>
                 <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Support Inbox</h3>
-                <div className="space-y-2">
-                  {(inbox.data?.inbox || []).slice(0,5).map(i => (
-                    <div key={i.id} className="p-3 rounded-lg border bg-card">
-                      <div className="text-sm font-medium">{i.email} • {i.subject}</div>
-                      <div className="text-sm text-muted-foreground">{i.message}</div>
-                    </div>
-                  ))}
-                </div>
+            </CardContent>
+          </Card>
+        )}
+        {feature === 'contact' && (
+          <Card className="shadow-2xl hover:shadow-orange-500/20 bg-gradient-to-br from-white via-orange-50 to-pink-50 border-0 rounded-2xl p-0">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-pink-700 bg-clip-text text-transparent drop-shadow-sm">Admin Contact Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-xl border bg-white shadow-md overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left">
+                      <th className="p-3">Full Name</th>
+                      <th className="p-3">Phone 1</th>
+                      <th className="p-3">Phone 2</th>
+                      <th className="p-3">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:hover]:bg-muted/30">
+                    <tr className="border-t">
+                      <td className="p-3">{settings.data?.settings?.contactName || '-'}</td>
+                      <td className="p-3">{settings.data?.settings?.contactPhone1 || '-'}</td>
+                      <td className="p-3">{settings.data?.settings?.contactPhone2 || '-'}</td>
+                      <td className="p-3">{settings.data?.settings?.contactEmail || '-'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {feature === 'contact' && (
+          <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
+            <CardHeader><CardTitle>Support Inbox</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {(inbox.data?.inbox || []).slice(0,5).map(i => (
+                  <div key={i.id} className="p-3 rounded-lg border bg-card">
+                    <div className="text-sm font-medium">{i.email} • {i.subject}</div>
+                    <div className="text-sm text-muted-foreground">{i.message}</div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
