@@ -381,15 +381,9 @@ const HotelDetail = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">{hotel?.name || 'Hotel Details'}</h1>
-                <div className="mt-2 flex items-center gap-3">
-                  <div className="inline-flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm border border-white/20">
-                    <Star className="h-4 w-4 text-yellow-300" />
-                    <span className="text-sm opacity-90">{typeof hotel?.rating === 'number' ? hotel.rating.toFixed(1) : ''}{typeof hotel?.reviews === 'number' ? ` (${hotel.reviews})` : ''}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm border border-white/20">
-                    <MapPin className="h-4 w-4" />
-                    <span className="text-sm opacity-90">{hotel?.location || ''}</span>
-                  </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm">{hotel?.location || ''}</span>
                 </div>
               </div>
               <div className="hidden md:flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">

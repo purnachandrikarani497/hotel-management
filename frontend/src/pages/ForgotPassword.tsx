@@ -31,17 +31,38 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md">
-          <div className="bg-card rounded-lg shadow-card p-8">
-            <h1 className="text-2xl font-bold mb-4">Forgot Password</h1>
-            <form onSubmit={(e)=>{ e.preventDefault(); m.mutate(); }} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Email</label>
-                <Input type="email" placeholder="your@email.com" value={email} onChange={(e)=> setEmail(e.target.value)} />
-              </div>
-              <Button className="w-full" disabled={m.isPending}>{m.isPending?"Sending...":"Send Reset Link"}</Button>
-            </form>
+      <main className="flex-1 relative">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
+          <div className="container">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Forgot Password</h1>
+              <p className="mt-3 text-lg opacity-90">Enter your email to receive a reset link</p>
+            </div>
+          </div>
+        </section>
+        <div className="container -mt-8 px-4 flex items-start justify-center">
+          <div className="w-full max-w-md">
+            <div className="relative rounded-lg p-8 pt-12 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 backdrop-blur-sm transition-all">
+              {(() => {
+                const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>
+                const logo = env?.VITE_LOGO_URL || "/logo.svg";
+                return (
+                  <img
+                    src={logo}
+                    alt="Sana Stayz"
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 h-14 w-14 rounded-full object-cover border border-white shadow-md bg-white"
+                    onError={(e)=>{ e.currentTarget.src = "https://placehold.co/96x96?text=S" }}
+                  />
+                )
+              })()}
+              <form onSubmit={(e)=>{ e.preventDefault(); m.mutate(); }} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <Input type="email" placeholder="your@email.com" value={email} onChange={(e)=> setEmail(e.target.value)} />
+                </div>
+                <Button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white" disabled={m.isPending}>{m.isPending?"Sending...":"Send Reset Link"}</Button>
+              </form>
+            </div>
           </div>
         </div>
       </main>

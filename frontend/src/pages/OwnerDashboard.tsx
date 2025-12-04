@@ -1029,14 +1029,7 @@ const OwnerDashboard = () => {
       <div className="absolute bottom-32 right-32 w-28 h-28 bg-gradient-to-r from-violet-300/15 to-pink-300/15 rounded-full blur-xl animate-bokeh animation-delay-3000"></div>
       <div className="absolute top-1/3 right-1/3 w-20 h-20 bg-gradient-to-r from-yellow-300/25 to-orange-300/25 rounded-full blur-lg animate-bokeh animation-delay-6000"></div>
 
-      {/* Character/Mascot Breathing */}
-      <div className="absolute top-24 right-24 animate-breathe">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-300/30 to-purple-300/30 rounded-full flex items-center justify-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-cyan-400/40 to-blue-400/40 rounded-full flex items-center justify-center">
-            <span className="text-2xl animate-pulse">🤖</span>
-          </div>
-        </div>
-      </div>
+      {/* Mascot removed */}
 
       {/* Rotating Hexagonal Patterns */}
       <div className="absolute top-1/4 left-1/4 animate-hex-rotate">
