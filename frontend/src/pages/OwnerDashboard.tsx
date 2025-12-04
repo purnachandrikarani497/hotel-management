@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { Building2, Calendar as CalendarIcon, LogIn, LogOut, XCircle } from "lucide-react"
+import { Building2, Calendar as CalendarIcon } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import RoomTypeManager from "@/components/RoomTypeManager"
@@ -1964,61 +1964,10 @@ const OwnerDashboard = () => {
 
           {/* BOOKINGS */}
           {feature === "bookings" && (
-            <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
-              <div className="container">
-                <div className="text-center">
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Manage Bookings</h1>
-                  <p className="mt-3 text-lg opacity-90">Track reservations, statuses and earnings</p>
-                  <div className="mt-4 flex justify-center">
-                    <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-                      <span className="text-sm opacity-80">Bookings Portal</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-          {feature === "bookings" && (
-            <div className="container mt-8 grid gap-8 lg:grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
-              <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-purple-700 uppercase tracking-wider">Total Bookings</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{bookings.length}</div>
-                  <div className="text-xs text-purple-600 opacity-70 uppercase tracking-wide">Reservations</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-green-500/30 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-green-700 uppercase tracking-wider">Total Revenue</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">₹{bookings.reduce((s,b)=> s + Number(b.total||0), 0)}</div>
-                  <div className="text-xs text-green-600 opacity-70 uppercase tracking-wide">Earnings</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-orange-500/30 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wider">Pending</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{bookings.filter(b=> String(b.status).trim().toLowerCase()==='pending').length}</div>
-                  <div className="text-xs text-orange-600 opacity-70 uppercase tracking-wide">Awaiting</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-cyan-700 uppercase tracking-wider">Checked Out</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{bookings.filter(b=> String(b.status).trim().toLowerCase()==='checked_out').length}</div>
-                  <div className="text-xs text-cyan-600 opacity-70 uppercase tracking-wide">Completed</div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          {feature === "bookings" && (
-            <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-[1.01] transition-all duration-500 ease-out backdrop-blur-sm">
+            <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">Manage Bookings</CardTitle>
+                  <CardTitle>Manage Bookings</CardTitle>
                 <div className="flex items-center gap-2">
                     {(() => {
                       const opts = [
@@ -2146,7 +2095,7 @@ const OwnerDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border overflow-x-auto">
+                <div className="rounded-lg border overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
@@ -2208,10 +2157,10 @@ const OwnerDashboard = () => {
                           <td className="p-3">{b.guests}</td>
                           <td className="p-3">₹{b.total}</td>
                           <td className="p-3">
-                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-md border whitespace-nowrap uppercase ${
-                              (String(b.status).toLowerCase() === 'confirmed')
-                                ? 'bg-gradient-to-r from-indigo-500 via-violet-600 to-purple-700 text-white border-violet-900 shadow-violet-900/50'
-                                : (String(b.status).toLowerCase() === 'checked_in')
+                            <div className={`inline-flex items-center gap-4 px-6 py-4 rounded-2xl text-lg font-bold shadow-xl border-2 whitespace-nowrap uppercase ${
+                              String(b.status).toLowerCase().includes('approved') ||
+                              String(b.status).toLowerCase().includes('confirmed') ||
+                              String(b.status).toLowerCase() === 'checked_in'
                                 ? 'bg-gradient-to-r from-emerald-500 via-green-600 to-emerald-700 text-white border-green-900 shadow-green-900/50'
                                 : String(b.status).toLowerCase().includes('pending')
                                 ? 'bg-gradient-to-r from-yellow-500 via-amber-600 to-yellow-700 text-white border-orange-900 shadow-orange-900/50 animate-pulse'
@@ -2229,7 +2178,7 @@ const OwnerDashboard = () => {
                                 <div className="w-2 h-2 bg-red-800 rounded-full flex-shrink-0 animate-ping"></div>
                               ) : null}
                               <span className="tracking-normal">
-                                {b.status === 'confirmed' ? 'CONFIRMED' :
+                                {b.status === 'confirmed' ? 'APPROVED' :
                                  b.status === 'checked_in' ? 'CHECKED IN' :
                                  b.status === 'checked_out' ? 'CHECKED OUT' :
                                  b.status === 'cancelled' ? 'CANCELLED' :
@@ -2251,47 +2200,42 @@ const OwnerDashboard = () => {
                                   {canCheckin && (
                                     <Button
                                       size="sm"
-                                      className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md"
                                       onClick={() =>
                                         checkinBooking.mutate(b.id)
                                       }
                                     >
-                                      <LogIn className="w-4 h-4 mr-1" />
                                       Check-in
                                     </Button>
                                   )}
                                   {canCheckout && (
                                     <Button
                                       size="sm"
-                                      className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-md"
+                                      variant="outline"
                                       onClick={() =>
                                         checkoutBooking.mutate(b.id)
                                       }
                                     >
-                                      <LogOut className="w-4 h-4 mr-1" />
                                       Check-out
                                     </Button>
                                   )}
                                   {canCancel && (
                                     <>
-                                      {!ownerCancelVisible[b.id] && (
-                                        <Button size="sm" className="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white shadow-md" onClick={() => setOwnerCancelVisible({ ...ownerCancelVisible, [b.id]: true })}>Cancel</Button>
-                                      )}
+                                      <Button size="sm" variant="outline" onClick={() => setOwnerCancelVisible({ ...ownerCancelVisible, [b.id]: !(ownerCancelVisible[b.id] || false) })}>Cancel</Button>
                                       {ownerCancelVisible[b.id] ? (
                                         <div className="flex items-center gap-2">
-                                          <select className="px-2 py-1 rounded border text-xs w-32" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
+                                          <select className="px-2 py-1 rounded border text-sm" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
                                             <option value="">Select reason</option>
                                             {ownerCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
                                           </select>
                                           {(ownerCancelSel[b.id] === 'Other') && (
-                                            <Input className="w-36 text-xs" placeholder="Please specify" value={ownerCancelOther[b.id] || ''} onChange={(e)=> setOwnerCancelOther({ ...ownerCancelOther, [b.id]: e.target.value })} />
+                                            <Input className="w-48" placeholder="Please specify" value={ownerCancelOther[b.id] || ''} onChange={(e)=> setOwnerCancelOther({ ...ownerCancelOther, [b.id]: e.target.value })} />
                                           )}
                                           {(() => {
                                             const chosen = ownerCancelSel[b.id] || ''
                                             const extra = chosen === 'Other' ? (ownerCancelOther[b.id] || '') : ''
                                             const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim()
                                             return (
-                                              <Button size="sm" className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white shadow-md px-3 py-1 text-xs ml-1" onClick={()=> cancelBooking.mutate({ id: b.id, reason })}><XCircle className="w-4 h-4 mr-1" />Confirm</Button>
+                                              <Button size="sm" variant="destructive" onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>
                                             )
                                           })()}
                                         </div>
@@ -2313,61 +2257,10 @@ const OwnerDashboard = () => {
 
         {/* GUESTS */}
         {feature === "guests" && (
-            <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
-              <div className="container">
-                <div className="text-center">
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Guests</h1>
-                  <p className="mt-3 text-lg opacity-90">View guests, documents and last bookings</p>
-                  <div className="mt-4 flex justify-center">
-                    <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-                      <span className="text-sm opacity-80">Guests Portal</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-        )}
-        {feature === "guests" && (
-            <div className="container mt-8 grid gap-8 lg:grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
-              <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-purple-700 uppercase tracking-wider">Total Guests</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{guests.length}</div>
-                  <div className="text-xs text-purple-600 opacity-70 uppercase tracking-wide">Profiles</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-green-500/30 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-green-700 uppercase tracking-wider">With Booking</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{guests.filter(g=>!!g.lastBooking).length}</div>
-                  <div className="text-xs text-green-600 opacity-70 uppercase tracking-wide">Linked</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-orange-500/30 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wider">Documents</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{guests.filter(g=>!!g.user?.idDocUrl).length}</div>
-                  <div className="text-xs text-orange-600 opacity-70 uppercase tracking-wide">Uploaded</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-cyan-700 uppercase tracking-wider">Hotels</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{Array.from(new Set(guests.map(g=>g.lastBooking?.hotelId).filter(Boolean))).length}</div>
-                  <div className="text-xs text-cyan-600 opacity-70 uppercase tracking-wide">Unique</div>
-                </CardContent>
-              </Card>
-            </div>
-        )}
-        {feature === "guests" && (
-            <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-[1.01] transition-all duration-500 ease-out backdrop-blur-sm">
+            <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">Guests</CardTitle>
+                  <CardTitle>Guests</CardTitle>
                   <div className="flex items-center gap-2">
                     {(() => {
                       const opts = [
@@ -2579,15 +2472,12 @@ const OwnerDashboard = () => {
 
         {/* CONTACT */}
         {feature === "contact" && (
-          <Card className="shadow-2xl hover:shadow-orange-500/20 bg-gradient-to-br from-white via-orange-50 to-pink-50 border-0 scale-100 hover:scale-102 transition-all duration-500 ease-out">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-pink-700 bg-clip-text text-transparent drop-shadow-sm">Contact</CardTitle>
-            </CardHeader>
+          <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
             <CardContent>
-              <div className="group border-0 rounded-xl p-4 bg-gradient-to-r from-white via-yellow-50 to-orange-50 shadow-lg relative overflow-x-auto">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-pink-500"></div>
+              <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-orange-100 to-pink-100">
+                  <thead className="bg-muted/50">
                     <tr className="text-left">
                       <th className="p-3">Hotel</th>
                       <th className="p-3">Hotel Email</th>
@@ -2597,7 +2487,7 @@ const OwnerDashboard = () => {
                       <th className="p-3">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="[&_tr]:transition-all [&_tr:hover]:shadow-md [&_tr:hover]:scale-[1.01]">
+                  <tbody className="[&_tr:hover]:bg-muted/30">
                     {(hotelsQ.data?.hotels || []).map((h: Hotel)=> (
                       <tr key={`contact-${h.id}`} className="border-t">
                         <td className="p-3">{h.id} • {h.name}</td>
@@ -2605,11 +2495,7 @@ const OwnerDashboard = () => {
                         <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) }} disabled={!contactEditing[h.id]} /></td>
                         <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) }} disabled={!contactEditing[h.id]} /></td>
                         <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3 flex gap-2">
-                          <Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button>
-                          <Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id]}>Save</Button>
-                          <Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button>
-                        </td>
+                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id]}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2620,15 +2506,12 @@ const OwnerDashboard = () => {
         )}
 
         {feature === "contact" && (
-          <Card className="shadow-2xl hover:shadow-orange-500/20 bg-gradient-to-br from-white via-orange-50 to-pink-50 border-0 scale-100 hover:scale-102 transition-all duration-500 ease-out">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-700 to-pink-700 bg-clip-text text-transparent drop-shadow-sm">Admin Contact Details</CardTitle>
-            </CardHeader>
+          <Card className="shadow-card hover:shadow-card-hover transition-all">
+            <CardHeader><CardTitle>Admin Contact Details</CardTitle></CardHeader>
             <CardContent>
-              <div className="group border-0 rounded-xl p-4 bg-gradient-to-r from-white via-yellow-50 to-orange-50 shadow-lg relative overflow-x-auto">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-pink-500"></div>
+              <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-orange-100 to-pink-100">
+                  <thead className="bg-muted/50">
                     <tr className="text-left">
                       <th className="p-3">Full Name</th>
                       <th className="p-3">Phone 1</th>
@@ -2636,7 +2519,7 @@ const OwnerDashboard = () => {
                       <th className="p-3">Email</th>
                     </tr>
                   </thead>
-                  <tbody className="[&_tr]:transition-all [&_tr:hover]:shadow-md [&_tr:hover]:scale-[1.01]">
+                  <tbody className="[&_tr:hover]:bg-muted/30">
                     <tr className="border-t">
                       <td className="p-3">{settingsQ.data?.settings?.contactName || '-'}</td>
                       <td className="p-3">{settingsQ.data?.settings?.contactPhone1 || '-'}</td>
@@ -2652,60 +2535,9 @@ const OwnerDashboard = () => {
 
           {/* PRICING */}
           {feature === "pricing" && (
-            <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
-              <div className="container">
-                <div className="text-center">
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Dynamic Pricing</h1>
-                  <p className="mt-3 text-lg opacity-90">Configure rates, seasons and special days</p>
-                  <div className="mt-4 flex justify-center">
-                    <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-                      <span className="text-sm opacity-80">Pricing Portal</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-          {feature === "pricing" && (
-            <div className="container mt-8 grid gap-8 lg:grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
-              <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-cyan-700 uppercase tracking-wider">Hotels</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{hotels.length}</div>
-                  <div className="text-xs text-cyan-600 opacity-70 uppercase tracking-wide">Count</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-purple-700 uppercase tracking-wider">Room Types</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{roomTypes.length}</div>
-                  <div className="text-xs text-purple-600 opacity-70 uppercase tracking-wide">Unique</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-green-500/30 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-green-700 uppercase tracking-wider">Seasonal Rules</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{Object.values(pricingForm).reduce((s,p)=> s + (p.seasonal?.length || 0), 0)}</div>
-                  <div className="text-xs text-green-600 opacity-70 uppercase tracking-wide">Defined</div>
-                </CardContent>
-              </Card>
-
-              <Card className="group shadow-2xl hover:shadow-orange-500/30 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wider">Special Days</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{Object.values(pricingForm).reduce((s,p)=> s + (p.specials?.length || 0), 0)}</div>
-                  <div className="text-xs text-orange-600 opacity-70 uppercase tracking-wide">Configured</div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          {feature === "pricing" && (
-            <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-[1.01] transition-all duration-500 ease-out backdrop-blur-sm">
+            <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">Dynamic Pricing</CardTitle>
+                <CardTitle>Dynamic Pricing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="overflow-x-auto">
