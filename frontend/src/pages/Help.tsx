@@ -95,14 +95,14 @@ const Help = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <section className="py-10">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
           <div className="container max-w-6xl">
-            <h1 className="text-3xl font-bold mb-2">Help Center</h1>
-            <p className="text-muted-foreground mb-6">Find answers to common questions or chat with us for quick help.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">Help Center</h1>
+            <p className="opacity-90">Find answers to common questions or chat with us for quick help.</p>
+          
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-8">
               <div className="md:col-span-3">
-                <Card className="shadow-card">
+                <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
                   <CardHeader>
                     <CardTitle className="text-lg">Topics</CardTitle>
                   </CardHeader>
@@ -128,7 +128,7 @@ const Help = () => {
               </div>
 
               <div className="md:col-span-9 space-y-6">
-                <Card className="shadow-card">
+                <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
                   <CardHeader>
                     <CardTitle className="text-lg">{categories.find((c) => c.id === selected)?.label}</CardTitle>
                   </CardHeader>
@@ -151,7 +151,7 @@ const Help = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-card">
+                <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
                   <CardHeader>
                     <CardTitle className="text-lg">Chat With Us</CardTitle>
                   </CardHeader>

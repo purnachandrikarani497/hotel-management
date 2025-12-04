@@ -101,7 +101,7 @@ const MessageInbox = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <section className="bg-hero-gradient text-primary-foreground py-10">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
           <div className="container">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl md:text-4xl font-bold">Message Inbox · {chatTitle}</h1>
@@ -111,7 +111,7 @@ const MessageInbox = () => {
         </section>
         <div className="container py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1">
+            <Card className="md:col-span-1 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
               <CardHeader><CardTitle>Threads</CardTitle></CardHeader>
               <CardContent>
                 <div className="rounded border overflow-hidden">
@@ -136,7 +136,7 @@ const MessageInbox = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="md:col-span-2">
+            <Card className="md:col-span-2 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
               <CardHeader><CardTitle>Conversation</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[400px] overflow-y-auto rounded border p-3 bg-card">
