@@ -115,6 +115,15 @@ const UserDashboard = () => {
   const adminsQ = useQuery({ queryKey: ["admin","users"], queryFn: () => apiGet<{ users: AdminUser[] }>(`/api/admin/users`), staleTime: 30_000 })
   const adminPrimary = React.useMemo(() => (adminsQ.data?.users || []).find(u => u.role === 'admin') || (adminsQ.data?.users || [])[0], [adminsQ.data])
 
+  const statusTextClass = (s: string): string => {
+    const v = String(s || '').toLowerCase()
+    if (v === 'checked_in' || v === 'checkin') return 'text-green-600'
+    if (v === 'checked_out' || v === 'checkout') return 'text-teal-600'
+    if (v === 'confirmed') return 'text-green-800'
+    if (v === 'cancelled') return 'text-red-600'
+    return 'text-muted-foreground'
+  }
+
   const cancelBooking = useMutation<{ status:string }, unknown, { id:number; reason:string }>({ mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/user/bookings/${p.id}/cancel`, { reason: p.reason }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","bookings",userId] }); toast({ title: "Booking cancelled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Cancellation failed", variant: "destructive" }) })
   const userCancelOptions = [
     "Change of Travel Plans",
@@ -146,18 +155,73 @@ const UserDashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <section className="bg-hero-gradient text-primary-foreground py-10">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
           <div className="container">
-            <div className="flex items-center gap-3 mb-2">
-              <User className="h-8 w-8" />
-              <h1 className="text-3xl md:text-4xl font-bold">User Dashboard</h1>
+            <div className="text-center">
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">User Dashboard</h1>
+              <p className="mt-3 text-lg opacity-90">Welcome to Sana Stayz — track your trips and manage bookings with ease.</p>
             </div>
-            
           </div>
         </section>
+        <div className="container mt-8 grid gap-8 lg:grid-cols-5 md:grid-cols-2 sm:grid-cols-1">
+          {(() => {
+            const now = new Date()
+            const totalBookings = bookings.length
+            const upcomingBookings = bookings.filter(b => {
+              const d = new Date(b.checkIn)
+              return ["pending","confirmed"].includes(String(b.status||'').toLowerCase()) && d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            }).length
+            const pendingBookings = bookings.filter(b => String(b.status||'').toLowerCase()==='pending').length
+            const totalSpend = bookings.reduce((sum, b) => sum + Number(b.total||0), 0)
+            const accountStatus = 'Active'
+            return (
+              <>
+              <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
+                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-purple-700 uppercase tracking-wider">Total Bookings</CardTitle></CardHeader>
+                <CardContent className="pt-0 text-center">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{totalBookings}</div>
+                  <div className="text-xs text-purple-600 opacity-70 uppercase tracking-wide">Reservations</div>
+                </CardContent>
+              </Card>
+
+              <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
+                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-cyan-700 uppercase tracking-wider">Upcoming</CardTitle></CardHeader>
+                <CardContent className="pt-0 text-center">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{upcomingBookings}</div>
+                  <div className="text-xs text-cyan-600 opacity-70 uppercase tracking-wide">Trips</div>
+                </CardContent>
+              </Card>
+
+              <Card className="group shadow-2xl hover:shadow-green-500/30 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
+                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-green-700 uppercase tracking-wider">Total Spend</CardTitle></CardHeader>
+                <CardContent className="pt-0 text-center">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">₹{totalSpend}</div>
+                  <div className="text-xs text-green-600 opacity-70 uppercase tracking-wide">Payments</div>
+                </CardContent>
+              </Card>
+
+              <Card className="group shadow-2xl hover:shadow-orange-500/30 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
+                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wider">Pending</CardTitle></CardHeader>
+                <CardContent className="pt-0 text-center">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{pendingBookings}</div>
+                  <div className="text-xs text-orange-600 opacity-70 uppercase tracking-wide">Awaiting</div>
+                </CardContent>
+              </Card>
+
+              <Card className="group shadow-2xl hover:shadow-red-500/30 bg-gradient-to-br from-white via-red-50 to-rose-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm min-w-0">
+                <CardHeader className="pb-2 text-center"><CardTitle className="text-sm font-bold text-red-700 uppercase tracking-wider">Status</CardTitle></CardHeader>
+                <CardContent className="pt-0 pb-3 text-center px-2">
+                  <div className="text-2xl md:text-3xl font-black bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent drop-shadow-lg mb-1 capitalize break-words leading-tight">{accountStatus}</div>
+                  <div className="text-xs text-red-600 opacity-80 uppercase font-semibold leading-relaxed">Account</div>
+                </CardContent>
+              </Card>
+              </>
+            )
+          })()}
+        </div>
         <div className="container py-8 space-y-8">
 
-        <Card className="shadow-card hover:shadow-card-hover transition-all">
+        <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-[1.01] transition-all duration-500 ease-out backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Bookings</CardTitle>
@@ -204,7 +268,7 @@ const UserDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-hidden backdrop-blur-sm">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
@@ -231,7 +295,7 @@ const UserDashboard = () => {
                         <td className="p-3">{Number(b.extraCharges||0) > 0 ? `₹${Number(b.extraCharges||0)}` : '-'}</td>
                         <td className="p-3">{String(b.status).toLowerCase()==='cancelled' && Number(b.cancellationFee||0) > 0 ? `₹${Number(b.cancellationFee||0)}` : '-'}</td>
                         <td className="p-3">₹{b.total}</td>
-                        <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{b.status}</span></td>
+                        <td className="p-3"><span className={`text-xs font-semibold ${statusTextClass(String(b.status||''))}`}>{b.status}</span></td>
                         <td className="p-3 flex gap-2 flex-wrap">
                           {(['pending','confirmed'].includes(String(b.status||''))) && (
                             <>
@@ -250,7 +314,6 @@ const UserDashboard = () => {
                               ) : null}
                             </>
                           )}
-                          <Button size="sm" variant="outline" onClick={() => window.open(`/api/user/invoices/${b.id}`, '_blank')}>Invoice</Button>
                         </td>
                       </tr>
                     ))

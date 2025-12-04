@@ -62,15 +62,15 @@ const UserDetails = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <section className="bg-hero-gradient text-primary-foreground py-10">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
           <div className="container">
-            <h1 className="text-3xl md:text-4xl font-bold">User Details</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">User Details</h1>
             <p className="opacity-90">View and edit your profile details</p>
           </div>
         </section>
         <div className="container py-8">
           {blocked && (
-            <Card className="shadow-card">
+            <Card className="rounded-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 shadow-2xl border-0">
               <CardHeader><CardTitle>Not Available</CardTitle></CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">Make at least one booking to access your details.</div>
@@ -78,7 +78,7 @@ const UserDetails = () => {
             </Card>
           )}
           {!blocked && form && (
-          <Card className="shadow-card hover:shadow-card-hover transition-all">
+          <Card className="rounded-2xl bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl border-0">
             <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -148,7 +148,7 @@ const UserDetails = () => {
                   </div>
                 </div>
               </div>
-              <Button onClick={()=>{ if(!validate()) return; update.mutate({ ...form!, idDocImage: docPreview && docPreview.startsWith('data:') ? docPreview : undefined }) }}>Save</Button>
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" onClick={()=>{ if(!validate()) return; update.mutate({ ...form!, idDocImage: docPreview && docPreview.startsWith('data:') ? docPreview : undefined }) }}>Save</Button>
             </CardContent>
           </Card>
           )}

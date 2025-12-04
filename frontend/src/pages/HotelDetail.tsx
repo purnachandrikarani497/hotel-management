@@ -376,6 +376,29 @@ const HotelDetail = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12 relative overflow-hidden">
+          <div className="container">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">{hotel?.name || 'Hotel Details'}</h1>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="inline-flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                    <Star className="h-4 w-4 text-yellow-300" />
+                    <span className="text-sm opacity-90">{typeof hotel?.rating === 'number' ? hotel.rating.toFixed(1) : ''}{typeof hotel?.reviews === 'number' ? ` (${hotel.reviews})` : ''}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm opacity-90">{hotel?.location || ''}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden md:flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                <span className="text-sm opacity-80">Booking Portal</span>
+              </div>
+            </div>
+          </div>
+        </section>
         <div className="container py-8">
           {isLoading && <div>Loading…</div>}
           {isError && <div>Failed to load</div>}
@@ -426,7 +449,7 @@ const HotelDetail = () => {
                 {/* Main content */}
                 <div className="lg:col-span-2">
                   <div className="mb-6">
-                    <h1 className="text-4xl font-bold">{hotel.name}</h1>
+                    <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">{hotel.name}</h1>
                     <div className="flex items-center text-muted-foreground mb-4">
                       <MapPin className="h-5 w-5 mr-2" />
                       <span>{hotel.location}</span>
@@ -438,13 +461,13 @@ const HotelDetail = () => {
                   </div>
                   <div className="mb-8">
                     <h2 className="text-2xl font-bold mb-4">Rooms</h2>
-                    <div className="rounded-xl border overflow-hidden">
+                    <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl border-0">
                       {availableRooms.map((r, idx) => {
                         const p0 = resolveImage(r.photos?.[0]);
                         return (
                           <div
                             key={r.id}
-                            className={`grid grid-cols-12 gap-4 items-center p-4 ${idx > 0 ? "border-t" : ""} bg-card`}
+                            className={`grid grid-cols-12 gap-4 items-center p-4 ${idx > 0 ? "border-t" : ""} bg-white/70`}
                             onClick={() => setRoomType(r.type)}
                             style={{ cursor: "pointer" }}
                           >
@@ -485,7 +508,7 @@ const HotelDetail = () => {
                               </div>
                             </div>
                             <div className="col-span-4 text-right">
-                              <div className="text-primary font-bold mb-2">₹{r.price}</div>
+                              <div className="font-bold mb-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">₹{r.price}</div>
                               <Button variant={roomType === r.type ? "default" : "outline"} size="sm" onClick={() => setRoomType(r.type)}>
                                 {roomType === r.type ? "Selected" : "Show price"}
                               </Button>
@@ -537,7 +560,7 @@ const HotelDetail = () => {
 
                   <div className="mt-8">
                     <h2 className="text-2xl font-bold mb-4">Owner Contact</h2>
-                    <div className="rounded-xl border p-6">
+                    <div className="rounded-2xl p-6 bg-gradient-to-br from-white via-blue-50 to-cyan-100 shadow-2xl border-0">
                       <div className="text-sm mb-1">{hotel?.name}</div>
                       <div className="text-sm">Email: {finalContact.email || '-'}</div>
                       <div className="text-sm">Phone 1: {finalContact.phone1 || '-'}</div>
@@ -551,9 +574,9 @@ const HotelDetail = () => {
 
                 {/* Booking card */}
                 <div className="lg:col-span-1">
-                  <div className="sticky top-24 p-6 rounded-2xl border bg-card shadow-card">
+                  <div className="sticky top-24 p-6 rounded-2xl bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl border-0">
                     <div className="mb-6">
-                      <div className="text-3xl font-bold text-primary mb-1">₹{price}</div>
+                      <div className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-1">₹{price}</div>
                       <p className="text-muted-foreground">per 24h</p>
                     </div>
 
@@ -674,7 +697,7 @@ const HotelDetail = () => {
                     </div>
 
                     <Button
-                      className="w-full h-12 bg-accent hover:bg-accent/90 text-white mb-4"
+                      className="w-full h-12 mb-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                       disabled={reserve.isPending || !hasDateTime || Number(selectedRoom?.available || 0) === 0 || guests > maxGuests}
                       onClick={() => {
                         if (!isAuthed) {

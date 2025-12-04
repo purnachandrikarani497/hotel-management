@@ -130,14 +130,27 @@ const Hotels = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container py-8">
-        <h1 className="text-3xl font-bold mb-6">Find Your Perfect Stay</h1>
+      <main className="flex-1">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12 relative overflow-hidden">
+          <div className="container">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">Find Your Perfect Stay</h1>
+                <p className="mt-2 text-lg opacity-90">Browse curated hotels with filters that help you decide faster</p>
+              </div>
+              <div className="hidden md:flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                <span className="text-sm opacity-80">Search Portal</span>
+              </div>
+            </div>
+          </div>
+        </section>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="container py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <aside className="lg:col-span-1">
-            <div className="bg-card rounded-lg p-6 shadow-card sticky top-20">
-              <h2 className="text-xl font-semibold mb-4">Filters</h2>
+            <div className="rounded-2xl p-6 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 sticky top-20">
+              <h2 className="text-xl font-extrabold mb-4 bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">Filters</h2>
               
               <div className="space-y-6">
                 {/* Search */}
@@ -145,7 +158,7 @@ const Hotels = () => {
                   <label className="text-sm font-medium mb-2 block">Search</label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Hotel name..." className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
+                    <Input placeholder="Hotel name..." className="pl-9 h-11" value={q} onChange={(e) => setQ(e.target.value)} />
                   </div>
                 </div>
 
@@ -219,7 +232,7 @@ const Hotels = () => {
                   </div>
                 </div>
 
-                <Button className="w-full" onClick={() => { /* filters apply automatically */ }}>Apply Filters</Button>
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" onClick={() => { /* filters apply automatically */ }}>Apply Filters</Button>
               </div>
             </div>
           </aside>
@@ -228,7 +241,7 @@ const Hotels = () => {
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
               <p className="text-muted-foreground">{isLoading ? "Loading..." : isError ? "Failed to load" : `${displayHotels.length} properties found`}</p>
-              <select className="border rounded-lg px-4 py-2 bg-background" value={sortBy} onChange={(e)=>setSortBy(e.target.value)}>
+              <select className="rounded-lg px-4 py-2 bg-white border shadow-sm" value={sortBy} onChange={(e)=>setSortBy(e.target.value)}>
                 <option>Price: Low to High</option>
                 <option>Price: High to Low</option>
                 <option>Rating</option>

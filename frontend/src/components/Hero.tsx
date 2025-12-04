@@ -18,24 +18,18 @@ const Hero = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 z-10" />
-      <img
-        src={heroImage}
-        alt="Luxury resort with beautiful views"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      
-      <div className="container relative z-20 text-center">
-        <h1 className="text-4xl md:text-6xl font-bold text-primary-foreground mb-4">
-          Find Your Perfect Stay
-        </h1>
-        <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-          Discover amazing hotels, resorts, and unique stays around the world
-        </p>
+    <section className="relative py-14 flex items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600">
+      <div className="absolute inset-0 opacity-[0.08] pointer-events-none">
+        <div className="absolute top-16 left-16 w-20 h-20 border-2 border-pink-200 rotate-45"></div>
+        <div className="absolute top-32 right-32 w-16 h-16 border-2 border-violet-200 rotate-12"></div>
+        <div className="absolute bottom-32 left-32 w-14 h-14 border-2 border-cyan-200 rounded-full"></div>
+      </div>
+      <div className="container relative z-10 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-primary-foreground mb-3">Find Your Perfect Stay</h1>
+        <p className="text-lg md:text-xl text-primary-foreground/90 mb-6 max-w-3xl mx-auto">Discover amazing hotels, resorts, and unique stays around the world</p>
 
-        <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl p-5 max-w-4xl mx-auto bg-gradient-to-br from-white via-blue-50 to-cyan-100 shadow-2xl border-0 backdrop-blur-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-1">
               <label className="text-sm font-medium text-muted-foreground mb-2 block text-left">
                 Where
@@ -44,7 +38,7 @@ const Hero = () => {
                 <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Input
                   placeholder="Search by hotel or place"
-                  className="pl-10 h-12 border-2 focus-visible:ring-primary"
+                   className="pl-10 h-11 border focus-visible:ring-primary"
                   value={query}
                   onChange={(e)=>setQuery(e.target.value)}
                 />
@@ -59,8 +53,8 @@ const Hero = () => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-12 border-2",
+                     className={cn(
+                       "w-full justify-start text-left font-normal h-11 border",
                       !checkIn && "text-muted-foreground"
                     )}
                   >
@@ -89,8 +83,8 @@ const Hero = () => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-12 border-2",
+                     className={cn(
+                       "w-full justify-start text-left font-normal h-11 border",
                       !checkOut && "text-muted-foreground"
                     )}
                   >
@@ -114,7 +108,7 @@ const Hero = () => {
             {/* Guests & Rooms selector intentionally removed */}
           </div>
           
-          <Button className="w-full md:w-auto mt-6 h-12 px-8" onClick={()=>{
+          <Button className="w-full md:w-auto mt-5 h-11 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" onClick={()=>{
             const params = new URLSearchParams()
             if (query) params.set('q', query)
             if (checkIn) params.set('checkIn', checkIn.toISOString().slice(0,10))
@@ -126,6 +120,7 @@ const Hero = () => {
             Search Hotels
           </Button>
         </div>
+        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-b from-transparent to-white/60" />
       </div>
     </section>
   );

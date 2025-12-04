@@ -41,7 +41,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
   };
 
   return (
-    <div className="group rounded-2xl overflow-hidden bg-card shadow-card hover:shadow-card-hover transition-all duration-300">
+    <div className="group rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
       <div className="relative h-64 overflow-hidden">
         <img
           src={resolveImage(image)}
@@ -53,7 +53,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
       
       <div className="p-6">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+          <h3 className="text-xl font-bold text-foreground group-hover:text-purple-700 transition-colors">
             {name}
           </h3>
           {typeof rating === 'number' ? (
@@ -97,7 +97,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
             <span className="text-muted-foreground"> / night</span>
           </div>
           <Link to={`/hotel/${id}`}>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
               View Details
             </Button>
           </Link>
