@@ -33,6 +33,20 @@ const OwnerCoupons: React.FC = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
+        <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
+          <div className="container">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Coupon Management</h1>
+              <p className="mt-3 text-lg opacity-90">Create, edit and control discount coupons</p>
+              <div className="mt-4 flex justify-center">
+                <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                  <span className="text-sm opacity-80">Coupons Portal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         <div className="container py-8">
           <Card className="shadow-card hover:shadow-card-hover transition-all">
             <CardHeader><CardTitle>Coupon Management</CardTitle></CardHeader>

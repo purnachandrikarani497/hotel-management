@@ -1964,6 +1964,22 @@ const OwnerDashboard = () => {
 
           {/* BOOKINGS */}
           {feature === "bookings" && (
+            <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
+              <div className="container">
+                <div className="text-center">
+                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Manage Bookings</h1>
+                  <p className="mt-3 text-lg opacity-90">Filter, export and manage guest bookings</p>
+                  <div className="mt-4 flex justify-center">
+                    <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                      <span className="text-sm opacity-80">Bookings Portal</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+          {feature === "bookings" && (
             <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2096,7 +2112,7 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-2xl p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-orange-50">
-                  <div className="rounded-xl border bg-white shadow-md overflow-hidden">
+                  <div className="rounded-xl border bg-white shadow-md overflow-visible">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
@@ -2158,35 +2174,32 @@ const OwnerDashboard = () => {
                           <td className="p-3">{b.guests}</td>
                           <td className="p-3">₹{b.total}</td>
                           <td className="p-3">
-                            <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full text-sm font-semibold shadow-md border whitespace-nowrap uppercase ${
-                              String(b.status).toLowerCase().includes('approved') ||
-                              String(b.status).toLowerCase().includes('confirmed') ||
-                              String(b.status).toLowerCase() === 'checked_in'
-                                ? 'bg-gradient-to-r from-emerald-500 via-green-600 to-emerald-700 text-white border-green-900'
-                              : String(b.status).toLowerCase().includes('pending')
-                                ? 'bg-gradient-to-r from-yellow-500 via-amber-600 to-yellow-700 text-white border-orange-900 animate-pulse'
-                              : String(b.status).toLowerCase().includes('cancelled')
-                                ? 'bg-gradient-to-r from-red-500 via-rose-600 to-red-700 text-white border-red-900'
-                                : 'bg-gradient-to-r from-blue-500 via-cyan-600 to-blue-700 text-white border-blue-900'
-                            }`}>
-                              {/* Status Icon */}
-                              {String(b.status).toLowerCase().includes('approved') ||
-                               String(b.status).toLowerCase().includes('confirmed') ? (
-                                <div className="w-2 h-2 bg-green-800 rounded-full animate-pulse flex-shrink-0"></div>
-                              ) : String(b.status).toLowerCase().includes('pending') ? (
-                                <div className="w-2 h-2 bg-orange-800 rounded-full animate-bounce flex-shrink-0"></div>
-                              ) : String(b.status).toLowerCase().includes('cancelled') ? (
-                                <div className="w-2 h-2 bg-red-800 rounded-full flex-shrink-0 animate-ping"></div>
-                              ) : null}
-                              <span className="tracking-normal">
-                                {b.status === 'confirmed' ? 'CONFIRMED' :
-                                 b.status === 'checked_in' ? 'CHECKED IN' :
-                                 b.status === 'checked_out' ? 'CHECKED OUT' :
-                                 b.status === 'cancelled' ? 'CANCELLED' :
-                                 b.status === 'pending' ? 'PENDING APPROVAL' :
-                                 b.status.toUpperCase()}
-                              </span>
-                            </div>
+                            {(() => {
+                              const sn = String(b.status).toLowerCase()
+                              const label = sn === 'confirmed'
+                                ? 'CONFIRMED'
+                                : sn === 'checked_in'
+                                  ? 'CHECKED IN'
+                                  : sn === 'checked_out'
+                                    ? 'CHECKED OUT'
+                                    : sn === 'cancelled'
+                                      ? 'CANCELLED'
+                                      : sn === 'pending'
+                                        ? 'PENDING APPROVAL'
+                                        : String(b.status || '').toUpperCase()
+                              const color = sn === 'confirmed'
+                                ? '#28A745'
+                                : sn === 'checked_in'
+                                  ? '#007BFF'
+                                  : sn === 'checked_out'
+                                    ? '#FD7E14'
+                                    : sn === 'cancelled'
+                                      ? '#DC3545'
+                                      : '#0EA5E9'
+                              return (
+                                <span className="font-semibold uppercase tracking-normal" style={{ color }}>{label}</span>
+                              )
+                            })()}
                           </td>
                           <td className="p-3">
                             {(() => {
@@ -2197,55 +2210,59 @@ const OwnerDashboard = () => {
                               const canCheckin = s === "confirmed"
                               const canCheckout = s === "confirmed" || s === "checked_in"
                               return (
-                                <div className="flex gap-2 flex-wrap items-center">
-                                  {canCancel && (
-                                    <>
-                                      <Button size="sm" variant="outline" onClick={() => setOwnerCancelVisible({ ...ownerCancelVisible, [b.id]: !(ownerCancelVisible[b.id] || false) })}>Cancel</Button>
-                                      {ownerCancelVisible[b.id] ? (
-                                        <div className="flex items-center gap-2 w-full">
-                                          <select className="px-2 py-1 rounded border text-sm" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
-                                            <option value="">Select reason</option>
-                                            {ownerCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
-                                          </select>
-                                          {(ownerCancelSel[b.id] === 'Other') && (
-                                            <Input className="w-48" placeholder="Please specify" value={ownerCancelOther[b.id] || ''} onChange={(e)=> setOwnerCancelOther({ ...ownerCancelOther, [b.id]: e.target.value })} />
-                                          )}
-                                          {(() => {
-                                            const chosen = ownerCancelSel[b.id] || ''
-                                            const extra = chosen === 'Other' ? (ownerCancelOther[b.id] || '') : ''
-                                            const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim()
-                                            return (
-                                              <Button size="sm" variant="destructive" onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>
-                                            )
-                                          })()}
-                                        </div>
-                                      ) : null}
-                                    </>
-                                  )}
-                                  {canCheckin && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-green-600 hover:bg-green-700 text-white shadow-md"
-                                      onClick={() =>
-                                        checkinBooking.mutate(b.id)
-                                      }
-                                    >
-                                      <LogIn className="w-4 h-4" />
-                                      Check-in
-                                    </Button>
-                                  )}
-                                  {canCheckout && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-md border-transparent"
-                                      onClick={() =>
-                                        checkoutBooking.mutate(b.id)
-                                      }
-                                    >
-                                      <LogOut className="w-4 h-4" />
-                                      Check-out
-                                    </Button>
-                                  )}
+                                <div className="flex flex-wrap items-center gap-2 w-full justify-between">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {canCancel && (
+                                      <Button size="sm" variant="outline" className="shrink-0" onClick={() => setOwnerCancelVisible({ ...ownerCancelVisible, [b.id]: !(ownerCancelVisible[b.id] || false) })}>Cancel</Button>
+                                    )}
+                                    {ownerCancelVisible[b.id] ? (
+                                      <>
+                                        <select className="px-2 py-1 rounded border text-sm min-w-40" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
+                                          <option value="">Select reason</option>
+                                          {ownerCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
+                                        </select>
+                                        {(ownerCancelSel[b.id] === 'Other') && (
+                                          <Input className="w-48" placeholder="Please specify" value={ownerCancelOther[b.id] || ''} onChange={(e)=> setOwnerCancelOther({ ...ownerCancelOther, [b.id]: e.target.value })} />
+                                        )}
+                                        {(() => {
+                                          const chosen = ownerCancelSel[b.id] || ''
+                                          const extra = chosen === 'Other' ? (ownerCancelOther[b.id] || '') : ''
+                                          const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim()
+                                          return (
+                                            <Button size="sm" variant="destructive" className="shrink-0" onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>
+                                          )
+                                        })()}
+                                      </>
+                                    ) : null}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {canCheckin && (
+                                      <Button
+                                        size="sm"
+                                        className="text-white shadow-md hover:opacity-90 shrink-0"
+                                        style={{ backgroundColor: '#007BFF' }}
+                                        onClick={() =>
+                                          checkinBooking.mutate(b.id)
+                                        }
+                                      >
+                                        <LogIn className="w-4 h-4" />
+                                        Check-in
+                                      </Button>
+                                    )}
+                                    {canCheckout && (
+                                      <Button
+                                        size="sm"
+                                        className="text-white shadow-md hover:opacity-90 border-transparent shrink-0"
+                                        style={{ backgroundColor: '#FD7E14' }}
+                                        onClick={() =>
+                                          checkoutBooking.mutate(b.id)
+                                        }
+                                      >
+                                        <LogOut className="w-4 h-4" />
+                                        Check-out
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               )
                             })()}
@@ -2261,6 +2278,22 @@ const OwnerDashboard = () => {
           )}
 
         {/* GUESTS */}
+        {feature === "guests" && (
+          <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
+            <div className="container">
+              <div className="text-center">
+                <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Guests</h1>
+                <p className="mt-3 text-lg opacity-90">View guest history and contacts</p>
+                <div className="mt-4 flex justify-center">
+                  <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                    <span className="text-sm opacity-80">Guests Portal</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
         {feature === "guests" && (
             <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
@@ -2541,6 +2574,22 @@ const OwnerDashboard = () => {
         )}
 
           {/* PRICING */}
+          {feature === "pricing" && (
+            <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-14 relative overflow-hidden">
+              <div className="container">
+                <div className="text-center">
+                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">Dynamic Pricing</h1>
+                  <p className="mt-3 text-lg opacity-90">Configure rates, seasonal ranges and special days</p>
+                  <div className="mt-4 flex justify-center">
+                    <div className="flex items-center space-x-1 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                      <span className="text-sm opacity-80">Pricing Portal</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
           {feature === "pricing" && (
             <Card className="shadow-card hover:shadow-card-hover transition-all">
               <CardHeader>
