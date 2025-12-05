@@ -359,6 +359,7 @@ const AdminDashboard = () => {
                 const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
                 downloadCsv(`bookings-${bookingsPeriod}`, rows)
               }}>Download</Button>
+              <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} booking(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
               
             </div>
             <div className="rounded-2xl border overflow-hidden shadow-md">
@@ -402,12 +403,12 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-2 gap-3">
                 <Input placeholder="Full Name" value={contactName} onChange={e=>setContactName(e.target.value)} disabled={!contactEditing} />
                 <Input placeholder="Email" value={contactEmail} onChange={e=>setContactEmail(e.target.value)} disabled={!contactEditing} />
-                <Input placeholder="Phone 1" value={contactPhone1} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactPhone1(v) }} disabled={!contactEditing} />
-                <Input placeholder="Phone 2" value={contactPhone2} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactPhone2(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" maxLength={10} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactPhone1(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" maxLength={10} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactPhone2(v) }} disabled={!contactEditing} />
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
-                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { if (!contactEditing) return; updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) }} disabled={!contactEditing || updateSettings.isPending}>Save</Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { if (!contactEditing) return; updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) }} disabled={!contactEditing || updateSettings.isPending || (!!contactPhone1 && !/^([6-9]\d{9})$/.test(contactPhone1)) || (!!contactPhone2 && !/^([6-9]\d{9})$/.test(contactPhone2))}>Save</Button>
                 <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
               </div>
             </CardContent>

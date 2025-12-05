@@ -124,6 +124,8 @@ const HotelDetail = () => {
     queryKey: ["hotel", "rooms", id, checkIn],
     queryFn: () => apiGet<{ rooms: RoomInfo[] }>(`/api/hotels/${id}/rooms?date=${checkIn}`),
     enabled: !!id && !!checkIn,
+    refetchInterval: 10000,
+    staleTime: 5000,
   });
 
   // fetch reviews

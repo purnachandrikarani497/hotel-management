@@ -23,11 +23,11 @@ const OwnerCoupons: React.FC = () => {
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["owner","coupons",ownerId] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const deleteCoupon = useMutation({ mutationFn: (id:number) => apiDelete(`/api/admin/coupons/${id}`), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["owner","coupons",ownerId] }); toast({ title: "Coupon deleted", description: `#${vars}` }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
   const deleteAll = useMutation({ mutationFn: () => apiDelete(`/api/admin/coupons`), onSuccess: () => { qc.invalidateQueries({ queryKey: ["owner","coupons",ownerId] }); toast({ title: "All coupons deleted" }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
-  const updateCoupon = useMutation({ mutationFn: (p: { id:number; discount?: number; usageLimit?: number }) => apiPost(`/api/admin/coupons/${p.id}`, p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["owner","coupons",ownerId] }); toast({ title: "Coupon updated", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+  const updateCoupon = useMutation({ mutationFn: (p: { id:number; discount?: number; usageLimit?: number; expiry?: string|null }) => apiPost(`/api/admin/coupons/${p.id}`, p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["owner","coupons",ownerId] }); toast({ title: "Coupon updated", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
 
   const [form, setForm] = React.useState({ code:"", discount:0, expiry:"", usageLimit:0, enabled:true })
   const [hotelId, setHotelId] = React.useState<number>(0)
-  const [editing, setEditing] = React.useState<{ [id:number]: { discount?: number; usageLimit?: number } }>({})
+  const [editing, setEditing] = React.useState<{ [id:number]: { discount?: number; usageLimit?: number; expiry?: string|null } }>({})
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -99,7 +99,13 @@ const OwnerCoupons: React.FC = () => {
                             <>{c.discount}%</>
                           )}
                         </td>
-                        <td className="p-3">{c.expiry ?? '—'}</td>
+                        <td className="p-3">
+                          {editing[c.id] ? (
+                            <Input type="date" value={(editing[c.id]?.expiry ?? c.expiry ?? '') || ''} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), expiry: e.target.value || null } })} />
+                          ) : (
+                            <>{c.expiry ?? '—'}</>
+                          )}
+                        </td>
                         <td className="p-3">
                           {editing[c.id] ? (
                             <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{c.used}</span>/<Input type="number" value={editing[c.id]?.usageLimit ?? c.usageLimit} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), usageLimit: Number(e.target.value) } })} /></div>
@@ -112,11 +118,11 @@ const OwnerCoupons: React.FC = () => {
                           <Button size="sm" onClick={() => setCouponStatus.mutate({ id: c.id, enabled: !c.enabled })}>{c.enabled ? 'Disable' : 'Enable'}</Button>
                           {editing[c.id] ? (
                             <>
-                              <Button size="sm" onClick={()=>{ const payload = { id: c.id, discount: editing[c.id]?.discount ?? c.discount, usageLimit: editing[c.id]?.usageLimit ?? c.usageLimit }; updateCoupon.mutate(payload); setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next }) }}>Save</Button>
+                              <Button size="sm" onClick={()=>{ const payload = { id: c.id, discount: editing[c.id]?.discount ?? c.discount, usageLimit: editing[c.id]?.usageLimit ?? c.usageLimit, expiry: (editing[c.id]?.expiry ?? c.expiry ?? null) }; updateCoupon.mutate(payload); setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next }) }}>Save</Button>
                               <Button size="sm" variant="outline" onClick={()=> setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next })}>Cancel</Button>
                             </>
                           ) : (
-                            <Button size="sm" variant="outline" onClick={()=> setEditing({ ...editing, [c.id]: { discount: c.discount, usageLimit: c.usageLimit } })}>Edit</Button>
+                            <Button size="sm" variant="outline" onClick={()=> setEditing({ ...editing, [c.id]: { discount: c.discount, usageLimit: c.usageLimit, expiry: c.expiry ?? null } })}>Edit</Button>
                           )}
                           <Button size="sm" variant="destructive" onClick={() => deleteCoupon.mutate(c.id)}>Delete</Button>
                         </td>

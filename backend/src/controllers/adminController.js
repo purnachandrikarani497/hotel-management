@@ -10,7 +10,9 @@ async function stats(req, res) {
     const bookings = await Booking.find().lean()
     const totalHotels = hotels.length
     const totalBookings = bookings.length
-    const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b?.total) || 0), 0)
+    const totalRevenue = bookings
+      .filter(b => String(b?.status || '') === 'checked_out')
+      .reduce((sum, b) => sum + (Number(b?.total) || 0), 0)
     const byMonth = {}
     bookings.forEach(b => {
       const d = b?.createdAt ? new Date(b.createdAt) : new Date()

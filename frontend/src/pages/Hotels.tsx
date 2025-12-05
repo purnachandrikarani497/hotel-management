@@ -54,8 +54,9 @@ const Hotels = () => {
       )
       return out
     },
-    staleTime: 60_000,
+    staleTime: 10_000,
     refetchOnWindowFocus: false,
+    refetchInterval: 10000,
   })
   const maxPriceAll = useMemo(() => {
     const hotels: Hotel[] = data?.hotels || []
@@ -89,7 +90,9 @@ const Hotels = () => {
     if (qLower.includes('hyd')) {
       list = list.filter(h => (h.location||'').toLowerCase().includes('hyd'))
     }
-    list = list.filter(h => h.price >= price[0] && h.price <= price[1])
+    const pMin = Math.min(price[0], price[1])
+    const pMax = Math.max(price[0], price[1])
+    list = list.filter(h => h.price >= pMin && h.price <= pMax)
     if (minRating) list = list.filter(h => Math.floor(h.rating) >= (minRating || 0))
     if (selectedTypes.length > 0) {
       list = list.filter(h => {
@@ -167,7 +170,15 @@ const Hotels = () => {
                   <label className="text-sm font-medium mb-3 block">
                     Price Range
                   </label>
-                  <Slider value={price} max={maxPriceAll} step={100} onValueChange={(v) => setPrice([v[0], v[1]])} />
+                  <Slider value={price} max={maxPriceAll} step={100} onValueChange={(v) => setPrice([Math.min(v[0], v[1]), Math.max(v[0], v[1])])} />
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      ₹{Math.min(price[0], price[1]).toLocaleString('en-IN')}
+                    </span>
+                    <span>
+                      ₹{Math.max(price[0], price[1]).toLocaleString('en-IN')}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Rating */}

@@ -270,14 +270,15 @@ const UserDashboard = () => {
           <CardContent>
             <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-hidden backdrop-blur-sm">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
                     return ordered.filter(b => {
                       try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[b.id] } catch { return true }
-                    }).map(b => (
+                    }).map((b, idx) => (
                       <tr key={b.id} className="border-t">
+                        <td className="p-3">{idx + 1}</td>
                         <td className="p-3">#{b.id}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-3">
@@ -318,7 +319,7 @@ const UserDashboard = () => {
                       </tr>
                     ))
                   })()}
-                  {bookings.length === 0 && <tr><td className="p-3 text-muted-foreground" colSpan={7}>No bookings found</td></tr>}
+                  {bookings.length === 0 && <tr><td className="p-3 text-muted-foreground" colSpan={12}>No bookings found</td></tr>}
                 </tbody>
               </table>
             </div>

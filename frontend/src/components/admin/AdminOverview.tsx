@@ -1,6 +1,8 @@
 import * as React from "react"
 import { Shield, BarChart3, Building2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 
 type Stats = { totalHotels: number; totalBookings: number; totalRevenue: number; monthlySales?: Record<string, number>; cityGrowth?: Record<string, number> }
 type Booking = { id: number; hotelId: number; checkIn: string; checkOut: string; guests: number; total: number; status: string }
@@ -25,6 +27,21 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
     const label = monthFormatter.format(d)
     monthlyCounts[label] = (monthlyCounts[label] || 0) + 1
   })
+
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const daysData = React.useMemo(() => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const arr: { day: string; bookings: number }[] = Array.from({ length: daysInMonth }, (_, i) => ({ day: String(i + 1), bookings: 0 }))
+    bookings.forEach(b => {
+      const d = new Date(b.checkIn)
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const idx = d.getDate() - 1
+        if (arr[idx]) arr[idx].bookings += 1
+      }
+    })
+    return arr
+  }, [bookings, year, month])
 
   const cityGrowth = stats?.cityGrowth || {}
   const citiesCount = Object.keys(cityGrowth).length
@@ -57,15 +74,18 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
               <BarChart3 className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-2 h-40">
-                {Object.entries(monthlyCounts).map(([m,v]) => (
-                  <div key={m} className="flex-1">
-                    <div className="bg-primary/80 rounded-md w-full" style={{ height: Math.max(8, Math.min(160, v*8)) }} />
-                    <div className="text-xs mt-1 text-muted-foreground">{m}</div>
-                  </div>
-                ))}
-                {Object.keys(monthlyCounts).length===0 && (<div className="text-sm text-muted-foreground">No data</div>)}
-              </div>
+              <ChartContainer
+                className="h-60"
+                config={{ bookings: { label: "Bookings", color: "hsl(var(--primary))" } }}
+              >
+                <BarChart data={daysData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
+                  <ChartTooltip content={<ChartTooltipContent nameKey="bookings" />} />
+                  <Bar dataKey="bookings" fill="var(--color-bookings)" radius={[4,4,0,0]} />
+                </BarChart>
+              </ChartContainer>
             </CardContent>
           </Card>
           <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">

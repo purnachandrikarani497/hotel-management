@@ -207,12 +207,41 @@ const OwnerDashboard = () => {
     queryKey: ["owner", "rooms", ownerId],
     queryFn: () => apiGet<{ rooms: Room[] }>(`/api/owner/rooms?ownerId=${ownerId}`),
     enabled: !!ownerId,
+    refetchInterval: 10000,
+    staleTime: 5000,
   })
 
   const bookingsQ = useQuery({
     queryKey: ["owner", "bookings", ownerId],
     queryFn: () => apiGet<{ bookings: Booking[] }>(`/api/owner/bookings?ownerId=${ownerId}`),
     enabled: !!ownerId,
+    refetchInterval: 10000,
+    staleTime: 5000,
+  })
+
+  const ownerHotels = hotelsQ.data?.hotels || []
+  const today = new Date()
+  const todayYmd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+  const availabilityQ = useQuery({
+    queryKey: ["owner","availability", ownerId, todayYmd],
+    enabled: !!ownerId && ownerHotels.length > 0,
+    queryFn: async () => {
+      const map: Record<string, { available: number; total: number; used: number }> = {}
+      await Promise.all(
+        ownerHotels.map(async (h) => {
+          try {
+            const r = await apiGet<{ rooms: { type: string; available?: number; total?: number; used?: number }[] }>(`/api/hotels/${h.id}/rooms?date=${todayYmd}`)
+            for (const x of (r.rooms || [])) {
+              const key = `${Number(h.id)}|${String(x.type||'')}`
+              map[key] = { available: Number(x.available||0), total: Number(x.total||0), used: Number(x.used||0) }
+            }
+          } catch (_e) { void 0 }
+        })
+      )
+      return map
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
   })
 
   const reviewsQ = useQuery({
@@ -345,6 +374,39 @@ const OwnerDashboard = () => {
   }
 
   const bookings = React.useMemo(() => bookingsQ.data?.bookings ?? [], [bookingsQ.data])
+  const bookedTodayRoomIds = React.useMemo(() => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
+    const active = new Set(["pending", "confirmed", "checked_in"]) as Set<string>
+    const set = new Set<number>()
+    for (const b of bookings) {
+      const status = String(b.status || "").toLowerCase()
+      if (!active.has(status)) continue
+      const ci = new Date(b.checkIn)
+      const co = new Date(b.checkOut)
+      if (ci < end && co > start) {
+        const rid = Number(b.roomId || 0)
+        if (rid) set.add(rid)
+      }
+    }
+    return set
+  }, [bookings])
+
+  const availableByGroupKeyToday = React.useMemo(() => {
+    const map: { [k: string]: number } = {}
+    const apiMap = availabilityQ.data || {}
+    for (const g of roomSummaries) {
+      const fromApi = apiMap[g.key]?.available
+      if (typeof fromApi === 'number') map[g.key] = Math.max(0, Number(fromApi))
+      else {
+        const totalAvail = rooms.filter(r => r.hotelId === g.hotelId && r.type === g.type && r.availability && !r.blocked).length
+        const booked = g.ids.filter(id => bookedTodayRoomIds.has(id)).length
+        map[g.key] = Math.max(0, totalAvail - booked)
+      }
+    }
+    return map
+  }, [roomSummaries, rooms, bookedTodayRoomIds, availabilityQ.data])
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
 
   const bookingsOrdered = React.useMemo(() => {
@@ -750,6 +812,7 @@ const OwnerDashboard = () => {
     onSuccess: (_res, vars) => {
       qc.invalidateQueries({ queryKey: ["owner", "reviews", ownerId] })
       toast({ title: "Response sent", description: `Review #${vars.id}` })
+      setReviewReply(prev => ({ ...prev, [vars.id]: "" }))
     },
     onError: () => toast({ title: "Response failed", variant: "destructive" }),
   })
@@ -1452,7 +1515,14 @@ const OwnerDashboard = () => {
               <Card className="group shadow-2xl hover:shadow-green-500/30 bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
                 <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-green-700 uppercase tracking-wider">Available</CardTitle></CardHeader>
                 <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{rooms.filter(r=>r.availability && !r.blocked).length}</div>
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{
+                    (() => {
+                      const apiMap = availabilityQ.data || {}
+                      const sum = roomSummaries.reduce((s, g) => s + Math.max(0, Number(apiMap[g.key]?.available ?? 0)), 0)
+                      if (sum > 0) return sum
+                      return rooms.filter(r=>r.availability && !r.blocked && !bookedTodayRoomIds.has(r.id)).length
+                    })()
+                  }</div>
                   <div className="text-xs text-green-600 opacity-70 uppercase tracking-wide">Rooms</div>
                 </CardContent>
               </Card>
@@ -1690,9 +1760,9 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-3">
                             {roomGroupEditing[g.key] ? (
-                              <Input type="number" className="w-16" value={roomGroupEdit[g.key]?.availableRooms ?? String(g.count)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availableRooms: e.target.value } })} />
+                              <Input type="number" className="w-16" value={roomGroupEdit[g.key]?.availableRooms ?? String(availableByGroupKeyToday[g.key] ?? g.count)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availableRooms: e.target.value } })} />
                             ) : (
-                              <div>{g.count}</div>
+                              <div>{availableByGroupKeyToday[g.key] ?? g.count}</div>
                             )}
                           </td>
                           <td className="p-3">
@@ -2420,10 +2490,10 @@ const OwnerDashboard = () => {
                       <tr key={`contact-${h.id}`} className="border-t">
                         <td className="p-3">{h.id} • {h.name}</td>
                         <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) }} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3"><Input placeholder="phone" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) }} disabled={!contactEditing[h.id]} /></td>
                         <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold shadow-md hover:shadow-lg" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id]}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
+                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold shadow-md hover:shadow-lg" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id] || (!!contactForm[h.id]?.phone1 && !/^([6-9]\d{9})$/.test(contactForm[h.id]?.phone1)) || (!!contactForm[h.id]?.phone2 && !/^([6-9]\d{9})$/.test(contactForm[h.id]?.phone2))}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -3187,30 +3257,33 @@ const OwnerDashboard = () => {
                           <div className="text-sm text-gray-800">{r.response}</div>
                         </div>
                       )}
-                      <div className="flex gap-3 mt-4">
-                        <Input
-                          placeholder="Write your response..."
-                          value={reviewReply[r.id] || ""}
-                          onChange={(e) =>
-                            setReviewReply({
-                              ...reviewReply,
-                              [r.id]: e.target.value,
-                            })
-                          }
-                          className="flex-1 bg-white/90 border-gray-300 focus:border-orange-400 focus:ring-orange-400"
-                        />
-                        <Button
-                          onClick={() =>
-                            respondReview.mutate({
-                              id: r.id,
-                              response: reviewReply[r.id] || "",
-                            })
-                          }
-                          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
-                        >
-                          Respond
-                        </Button>
-                      </div>
+                      {!r.response && (
+                        <div className="flex gap-3 mt-4">
+                          <Input
+                            placeholder="Write your response..."
+                            value={reviewReply[r.id] || ""}
+                            onChange={(e) =>
+                              setReviewReply({
+                                ...reviewReply,
+                                [r.id]: e.target.value,
+                              })
+                            }
+                            className="flex-1 bg-white/90 border-gray-300 focus:border-orange-400 focus:ring-orange-400"
+                          />
+                          <Button
+                            disabled={!String(reviewReply[r.id] || "").trim()}
+                            onClick={() =>
+                              respondReview.mutate({
+                                id: r.id,
+                                response: (reviewReply[r.id] || "").trim(),
+                              })
+                            }
+                            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
+                          >
+                            Respond
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {reviews.length === 0 && (
