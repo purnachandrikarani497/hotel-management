@@ -23,6 +23,7 @@ const Hotels = () => {
   const roomsNeeded = Math.max(1, Number(searchParams.get('rooms') || '1'))
   const totalGuests = Math.max(1, adults + children)
   const [price, setPrice] = useState<[number, number]>([0, 100000])
+  const [didInitPriceRange, setDidInitPriceRange] = useState(false)
   const [minRating, setMinRating] = useState<number | null>(null)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
@@ -64,11 +65,22 @@ const Hotels = () => {
     return max
   }, [data?.hotels])
   useEffect(() => {
-    const curMax = price[1]
-    if (maxPriceAll && maxPriceAll !== curMax) {
+    if (!didInitPriceRange && maxPriceAll) {
       setPrice([0, maxPriceAll])
+      setDidInitPriceRange(true)
+      return
     }
-  }, [maxPriceAll, price])
+    if (maxPriceAll) {
+      setPrice((prev) => {
+        const pMin = Math.min(prev[0], prev[1])
+        const pMax = Math.max(prev[0], prev[1])
+        if (pMax > maxPriceAll) {
+          return [pMin, maxPriceAll]
+        }
+        return prev
+      })
+    }
+  }, [maxPriceAll, didInitPriceRange])
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === 'hotelUpdated' && e.newValue) {
