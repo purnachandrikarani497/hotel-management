@@ -1455,7 +1455,7 @@ const OwnerDashboard = () => {
         {/* Upload result popup */}
         {uploadInfo.type && (
           <div className="fixed inset-0 flex items-center justify-center">
-            <div className="bg-card border rounded-lg shadow-card p-6 w-[400px]">
+            <div className="bg-card border rounded-lg shadow-card p-6 w-full max-w-sm sm:max-w-md">
               <div className="text-lg font-semibold mb-2">{uploadInfo.type === 'images' ? 'Images uploaded' : uploadInfo.type === 'documents' ? 'Documents uploaded' : 'Room photos added'}</div>
               <div className="text-sm text-muted-foreground mb-4">Files:</div>
               <div className="space-y-1 max-h-40 overflow-auto">
@@ -1819,7 +1819,7 @@ const OwnerDashboard = () => {
           {/* Upload result popup */}
           {uploadInfo.type && (
             <div className="fixed inset-0 flex items-center justify-center">
-              <div className="bg-card border rounded-lg shadow-card p-6 w-[400px]">
+              <div className="bg-card border rounded-lg shadow-card p-6 w-full max-w-sm sm:max-w-md">
                 <div className="text-lg font-semibold mb-2">
                   {uploadInfo.type === "images"
                     ? "Images uploaded"
@@ -1943,7 +1943,7 @@ const OwnerDashboard = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Manage Bookings</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-2">
                     {(() => {
                       const opts = [
                         { k: "all", v: "All" },
@@ -2071,8 +2071,8 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-2xl p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-orange-50">
-                  <div className="rounded-xl border bg-white shadow-md overflow-visible">
-                  <table className="w-full text-sm">
+                  <div className="rounded-xl border bg-white shadow-md overflow-x-auto">
+                  <table className="min-w-[900px] w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
                         <th className="p-3">S.No</th>
@@ -2258,7 +2258,7 @@ const OwnerDashboard = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Guests</CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-wrap gap-2">
                     {(() => {
                       const opts = [
                         { k: "all", v: "All time" },
@@ -2369,8 +2369,8 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="rounded-2xl p-4 bg-gradient-to-br from-pink-50 via-purple-50 to-orange-50">
-                  <div className="rounded-xl border bg-white shadow-md overflow-hidden">
-                  <table className="w-full text-sm">
+                  <div className="rounded-xl border bg-white shadow-md overflow-x-auto">
+                  <table className="min-w-[900px] w-full text-sm">
                     <thead className="bg-muted/50">
                         <tr className="text-left">
                           <th className="p-3">S.No</th>

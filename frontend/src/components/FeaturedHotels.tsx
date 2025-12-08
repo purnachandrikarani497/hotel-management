@@ -16,7 +16,7 @@ const FeaturedHotels = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {isLoading && <div className="col-span-4 text-center">Loading...</div>}
           {isError && <div className="col-span-4 text-center">Failed to load</div>}
           {!isLoading && !isError && hotels.map((hotel) => (

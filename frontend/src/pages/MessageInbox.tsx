@@ -114,7 +114,7 @@ const MessageInbox = () => {
             <Card className="md:col-span-1 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
               <CardHeader><CardTitle>Threads</CardTitle></CardHeader>
               <CardContent>
-                <div className="rounded border overflow-hidden">
+                <div className="rounded border overflow-hidden max-h-[320px] overflow-y-auto sm:max-h-none">
                   {(orderedThreads||[]).map(t => (
                     <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={()=>setActiveId(t.id)}>
                       <div className="flex items-center gap-3">
@@ -139,7 +139,7 @@ const MessageInbox = () => {
             <Card className="md:col-span-2 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
               <CardHeader><CardTitle>Conversation</CardTitle></CardHeader>
               <CardContent>
-                <div className="h-[400px] overflow-y-auto rounded border p-3 bg-card">
+                <div className="h-[320px] sm:h-[400px] overflow-y-auto rounded border p-3 bg-card">
                   {(orderedMessages||[]).map(m => {
                     const youRole = role==='owner' ? 'owner' : 'user'
                     const isYou = m.senderRole === youRole

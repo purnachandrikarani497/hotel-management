@@ -29,7 +29,7 @@ const Hero = () => {
         <p className="text-lg md:text-xl text-primary-foreground/90 mb-6 max-w-3xl mx-auto">Discover amazing hotels, resorts, and unique stays around the world</p>
 
         <div className="rounded-2xl p-5 max-w-4xl mx-auto bg-gradient-to-br from-white via-blue-50 to-cyan-100 shadow-2xl border-0 backdrop-blur-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
             <div className="md:col-span-1">
               <label className="text-sm font-medium text-muted-foreground mb-2 block text-left">
                 Where

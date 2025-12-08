@@ -42,7 +42,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
 
   return (
     <div className="group rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
         <img
           src={resolveImage(image)}
           alt={name}

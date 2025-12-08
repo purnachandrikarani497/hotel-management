@@ -124,7 +124,7 @@ const UserDashboard = () => {
     return 'text-muted-foreground'
   }
 
-  const cancelBooking = useMutation<{ status:string }, unknown, { id:number; reason:string }>({
+  const cancelBooking = useMutation<{ status:string }, unknown, { id:number; reason:string }, { prev?: { bookings: Booking[] } | undefined }>({
     mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/user/bookings/${p.id}/cancel`, { reason: p.reason }),
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["user","bookings",userId] })
@@ -186,7 +186,7 @@ const UserDashboard = () => {
             </div>
           </div>
         </section>
-        <div className="container mt-8 grid gap-8 lg:grid-cols-5 md:grid-cols-2 sm:grid-cols-1">
+        <div className="container mt-8 grid gap-6 sm:gap-8 lg:grid-cols-5 md:grid-cols-2 sm:grid-cols-1">
           {(() => {
             const now = new Date()
             const totalBookings = bookings.length
@@ -296,7 +296,7 @@ const UserDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-visible backdrop-blur-sm">
+            <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-x-auto backdrop-blur-sm">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3 min-w-[300px]">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">

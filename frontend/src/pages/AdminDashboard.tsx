@@ -246,7 +246,7 @@ const AdminDashboard = () => {
               }}>Download</Button>
               <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))); data.forEach(u=>{ map[u.id] = true }); localStorage.setItem('deletedAdminUsers', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} user(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
             </div>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Email</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
@@ -288,7 +288,7 @@ const AdminDashboard = () => {
               }}>Download</Button>
               <Button variant="destructive" onClick={async ()=>{ const src = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))); if (src.length && window.confirm(`Delete ${src.length} hotel(s) in current filter?`)) { const ids = src.map(h=>h.id); await qc.cancelQueries({ queryKey: ["admin","hotels"] }); const prev = qc.getQueryData<{ hotels: Hotel[] }>(["admin","hotels"]) || { hotels: [] }; qc.setQueryData(["admin","hotels"], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => !ids.includes(h.id)) })); Promise.all(ids.map(id => deleteHotelOwner.mutateAsync(id))).finally(()=> qc.invalidateQueries({ queryKey: ["admin","hotels"] })) } }}>Delete</Button>
             </div>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
@@ -362,7 +362,7 @@ const AdminDashboard = () => {
               <Button variant="destructive" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} booking(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
               
             </div>
-            <div className="rounded-2xl border overflow-hidden shadow-md">
+            <div className="rounded-2xl border overflow-x-auto shadow-md">
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-purple-50 to-pink-50"><tr className="text-left"><th className="p-3 font-semibold">S.No</th><th className="p-3 font-semibold">Hotel</th><th className="p-3 font-semibold">Dates</th><th className="p-3 font-semibold">Guests</th><th className="p-3 font-semibold">Total</th><th className="p-3 font-semibold">Status</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30 [&_tr:nth-child(even)]:bg-muted/10">
