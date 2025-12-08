@@ -145,6 +145,9 @@ async function create(req, res) {
   const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
   const chosenRoomDoc = await Room.findOne({ id: Number(chosenRoomId) }).lean()
   await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: Number(chosenRoomId), roomNumber: String(chosenRoomDoc?.roomNumber || ''), checkIn, checkOut, guests: Number(guests), total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'confirmed', paid: false, ownerActionToken, userActionToken })
+  if (appliedCouponId) {
+    try { await Coupon.updateOne({ id: Number(appliedCouponId) }, { $inc: { used: 1 } }) } catch {}
+  }
   // Do not hard-block room for all dates; overlap logic prevents conflicts
   let thread = await MessageThread.findOne({ bookingId: id })
   if (!thread) {

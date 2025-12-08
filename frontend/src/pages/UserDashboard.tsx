@@ -124,7 +124,30 @@ const UserDashboard = () => {
     return 'text-muted-foreground'
   }
 
-  const cancelBooking = useMutation<{ status:string }, unknown, { id:number; reason:string }>({ mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/user/bookings/${p.id}/cancel`, { reason: p.reason }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["user","bookings",userId] }); toast({ title: "Booking cancelled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Cancellation failed", variant: "destructive" }) })
+  const cancelBooking = useMutation<{ status:string }, unknown, { id:number; reason:string }>({
+    mutationFn: (p:{ id:number; reason:string }) => apiPost(`/api/user/bookings/${p.id}/cancel`, { reason: p.reason }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ["user","bookings",userId] })
+      const prev = qc.getQueryData<{ bookings: Booking[] }>(["user","bookings",userId])
+      qc.setQueryData(["user","bookings",userId], (data?: { bookings: Booking[] }) => {
+        const list = data?.bookings || []
+        const next = list.map(b => b.id === vars.id ? { ...b, status: 'cancelled' } : b)
+        return { bookings: next }
+      })
+      setUserCancelVisible(prevVis => ({ ...prevVis, [vars.id]: false }))
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["user","bookings",userId], ctx.prev)
+      toast({ title: "Cancellation failed", variant: "destructive" })
+    },
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ["user","bookings",userId] })
+      toast({ title: "Booking cancelled", description: `#${vars.id}` })
+      setUserCancelSel(prev => { const next = { ...prev }; delete next[vars.id]; return next })
+      setUserCancelOther(prev => { const next = { ...prev }; delete next[vars.id]; return next })
+    },
+  })
   const userCancelOptions = [
     "Change of Travel Plans",
     "Found a Better Price",
@@ -172,7 +195,12 @@ const UserDashboard = () => {
               return ["pending","confirmed"].includes(String(b.status||'').toLowerCase()) && d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
             }).length
             const pendingBookings = bookings.filter(b => String(b.status||'').toLowerCase()==='pending').length
-            const totalSpend = bookings.reduce((sum, b) => sum + Number(b.total||0), 0)
+            const totalSpend = bookings
+              .filter(b => {
+                const s = String(b.status||'').toLowerCase()
+                return s === 'checked_out' || s === 'checkout'
+              })
+              .reduce((sum, b) => sum + Number(b.total||0), 0)
             const accountStatus = 'Active'
             return (
               <>
@@ -268,9 +296,9 @@ const UserDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-hidden backdrop-blur-sm">
+            <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-visible backdrop-blur-sm">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3 min-w-[300px]">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
@@ -297,24 +325,24 @@ const UserDashboard = () => {
                         <td className="p-3">{String(b.status).toLowerCase()==='cancelled' && Number(b.cancellationFee||0) > 0 ? `₹${Number(b.cancellationFee||0)}` : '-'}</td>
                         <td className="p-3">₹{b.total}</td>
                         <td className="p-3"><span className={`text-xs font-semibold ${statusTextClass(String(b.status||''))}`}>{b.status}</span></td>
-                        <td className="p-3 flex gap-2 flex-wrap">
-                          {(['pending','confirmed'].includes(String(b.status||''))) && (
-                            <>
-                              <Button size="sm" variant="outline" onClick={() => setUserCancelVisible({ ...userCancelVisible, [b.id]: !(userCancelVisible[b.id] || false) })}>Cancel</Button>
-                              {userCancelVisible[b.id] ? (
-                                <div className="flex items-center gap-2">
-                                  <select className="px-2 py-1 rounded border text-sm" value={userCancelSel[b.id] || ''} onChange={(e)=> setUserCancelSel({ ...userCancelSel, [b.id]: e.target.value })}>
-                                    <option value="">Select reason</option>
-                                    {userCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
-                                  </select>
-                                  {(userCancelSel[b.id] === 'Other') && (
-                                    <Input className="w-48" placeholder="Please specify" value={userCancelOther[b.id] || ''} onChange={(e)=> setUserCancelOther({ ...userCancelOther, [b.id]: e.target.value })} />
-                                  )}
-                                  {(() => { const chosen = userCancelSel[b.id] || ''; const extra = chosen === 'Other' ? (userCancelOther[b.id] || '') : ''; const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim(); return (<Button size="sm" variant="destructive" onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>) })()}
-                                </div>
-                              ) : null}
-                            </>
-                          )}
+                        <td className="p-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {(['pending','confirmed'].includes(String(b.status||''))) && (
+                              <Button size="sm" variant="outline" className="shrink-0" onClick={() => setUserCancelVisible({ ...userCancelVisible, [b.id]: !(userCancelVisible[b.id] || false) })}>Cancel</Button>
+                            )}
+                            {userCancelVisible[b.id] ? (
+                              <>
+                                <select className="px-2 py-1 rounded border text-sm min-w-40" value={userCancelSel[b.id] || ''} onChange={(e)=> setUserCancelSel({ ...userCancelSel, [b.id]: e.target.value })}>
+                                  <option value="">Select reason</option>
+                                  {userCancelOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
+                                </select>
+                                {(userCancelSel[b.id] === 'Other') && (
+                                  <Input className="w-48" placeholder="Please specify" value={userCancelOther[b.id] || ''} onChange={(e)=> setUserCancelOther({ ...userCancelOther, [b.id]: e.target.value })} />
+                                )}
+                                {(() => { const chosen = userCancelSel[b.id] || ''; const extra = chosen === 'Other' ? (userCancelOther[b.id] || '') : ''; const reason = `${chosen}${extra ? (': ' + extra) : ''}`.trim(); return (<Button size="sm" variant="destructive" className="shrink-0" disabled={cancelBooking.isPending} onClick={()=> cancelBooking.mutate({ id: b.id, reason })}>Confirm</Button>) })()}
+                              </>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))

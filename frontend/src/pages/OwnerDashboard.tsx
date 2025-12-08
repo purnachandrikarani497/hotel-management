@@ -729,6 +729,9 @@ const OwnerDashboard = () => {
     },
     onSuccess: (_res, vars) => {
       toast({ title: "Booking cancelled", description: `#${vars.id}` })
+      setOwnerCancelVisible((prev) => ({ ...prev, [vars.id]: false }))
+      setOwnerCancelSel((prev) => { const next = { ...prev }; delete next[vars.id]; return next })
+      setOwnerCancelOther((prev) => { const next = { ...prev }; delete next[vars.id]; return next })
       qc.invalidateQueries({ queryKey: ["owner", "bookings", ownerId] })
       qc.invalidateQueries({ queryKey: ["owner", "stats", ownerId] })
     },
@@ -2171,7 +2174,7 @@ const OwnerDashboard = () => {
                                     {canCancel && (
                                       <Button size="sm" variant="outline" className="shrink-0" onClick={() => setOwnerCancelVisible({ ...ownerCancelVisible, [b.id]: !(ownerCancelVisible[b.id] || false) })}>Cancel</Button>
                                     )}
-                                    {ownerCancelVisible[b.id] ? (
+                                    {ownerCancelVisible[b.id] && canCancel ? (
                                       <>
                                         <select className="px-2 py-1 rounded border text-sm min-w-40" value={ownerCancelSel[b.id] || ''} onChange={(e)=> setOwnerCancelSel({ ...ownerCancelSel, [b.id]: e.target.value })}>
                                           <option value="">Select reason</option>
