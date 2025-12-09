@@ -1132,7 +1132,7 @@ const OwnerDashboard = () => {
               </div>
             </section>
 
-            <div className="container mt-8 grid gap-8 lg:grid-cols-5 md:grid-cols-2 sm:grid-cols-1">
+            <div className="container mt-8 grid gap-8 lg:grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
               <Card className="group shadow-2xl hover:shadow-cyan-500/30 bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
                 <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-cyan-700 uppercase tracking-wider">Total Rooms</CardTitle></CardHeader>
                 <CardContent className="pt-0 text-center">
@@ -1157,13 +1157,6 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card className="group shadow-2xl hover:shadow-orange-500/30 bg-gradient-to-br from-white via-orange-50 to-yellow-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
-                <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wider">Pending</CardTitle></CardHeader>
-                <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{stats.data?.pendingBookings ?? 0}</div>
-                  <div className="text-xs text-orange-600 opacity-70 uppercase tracking-wide">Awaiting</div>
-                </CardContent>
-              </Card>
 
               <Card className="group shadow-2xl hover:shadow-red-500/30 bg-gradient-to-br from-white via-red-50 to-rose-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm min-w-0">
                 <CardHeader className="pb-2 text-center"><CardTitle className="text-sm font-bold text-red-700 uppercase tracking-wider">Status</CardTitle></CardHeader>
