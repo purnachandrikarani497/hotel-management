@@ -81,7 +81,8 @@ try {
     fromApiPort = p ? Number(p) : 0;
   }
 } catch {}
-const port = Number(process.env.PORT || process.env.BACKEND_PORT || (fromApiPort || 5000));
+const envPortRaw = String(process.env.PORT || process.env.API_PORT || '').trim();
+const port = fromApiPort || (envPortRaw ? Number(envPortRaw) : 0) || 5000;
 
 (async () => {
   try {
