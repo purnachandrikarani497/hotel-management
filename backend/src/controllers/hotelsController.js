@@ -1,7 +1,7 @@
 const { connect } = require('../config/db');
 const ensureSeed = require('../seed');
 const { Hotel, Booking, Review, Room, Coupon, User, Settings } = require('../models');
-const BASE_URL = process.env.API_BASE || `http://localhost:${process.env.PORT || 5000}`;
+const BASE_URL = process.env.API_BASE || process.env.VITE_API_URL || process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
 
 function toPublicUrl(url) {
   if (!url || typeof url !== 'string') return '';
