@@ -5,8 +5,6 @@ const { User } = require('../models')
 const crypto = require('crypto')
 let mailer = null
 try { mailer = require('nodemailer') } catch { mailer = null }
-const fs = require('fs')
-const path = require('path')
 let cloudinary = null
 try { cloudinary = require('cloudinary').v2 } catch { cloudinary = null }
 if (cloudinary) {
@@ -19,7 +17,6 @@ if (cloudinary) {
   } catch {}
 }
 
-function ensureUploadsDir() { const uploadsDir = path.join(__dirname, '../uploads'); try { fs.mkdirSync(uploadsDir, { recursive: true }) } catch {} return uploadsDir }
 function dataUrlToBuffer(dataUrl) { if (typeof dataUrl !== 'string') return null; const match = dataUrl.match(/^data:(.+);base64,(.+)$/); if (!match) return null; const mime = match[1]; const base64 = match[2]; const buf = Buffer.from(base64, 'base64'); let ext = 'png'; if (mime.includes('jpeg')) ext = 'jpg'; else if (mime.includes('png')) ext = 'png'; else if (mime.includes('gif')) ext = 'gif'; else if (mime.includes('webp')) ext = 'webp'; return { buf, ext } }
 
 async function signin(req, res) {
@@ -63,14 +60,12 @@ async function register(req, res) {
         })
         if (resUp && resUp.secure_url) idDocUrl = resUp.secure_url
       } else {
-        const uploadsDir = ensureUploadsDir()
-        const filename = `user-doc-${id}-${Date.now()}.${parsed.ext}`
-        const filePath = path.join(__dirname, '../uploads', filename)
-        try { fs.writeFileSync(filePath, parsed.buf) } catch {}
-        idDocUrl = `/uploads/${filename}`
+        console.error('[Upload] Cloudinary not configured, skipping local save')
       }
     }
-  } catch {}
+  } catch (e) {
+    console.error('[Register] Upload error:', e.message)
+  }
   await User.create({ id, email, password, firstName, lastName, phone, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocUrl, role: 'user', isApproved: true })
   res.json({ status: 'created', user: { id, email, role: 'user' } })
 }

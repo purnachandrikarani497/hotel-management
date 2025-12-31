@@ -4,8 +4,6 @@ const { nextIdFor } = require('../utils/ids')
 const { Booking, Review, Wishlist, MessageThread, Message, Hotel, User } = require('../models')
 let mailer = null
 try { mailer = require('nodemailer') } catch { mailer = null }
-const fs = require('fs')
-const path = require('path')
 let cloudinary = null
 try { cloudinary = require('cloudinary').v2 } catch { cloudinary = null }
 if (cloudinary) {
@@ -18,7 +16,6 @@ if (cloudinary) {
   } catch {}
 }
 
-function ensureUploadsDir() { const uploadsDir = path.join(__dirname, '../uploads'); try { fs.mkdirSync(uploadsDir, { recursive: true }) } catch {} return uploadsDir }
 function dataUrlToBuffer(dataUrl) { if (typeof dataUrl !== 'string') return null; const match = dataUrl.match(/^data:(.+);base64,(.+)$/); if (!match) return null; const mime = match[1]; const base64 = match[2]; const buf = Buffer.from(base64, 'base64'); let ext = 'png'; if (mime.includes('jpeg')) ext = 'jpg'; else if (mime.includes('png')) ext = 'png'; else if (mime.includes('gif')) ext = 'gif'; else if (mime.includes('webp')) ext = 'webp'; return { buf, ext } }
 
 async function bookings(req, res) {
@@ -206,14 +203,12 @@ async function updateDetails(req, res) {
           })
           if (resUp && resUp.secure_url) u.idDocUrl = resUp.secure_url
         } else {
-          const uploadsDir = ensureUploadsDir()
-          const filename = `user-doc-${u.id}-${Date.now()}.${parsed.ext}`
-          const filePath = path.join(uploadsDir, filename)
-          try { fs.writeFileSync(filePath, parsed.buf) } catch {}
-          u.idDocUrl = `/uploads/${filename}`
+          console.error('[Upload] Cloudinary not configured, skipping local save');
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('[Upload] Error:', err.message);
+    }
   }
   await u.save()
   res.json({ status: 'updated' })

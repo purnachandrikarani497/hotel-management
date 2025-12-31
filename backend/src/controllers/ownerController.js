@@ -4,8 +4,6 @@ const { connect } = require('../config/db');
 const ensureSeed = require('../seed');
 const { nextIdFor } = require('../utils/ids');
 const { Hotel, Booking, Room, Review, MessageThread, Message, User } = require('../models');
-const fs = require('fs');
-const path = require('path');
 let cloudinary = null;
 try { cloudinary = require('cloudinary').v2 } catch { cloudinary = null }
 if (cloudinary) {
@@ -16,12 +14,6 @@ if (cloudinary) {
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
   } catch {}
-}
-
-function ensureUploadsDir() {
-  const uploadsDir = path.join(__dirname, '../uploads');
-  try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch {}
-  return uploadsDir;
 }
 
 function dataUrlToBuffer(dataUrl) {
@@ -59,16 +51,7 @@ async function saveImagesFromDataUrls(prefix, entityId, list) {
     }
     return urls;
   }
-  const uploadsDir = ensureUploadsDir();
-  for (let i = 0; i < items.length; i++) {
-    const parsed = dataUrlToBuffer(items[i]);
-    if (!parsed) continue;
-    const ts = Date.now();
-    const filename = `${prefix}-${entityId}-${ts}-${i}.${parsed.ext}`;
-    const filePath = path.join(uploadsDir, filename);
-    try { fs.writeFileSync(filePath, parsed.buf); } catch {}
-    urls.push(`/uploads/${filename}`);
-  }
+  console.error('[Upload] Cloudinary not configured, skipping local save');
   return urls;
 }
 

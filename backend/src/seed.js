@@ -17,26 +17,36 @@ async function ensureSeed() {
     return
   }
   if (count === 0) {
-    console.log('[Seed] seeding base hotels and settings')
-    const base = [
-      { name: 'Grand Luxury Hotel', location: 'New York, USA', rating: 4.8, reviews: 328, price: 299, image: '/src/assets/hotel-1.jpg', amenities: ['WiFi','Breakfast','Parking'], description: 'Experience luxury and comfort at our Grand Luxury Hotel.' },
-      { name: 'Tropical Paradise Resort', location: 'Bali, Indonesia', rating: 4.9, reviews: 512, price: 189, image: '/src/assets/hotel-2.jpg', amenities: ['WiFi','Breakfast','Parking'], description: 'Relax at our tropical paradise resort.' },
-      { name: 'Mediterranean Villa', location: 'Santorini, Greece', rating: 4.7, reviews: 256, price: 349, image: '/src/assets/hotel-3.jpg', amenities: ['WiFi','Breakfast'], description: 'Enjoy views at our Mediterranean villa.' },
-      { name: 'Alpine Mountain Lodge', location: 'Swiss Alps, Switzerland', rating: 4.9, reviews: 425, price: 279, image: '/src/assets/hotel-4.jpg', amenities: ['WiFi','Parking'], description: 'Stay at our alpine mountain lodge.' }
-    ]
-    for (const h of base) {
-      const id = await nextIdFor('Hotel')
-      await Hotel.create({ id, ownerId: null, status: 'approved', featured: false, images: [], docs: [], pricing: {}, ...h })
-    }
-    let exists = 0
+    console.log('[Seed] no base hotels to seed (dummy data disabled)')
+  } else {
+    // Aggressively remove dummy hotels (those with no ownerId or legacy paths)
     try {
-      exists = await Settings.countDocuments()
+      const result = await Hotel.deleteMany({ 
+        $or: [
+          { ownerId: null },
+          { image: /^\/src\/assets\// },
+          { name: { $in: ['Grand Luxury Hotel', 'Tropical Paradise Resort', 'Mediterranean Villa', 'Alpine Mountain Lodge'] } }
+        ]
+      });
+      if (result.deletedCount > 0) {
+        console.log(`[Seed] removed ${result.deletedCount} dummy/legacy hotels`);
+      }
     } catch (e) {
-      exists = 0
+      console.warn('[Seed] cleanup dummy hotels failed', e.message);
     }
-    if (exists === 0) await Settings.create({ taxRate: 10, commissionRate: 15 })
-    console.log('[Seed] completed')
   }
+
+  let exists = 0
+  try {
+    exists = await Settings.countDocuments()
+  } catch (e) {
+    exists = 0
+  }
+  if (exists === 0) {
+    console.log('[Seed] seeding default settings');
+    await Settings.create({ taxRate: 10, commissionRate: 15 });
+  }
+  console.log('[Seed] completed')
 }
 
 module.exports = ensureSeed
