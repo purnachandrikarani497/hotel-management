@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const Register = () => {
+  const navigate = useNavigate()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -56,7 +57,12 @@ const Register = () => {
   const { toast } = useToast()
   const mutation = useMutation({
     mutationFn: () => apiPost("/api/auth/register", { firstName, lastName, email, phone, password, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage }),
-    onSuccess: () => { toast({ title: "Account created", description: "Welcome!" }) },
+    onSuccess: () => { 
+      toast({ title: "Account created", description: "Welcome! Redirecting to sign in..." });
+      setTimeout(() => {
+        navigate("/signin");
+      }, 2000);
+    },
     onError: (err: unknown) => {
       const msg = (() => {
         if (err instanceof Error) return String(err.message || '')
