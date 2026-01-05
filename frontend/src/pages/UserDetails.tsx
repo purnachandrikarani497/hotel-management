@@ -35,11 +35,11 @@ const UserDetails = () => {
     const t = String(type||"")
     const n = String(num||"")
     if (!t || !n) return ""
-    if (t === "Aadhaar Card" && !/^\d{12}$/.test(n)) return "Aadhaar must be 12 digits"
-    if (t === "Passport" && !/^[A-Za-z][0-9]{7}$/.test(n)) return "Passport: 1 letter + 7 digits"
-    if (t === "Driving Licence" && !/^[A-Za-z0-9-]{5,20}$/.test(n)) return "DL: 5-20 alphanumeric"
-    if (t === "Voter ID" && !/^[A-Za-z]{3}[0-9]{7}$/.test(n)) return "Voter ID: 3 letters + 7 digits"
-    if (t === "PAN card" && !/^[A-Za-z]{5}[0-9]{4}[A-Za-z]$/.test(n)) return "PAN: 5 letters, 4 digits, 1 letter"
+    if (t === "Aadhaar Card" && !/^\d{12}$/.test(n)) return "Aadhaar must be exactly 12 digits"
+    if (t === "Passport" && !/^[A-Z][0-9]{7}$/.test(n)) return "Passport: 1 letter + 7 digits"
+    if (t === "Driving Licence" && !/^[A-Z0-9-]{5,20}$/.test(n)) return "DL: 5-20 alphanumeric"
+    if (t === "Voter ID" && !/^[A-Z]{3}[0-9]{7}$/.test(n)) return "Voter ID: 3 letters + 7 digits"
+    if (t === "PAN card" && !/^[A-Z0-9]{10}$/.test(n)) return "PAN: 10 capital alphanumeric characters"
     return ""
   }
   const validate = (): boolean => {
@@ -126,7 +126,24 @@ const UserDetails = () => {
                 </div>
                 <div>
                   <Label>ID Number</Label>
-                  <Input placeholder="ID Number" value={form.idNumber||""} onChange={e=>setForm({ ...(form as User), idNumber: e.target.value })} />
+                  <Input 
+                    placeholder="ID Number" 
+                    value={form.idNumber||""} 
+                    onChange={e=>{ 
+                      let v = e.target.value;
+                      const type = form.idType || "";
+                      if (type === "Aadhaar Card") {
+                        v = v.replace(/\D/g, "").slice(0, 12);
+                      } else if (type === "Passport") {
+                        v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                      } else if (type === "PAN card") {
+                        v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                      } else {
+                        v = v.toUpperCase();
+                      }
+                      setForm({ ...(form as User), idNumber: v }) 
+                    }} 
+                  />
                   {errors.idNumber && <div className="text-xs text-destructive mt-1">{errors.idNumber}</div>}
                 </div>
                 <div>

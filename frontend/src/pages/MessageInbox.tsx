@@ -40,6 +40,7 @@ const MessageInbox = () => {
   const [activeId, setActiveId] = React.useState<number>(threads[0]?.id || 0)
   React.useEffect(() => {
     if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
+    createReview.reset()
   }, [threads, activeId])
   const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 1500, refetchOnWindowFocus: true })
   const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
@@ -55,13 +56,13 @@ const MessageInbox = () => {
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
   const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 3000 })
+  const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: { id:number; bookingId:number }[] }>(`/api/user/reviews?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 3000 })
   const threadBooking = React.useMemo(() => {
     const t = (threads||[]).find(x=>x.id===activeId)
     const bid = t?.bookingId
     return (bookingsQ.data?.bookings||[]).find(b=>b.id===bid)
   }, [activeId, threads, bookingsQ.data])
   const hasCheckoutMsg = messages.some(m=>m.senderRole==='system' && /Checkout complete/i.test(m.content||''))
-  const canReview = role==='user' && hasCheckoutMsg
   const isCancelled = String(threadBooking?.status||'') === 'cancelled'
   const [rating, setRating] = React.useState<number>(5)
   const [feedback, setFeedback] = React.useState<string>("")
@@ -78,8 +79,16 @@ const MessageInbox = () => {
     setFeedback("")
     toast({ title: "Review submitted", description: `Thank you for rating hotel #${hotelId}` })
     qc.invalidateQueries({ queryKey: ["hotel","reviews", hotelId] })
+    qc.invalidateQueries({ queryKey: ["user","reviews", userId] })
     if (ownerId) qc.invalidateQueries({ queryKey: ["owner","reviews", ownerId] })
   }, onError: () => { toast({ title: "Review submission failed", variant: "destructive" }) } })
+
+  const alreadyReviewed = React.useMemo(() => {
+    const bid = threadBooking?.id
+    if (!bid) return false
+    return (reviewsQ.data?.reviews || []).some(r => r.bookingId === bid)
+  }, [reviewsQ.data, threadBooking])
+  const canReview = role==='user' && hasCheckoutMsg && !alreadyReviewed && !createReview.isSuccess
 
   const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || env?.VITE_API_BASE || ''; if (s.startsWith('/uploads')) return base ? `${base}${s}` : s; if (s.startsWith('uploads')) return base ? `${base}/${s}` : `/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
   const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
