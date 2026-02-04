@@ -44,13 +44,87 @@ const Register = () => {
     "PAN card (usually not accepted as primary ID)": "5 letters, 4 digits, 1 letter (ABCDE1234F)",
   }
   const phoneRe = /^[6-9]\d{9}$/
+  
   const validate = (): boolean => {
-    if (!firstName || !lastName || !email || !phone || !password || !confirm || !fullName || !dob || !address || !idType || !idNumber) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
-    if (!idDocImage) { toast({ title: "Document required", description: "Please upload your ID document", variant: "destructive" }); return false }
+    // First Name
+    if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (firstName.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return false }
+
+    // Last Name
+    if (!lastName.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (lastName.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return false }
+
+    // Email
+    if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return false }
+    if (!email.includes('@')) { toast({ title: "Invalid email", description: "Email must contain '@'", variant: "destructive" }); return false }
+    // Basic email regex
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email", variant: "destructive" }); return false }
+    if (email.length > 20) { toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" }); return false }
+
+    // Phone
+    if (!phone) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false } // Keeping existing generic or specific?
+    // User didn't specify phone rules in prompt but existing code has it. I'll keep existing check but maybe after others.
     if (!phoneRe.test(String(phone).trim())) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
-    if (password !== confirm) { toast({ title: "Passwords do not match", variant: "destructive" }); return false }
-    const pat = idPatterns[idType]
-    if (pat && !pat.test(String(idNumber).trim())) { toast({ title: "Invalid ID number", description: idHints[idType], variant: "destructive" }); return false }
+
+    // Password
+    if (!password) { toast({ title: "Please enter the Password", variant: "destructive" }); return false }
+    if (password.length < 6 || password.length > 12) { 
+        if (password.length > 12) { toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" }); }
+        else { toast({ title: "Invalid Password", description: "Password min 6 to max 12 characters", variant: "destructive" }); }
+        return false 
+    }
+    // Allow both char & numbers and also special char. "dont allow only empty spaces". 
+    // Assuming this means it must contain valid characters.
+    if (!/^[\w\W]+$/.test(password) || !password.trim()) { toast({ title: "Invalid Password", variant: "destructive" }); return false }
+
+    // Confirm Password
+    if (!confirm) { toast({ title: "Please enter the Confirm Password", variant: "destructive" }); return false }
+    if (confirm !== password) { toast({ title: "Invalid Confirm Password", description: "Passwords do not match", variant: "destructive" }); return false }
+    if (confirm.length > 12) { toast({ title: "Maximum limit exceeded", description: "Confirm Password max 12 characters", variant: "destructive" }); return false }
+
+    // Full Name
+    if (!fullName.trim()) { toast({ title: "Please enter the Full name", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z\s]+$/.test(fullName)) { toast({ title: "Invalid Full name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (fullName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return false }
+
+    // Date of Birth
+    if (!dob) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (new Date(dob) > new Date()) { toast({ title: "Invalid Date of Birth", description: "Future dates not allowed", variant: "destructive" }); return false }
+
+    // Address
+    if (!address.trim()) { toast({ title: "Please enter the Address", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z0-9\s,.-]+$/.test(address)) { toast({ title: "Invalid Address", description: "Only characters & numbers allowed", variant: "destructive" }); return false }
+    // Length check already done via onChange toast but keeping double check
+    if (address.length > 100) { toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" }); return false }
+
+    // ID Type & Number
+    if (!idType) { toast({ title: "Please enter the ID Type", variant: "destructive" }); return false }
+    if (!idNumber.trim()) { toast({ title: "Missing ID Number", variant: "destructive" }); return false }
+    
+    // ID Validation logic based on type
+    if (idType === "Aadhaar Card") {
+        if (!/^\d{12}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Aadhaar must be 12 digits number", variant: "destructive" }); return false }
+    } else if (idType === "Passport") {
+        if (!/^[A-Za-z]\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Passport: 1st alphabet & 7 numbers", variant: "destructive" }); return false }
+        if (idNumber.length > 8) { toast({ title: "Maximum limit exceeded", description: "Passport max 8 characters", variant: "destructive" }); return false }
+    } else if (idType === "Driving Licence") {
+        if (!/^[A-Za-z0-9]+$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Driving Licence must be alphanumeric", variant: "destructive" }); return false }
+        if (idNumber.length > 20) { toast({ title: "Maximum limit exceeded", description: "Driving Licence max 20 characters", variant: "destructive" }); return false }
+    } else if (idType === "Voter ID") {
+        if (!/^[A-Za-z]{3}\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Voter ID: 3 letters & 7 numbers", variant: "destructive" }); return false }
+        if (idNumber.length > 10) { toast({ title: "Maximum limit exceeded", description: "Voter ID max 10 characters", variant: "destructive" }); return false }
+    }
+
+    // Document Upload
+    if (!idDocImage) { toast({ title: "Document required", description: "Please upload your ID document", variant: "destructive" }); return false }
+
+    // Issue & Expiry Date
+    if (idIssueDate && idExpiryDate) {
+        if (new Date(idIssueDate) >= new Date(idExpiryDate)) { toast({ title: "issue Date was must be early than the Expiry Date", variant: "destructive" }); return false }
+    }
+
     if (!agree) { toast({ title: "Accept Terms & Conditions", variant: "destructive" }); return false }
     return true
   }
@@ -107,33 +181,103 @@ const Register = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">First Name *</label>
-                    <Input placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                    <Input 
+                      placeholder="John" 
+                      value={firstName} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.length > 20) {
+                          toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" });
+                          return;
+                        }
+                        setFirstName(val);
+                      }} 
+                    />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Last Name *</label>
-                  <Input placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  <Input 
+                    placeholder="Doe" 
+                    value={lastName} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length > 20) {
+                        toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" });
+                        return;
+                      }
+                      setLastName(val);
+                    }} 
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Email *</label>
-                <Input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input 
+                  type="email" 
+                  placeholder="your@email.com" 
+                  value={email} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length > 20) {
+                      toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" });
+                      return;
+                    }
+                    setEmail(val);
+                  }} 
+                />
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Phone Number *</label>
-                <Input type="tel" placeholder="10 digits, starts 6-9" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g,""))} maxLength={10} />
+                <Input 
+                  type="tel" 
+                  placeholder="10 digits, starts 6-9" 
+                  value={phone} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g,"");
+                    if (val.length > 10) {
+                      toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
+                      return;
+                    }
+                    setPhone(val);
+                  }} 
+                />
               </div>
 
               <div className="relative">
                 <label className="text-sm font-medium mb-2 block">Password *</label>
-                <Input type={showA?"text":"password"} placeholder="Create a strong password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input 
+                  type={showA?"text":"password"} 
+                  placeholder="Create a strong password" 
+                  value={password} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length > 12) {
+                      toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
+                      return;
+                    }
+                    setPassword(val);
+                  }} 
+                />
                 <button type="button" className="absolute right-3 top-[52px] text-muted-foreground" onClick={()=>setShowA(!showA)}>{showA? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
               </div>
 
               <div className="relative">
                 <label className="text-sm font-medium mb-2 block">Confirm Password *</label>
-                <Input type={showB?"text":"password"} placeholder="Confirm your password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                <Input 
+                  type={showB?"text":"password"} 
+                  placeholder="Confirm your password" 
+                  value={confirm} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length > 12) {
+                      toast({ title: "Maximum limit exceeded", description: "Confirm Password max 12 characters", variant: "destructive" });
+                      return;
+                    }
+                    setConfirm(val);
+                  }} 
+                />
                 <button type="button" className="absolute right-3 top-[52px] text-muted-foreground" onClick={()=>setShowB(!showB)}>{showB? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
               </div>
               {password && confirm && password !== confirm && (
@@ -143,16 +287,47 @@ const Register = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Full Name *</label>
-                  <Input placeholder="As per ID" value={fullName} onChange={(e)=>setFullName(e.target.value)} />
+                  <Input 
+                    placeholder="As per ID" 
+                    value={fullName} 
+                    onChange={(e)=>{
+                      const val = e.target.value;
+                      if (!/^[a-zA-Z\s]*$/.test(val)) {
+                         // Optionally show toast, but usually better to just block or show toast. User said "allow only char".
+                         // If I just ignore it, they can't type numbers. If I show toast, it might spam.
+                         // But for other fields user asked for popup.
+                         // "fullname allow only char just add this"
+                         // I will show toast if invalid char is attempted.
+                         toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" });
+                         return;
+                      }
+                      if (val.length > 50) {
+                        toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" });
+                        return;
+                      }
+                      setFullName(val);
+                    }} 
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Date of Birth *</label>
-                  <Input type="date" value={dob} onChange={(e)=>setDob(e.target.value)} />
+                  <Input type="date" value={dob} onChange={(e)=>setDob(e.target.value)} max={new Date().toISOString().split("T")[0]} />
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Address *</label>
-                <Input placeholder="Residential address" value={address} onChange={(e)=>setAddress(e.target.value)} />
+                <Input 
+                  placeholder="Residential address" 
+                  value={address} 
+                  onChange={(e)=>{
+                    const val = e.target.value;
+                    if (val.length > 100) {
+                      toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" });
+                      return;
+                    }
+                    setAddress(val);
+                  }} 
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -188,7 +363,24 @@ const Register = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Document Upload *</label>
-                  <Input type="file" accept="image/*" onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} />
+                  <div className="flex items-center gap-3">
+                    <label 
+                      htmlFor="id-doc-upload" 
+                      className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-10 px-4 py-2"
+                    >
+                      Choose File
+                    </label>
+                    <span className="text-sm text-muted-foreground">
+                      {idDocImage ? "File selected" : ""}
+                    </span>
+                    <Input 
+                      id="id-doc-upload"
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} 
+                    />
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
