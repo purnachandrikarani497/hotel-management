@@ -97,8 +97,10 @@ const Help = () => {
       <main className="flex-1">
         <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-12">
           <div className="container max-w-6xl">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">Help Center</h1>
-            <p className="opacity-90">Find answers to common questions or chat with us for quick help.</p>
+            <div className="text-center mb-8">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">Help Center</h1>
+              <p className="opacity-90">Find answers to common questions or chat with us for quick help.</p>
+            </div>
           
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-8">
               <div className="md:col-span-3">
@@ -114,10 +116,10 @@ const Help = () => {
                         return (
                           <button
                             key={c.id}
-                            className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm ${active ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+                            className={`w-full flex items-center text-left gap-3 rounded-md px-3 py-2 text-sm ${active ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
                             onClick={() => setSelected(c.id)}
                           >
-                            <Icon className="h-4 w-4" />
+                            <Icon className="h-4 w-4 shrink-0" />
                             <span>{c.label}</span>
                           </button>
                         )
