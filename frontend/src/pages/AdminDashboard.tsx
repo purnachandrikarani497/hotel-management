@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
-  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
+  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else if (vars.ourStory !== undefined && vars.ourMission === undefined) { toast({ title: "About Us updated successfully" }) } else if (vars.ourMission !== undefined && vars.ourStory === undefined) { toast({ title: "Mission updated successfully" }) } else if (vars.ourStory !== undefined && vars.ourMission !== undefined) { toast({ title: "About Us and Mission updated successfully" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
   const createOwner = useMutation({
     mutationFn: (p: { email:string; password:string; firstName:string; lastName:string; phone:string }) =>
       apiPost<{ id:number }, { email:string; password:string; firstName:string; lastName:string; phone:string }>("/api/admin/owners", p),
@@ -477,20 +477,54 @@ const AdminDashboard = () => {
             <div className="space-y-4">
               <div>
                 <div className="text-sm font-medium mb-2">Our Story</div>
-                <Textarea rows={6} placeholder="Enter our story" value={storyInput} onChange={e=>setStoryInput(e.target.value)} readOnly={!storyEditing} />
+                <Textarea rows={6} placeholder="Enter our story" value={storyInput} onChange={e => {
+                  const val = e.target.value;
+                  if (val.length > 120) {
+                    toast({ title: "Maximum limit exceeded", description: "Max 120 characters", variant: "destructive" });
+                    return;
+                  }
+                  setStoryInput(val);
+                }} readOnly={!storyEditing} />
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={()=> setStoryEditing(!storyEditing)}>{storyEditing ? 'Stop Edit' : 'Edit'}</Button>
-                  <Button onClick={() => updateSettings.mutate({ ourStory: storyInput })} disabled={updateSettings.isPending || !storyEditing}>Update</Button>
-                  <Button variant="secondary" onClick={() => updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })} disabled={updateSettings.isPending}>Save</Button>
+                  <Button onClick={() => {
+                    if (!storyInput.trim()) {
+                      toast({ title: "Please enter story field", variant: "destructive" });
+                      return;
+                    }
+                    updateSettings.mutate({ ourStory: storyInput })
+                  }} disabled={updateSettings.isPending || !storyEditing}>Update</Button>
+                  <Button variant="secondary" onClick={() => {
+                     if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
+                     if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
+                     updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })
+                  }} disabled={updateSettings.isPending}>Save</Button>
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium mb-2">Our Mission</div>
-                <Textarea rows={4} placeholder="Enter our mission" value={missionInput} onChange={e=>setMissionInput(e.target.value)} readOnly={!missionEditing} />
+                <Textarea rows={4} placeholder="Enter our mission" value={missionInput} onChange={e => {
+                  const val = e.target.value;
+                  if (val.length > 120) {
+                    toast({ title: "Maximum limit exceeded", description: "Max 120 characters", variant: "destructive" });
+                    return;
+                  }
+                  setMissionInput(val);
+                }} readOnly={!missionEditing} />
                 <div className="mt-2 flex gap-2">
                   <Button variant="outline" onClick={()=> setMissionEditing(!missionEditing)}>{missionEditing ? 'Stop Edit' : 'Edit'}</Button>
-                  <Button onClick={() => updateSettings.mutate({ ourMission: missionInput })} disabled={updateSettings.isPending || !missionEditing}>Update</Button>
-                  <Button variant="secondary" onClick={() => updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })} disabled={updateSettings.isPending}>Save</Button>
+                  <Button onClick={() => {
+                    if (!missionInput.trim()) {
+                      toast({ title: "Please enter mission field", variant: "destructive" });
+                      return;
+                    }
+                    updateSettings.mutate({ ourMission: missionInput })
+                  }} disabled={updateSettings.isPending || !missionEditing}>Update</Button>
+                  <Button variant="secondary" onClick={() => {
+                     if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
+                     if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
+                     updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })
+                  }} disabled={updateSettings.isPending}>Save</Button>
                 </div>
               </div>
               
