@@ -38,7 +38,7 @@ const AdminDashboard = () => {
   const bookings = useQuery({ queryKey: ["admin","bookings"], queryFn: () => apiGet<{ bookings: Booking[] }>("/api/admin/bookings"), refetchOnWindowFocus: true, refetchInterval: 5000 })
   const coupons = useQuery({ queryKey: ["admin","coupons"], queryFn: () => apiGet<{ coupons: Coupon[] }>("/api/admin/coupons") })
   const settings = useQuery({ queryKey: ["admin","settings"], queryFn: () => apiGet<{ settings: Settings }>("/api/admin/settings") })
-  const inbox = useQuery({ queryKey: ["admin","support"], queryFn: () => apiGet<{ inbox: { id:number; email:string; subject:string; message:string; createdAt:string }[] }>("/api/admin/support") })
+  // const inbox = useQuery({ queryKey: ["admin","support"], queryFn: () => apiGet<{ inbox: { id:number; email:string; subject:string; message:string; createdAt:string }[] }>("/api/admin/support") })
 
   const hasDashboardData = ((hotels.data?.hotels || []).length > 0)
     || ((coupons.data?.coupons || []).length > 0)
@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
-  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); toast({ title: "Settings updated" }) }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
+  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
   const createOwner = useMutation({
     mutationFn: (p: { email:string; password:string; firstName:string; lastName:string; phone:string }) =>
       apiPost<{ id:number }, { email:string; password:string; firstName:string; lastName:string; phone:string }>("/api/admin/owners", p),
@@ -593,14 +593,25 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Full Name" value={contactName} onChange={e=>setContactName(e.target.value)} disabled={!contactEditing} />
-                <Input placeholder="Email" value={contactEmail} onChange={e=>setContactEmail(e.target.value)} disabled={!contactEditing} />
-                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" maxLength={10} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactPhone1(v) }} disabled={!contactEditing} />
-                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" maxLength={10} onChange={e=>{ const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactPhone2(v) }} disabled={!contactEditing} />
+                <Input placeholder="Full Name" value={contactName} onChange={e=>{ const v=e.target.value; if(v.length>20){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(!/^[a-zA-Z\s]*$/.test(v)){toast({title:"Invalid full name",variant:"destructive"});return} setContactName(v) }} disabled={!contactEditing} />
+                <Input placeholder="Email" value={contactEmail} onChange={e=>{ const v=e.target.value; if(v.length>20){toast({title:"Maximum limit exceeded",variant:"destructive"});return} setContactEmail(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone1(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone2(v) }} disabled={!contactEditing} />
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
-                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { if (!contactEditing) return; updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) }} disabled={!contactEditing || updateSettings.isPending || (!!contactPhone1 && !/^([6-9]\d{9})$/.test(contactPhone1)) || (!!contactPhone2 && !/^([6-9]\d{9})$/.test(contactPhone2))}>Save</Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { 
+                  if (!contactEditing) return; 
+                  if (!contactName?.trim()) { toast({ title: "Please enter the full name", variant: "destructive" }); return }
+                  if (!contactEmail?.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return }
+                  if (!contactEmail.includes('@')) { toast({ title: "Missing @", variant: "destructive" }); return }
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { toast({ title: "Invalid email", variant: "destructive" }); return }
+                  if (!contactPhone1?.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return }
+                  if (contactPhone1.length < 10) { toast({ title: "Invalid Phone number", variant: "destructive" }); return }
+                  if (!contactPhone2?.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return }
+                  if (contactPhone2.length < 10) { toast({ title: "Invalid Phone number", variant: "destructive" }); return }
+                  updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) 
+                }} disabled={!contactEditing || updateSettings.isPending}>Save</Button>
                 <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
               </div>
             </CardContent>
@@ -623,33 +634,23 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="[&_tr:hover]:bg-muted/30">
+                    {(!settings.data?.settings?.contactName && !settings.data?.settings?.contactPhone1 && !settings.data?.settings?.contactPhone2 && !settings.data?.settings?.contactEmail) ? (
+                      <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No data found</td></tr>
+                    ) : (
                     <tr className="border-t">
                       <td className="p-3">{settings.data?.settings?.contactName || '-'}</td>
                       <td className="p-3">{settings.data?.settings?.contactPhone1 || '-'}</td>
                       <td className="p-3">{settings.data?.settings?.contactPhone2 || '-'}</td>
                       <td className="p-3">{settings.data?.settings?.contactEmail || '-'}</td>
                     </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </CardContent>
           </Card>
         )}
-        {feature === 'contact' && (
-          <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0">
-            <CardHeader><CardTitle>Support Inbox</CardTitle></CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {(inbox.data?.inbox || []).slice(0,5).map(i => (
-                  <div key={i.id} className="p-3 rounded-lg border bg-card">
-                    <div className="text-sm font-medium">{i.email} • {i.subject}</div>
-                    <div className="text-sm text-muted-foreground">{i.message}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+{/* Support Inbox removed */}
       </div>
       </main>
       <Footer />
