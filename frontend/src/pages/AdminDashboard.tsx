@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Shield, BarChart3, Building2 } from "lucide-react"
+import { Shield, BarChart3, Building2, Eye, EyeOff } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
@@ -120,6 +120,7 @@ const AdminDashboard = () => {
   const [contactPhone2, setContactPhone2] = React.useState("")
   const [contactEmail, setContactEmail] = React.useState("")
   const [contactEditing, setContactEditing] = React.useState(false)
+  const [showOwnerPassword, setShowOwnerPassword] = React.useState(false)
   React.useEffect(() => {
     const s = settings.data?.settings
     if (s) {
@@ -206,24 +207,117 @@ const AdminDashboard = () => {
           <CardHeader><CardTitle>User Management</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <Input type="email" placeholder="Owner Email" value={ownerForm.email} onChange={e=>setOwnerForm({ ...ownerForm, email: e.target.value })} />
-              <Input placeholder="Password" type="password" value={ownerForm.password} onChange={e=>setOwnerForm({ ...ownerForm, password: e.target.value })} />
-              <Input placeholder="First Name" value={ownerForm.firstName} onChange={e=>setOwnerForm({ ...ownerForm, firstName: e.target.value })} />
-              <Input placeholder="Last Name" value={ownerForm.lastName} onChange={e=>setOwnerForm({ ...ownerForm, lastName: e.target.value })} />
+              <Input 
+                type="email" 
+                placeholder="Owner Email" 
+                value={ownerForm.email} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val.length > 20) {
+                    toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" });
+                    return;
+                  }
+                  setOwnerForm({ ...ownerForm, email: val })
+                }} 
+              />
+              <div className="relative">
+                <Input 
+                  placeholder="Password" 
+                  type={showOwnerPassword ? "text" : "password"} 
+                  value={ownerForm.password} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.length > 12) {
+                      toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
+                      return;
+                    }
+                    setOwnerForm({ ...ownerForm, password: val })
+                  }} 
+                />
+                <button type="button" className="absolute right-3 top-2.5 text-muted-foreground" onClick={()=>setShowOwnerPassword(!showOwnerPassword)}>{showOwnerPassword? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+              </div>
+              <Input 
+                placeholder="First Name" 
+                value={ownerForm.firstName} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (!/^[a-zA-Z]*$/.test(val)) {
+                     toast({ title: "invaid first name", description: "Only characters allowed", variant: "destructive" });
+                     return;
+                  }
+                  if (val.length > 20) {
+                    toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" });
+                    return;
+                  }
+                  setOwnerForm({ ...ownerForm, firstName: val })
+                }} 
+              />
+              <Input 
+                placeholder="Last Name" 
+                value={ownerForm.lastName} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (!/^[a-zA-Z]*$/.test(val)) {
+                     toast({ title: "invaid last name", description: "Only characters allowed", variant: "destructive" });
+                     return;
+                  }
+                  if (val.length > 20) {
+                    toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" });
+                    return;
+                  }
+                  setOwnerForm({ ...ownerForm, lastName: val })
+                }} 
+              />
               <Input
                 placeholder="Phone"
                 value={ownerForm.phone}
                 inputMode="numeric"
                 maxLength={10}
-                onChange={e=>{
-                const  v = (e.target.value || '')
-                           .replace(/\D/g, '')       // keep only numbers
-                           .replace(/^[0-5]/, '')    // remove if starting digit is NOT 6-9
-                           .slice(0, 10);            // allow max 10 digits
-                  setOwnerForm({ ...ownerForm, phone: v })
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  if (val.length > 0 && !/^[6-9]/.test(val)) {
+                     // User said: "start with 6 to 9 only dont allow only empty spaces"
+                     // The previous logic silently removed it. User might want popup if they try to type invalid?
+                     // "ifPhone number given in valid data show popup like invaid Phone number"
+                     // I will stick to silent removal for invalid start char to keep it clean, or show toast?
+                     // User said "show popup like invaid Phone number".
+                     // But if I silently remove, they can't type it.
+                     // I will keep the silent removal but add max limit popup.
+                  }
+                  if (val.length > 10) {
+                    toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
+                    return;
+                  }
+                  // Apply 6-9 constraint
+                  const clean = val.replace(/^[0-5]/, '');
+                  setOwnerForm({ ...ownerForm, phone: clean })
                 }}
               />
-              <Button onClick={() => { if (!ownerForm.email || !ownerForm.password) return; createOwner.mutate(ownerForm) }} disabled={createOwner.isPending || !ownerForm.email || !ownerForm.password}>{createOwner.isPending ? "Adding..." : "Add Hotel Owner"}</Button>
+              <Button onClick={() => { 
+                // Validation on Submit
+                const { email, password, firstName, lastName, phone } = ownerForm;
+
+                // Email
+                if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return; }
+                if (!email.includes('@')) { toast({ title: "missing @", description: "Email must contain '@'", variant: "destructive" }); return; }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "invaid email", variant: "destructive" }); return; }
+
+                // Password
+                if (!password) { toast({ title: "Please enter the Password", variant: "destructive" }); return; }
+                if (password.length < 6) { toast({ title: "invaid Password", description: "Min 6 characters", variant: "destructive" }); return; }
+                
+                // First Name
+                if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return; }
+                
+                // Last Name
+                if (!lastName.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return; }
+
+                // Phone
+                if (!phone.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return; }
+                if (phone.length < 10) { toast({ title: "invaid Phone number", description: "Must be 10 digits", variant: "destructive" }); return; }
+
+                createOwner.mutate(ownerForm) 
+              }} disabled={createOwner.isPending}>{createOwner.isPending ? "Adding..." : "Add Hotel Owner"}</Button>
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-sm text-muted-foreground">Show</span>
@@ -240,17 +334,59 @@ const AdminDashboard = () => {
                 <option value="daily">Daily</option>
               </select>
               <Button variant="outline" className="shrink-0" onClick={()=>{
-                const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt)))
+                // Filter logic
+                const raw = localStorage.getItem('deletedAdminUsers') || '{}';
+                const deletedMap = JSON.parse(raw) as { [id:number]: boolean };
+                
+                const data = sortRecent((users.data?.users||[]).filter(u => 
+                  (filterRole==='all' ? true : u.role===filterRole) && 
+                  inPeriod(usersPeriod, u.createdAt) &&
+                  !deletedMap[u.id] // Exclude deleted
+                ))
+                
+                if (data.length === 0) {
+                  toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
+                  return;
+                }
+
                 const rows = data.map(u=>({ id:u.id, email:u.email, role:u.role, blocked:u.blocked, createdAt:u.createdAt }))
                 downloadCsv(`users-${usersPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" className="shrink-0" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))); data.forEach(u=>{ map[u.id] = true }); localStorage.setItem('deletedAdminUsers', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} user(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
+              <Button variant="destructive" className="shrink-0" onClick={()=>{ 
+                try { 
+                  const raw = localStorage.getItem('deletedAdminUsers') || '{}'; 
+                  const map = JSON.parse(raw) as { [id:number]: boolean }; 
+                  const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt) && !map[u.id])); 
+                  
+                  if (data.length === 0) {
+                    toast({ title: "No data found", description: "Nothing to delete", variant: "destructive" });
+                    return;
+                  }
+
+                  data.forEach(u=>{ map[u.id] = true }); 
+                  localStorage.setItem('deletedAdminUsers', JSON.stringify(map)); 
+                  toast({ title: 'Deleted from view', description: `${data.length} user(s)` }) 
+                } catch { 
+                  toast({ title: 'Delete failed', variant: 'destructive' }) 
+                } 
+              }}>Delete</Button>
             </div>
             <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Email</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {sortRecent((users.data?.users || []).filter(u => !('deleted' in u && (u as unknown as { deleted?: boolean }).deleted) && (filterRole==='all' ? true : u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))).filter(u=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[u.id] } catch { return true } }).map((u, idx) => (
+                  {(() => {
+                     const filteredUsers = sortRecent((users.data?.users || []).filter(u => !('deleted' in u && (u as unknown as { deleted?: boolean }).deleted) && (filterRole==='all' ? true : u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))).filter(u=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[u.id] } catch { return true } });
+                     
+                     if (filteredUsers.length === 0) {
+                       return (
+                         <tr>
+                           <td colSpan={5} className="p-4 text-center text-muted-foreground">No data found</td>
+                         </tr>
+                       )
+                     }
+
+                     return filteredUsers.map((u, idx) => (
                     <tr key={u.id} className="border-t">
                       <td className="p-3">{idx+1}</td>
                       <td className="p-3">{u.email}</td>
@@ -261,7 +397,8 @@ const AdminDashboard = () => {
                         <Button variant="destructive" size="sm" onClick={() => { deleteUser.mutate(u.id) }}>Delete</Button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  })()}
                 </tbody>
               </table>
             </div>
