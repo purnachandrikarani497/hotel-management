@@ -5,7 +5,9 @@ import { apiGet } from "@/lib/api";
 const FeaturedHotels = () => {
   type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[] }
   const { data, isLoading, isError } = useQuery({ queryKey: ["featured"], queryFn: () => apiGet<{ hotels: Hotel[] }>("/api/featured"), staleTime: 60_000, refetchOnWindowFocus: false })
-  const hotels: Hotel[] = data?.hotels || []
+  const hotels: Hotel[] = (data?.hotels || [])
+    .filter(h => (h.rating || 0) > 0)
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0));
   return (
     <section className="py-16 bg-gradient-to-br from-white via-blue-50 to-cyan-50">
       <div className="container">

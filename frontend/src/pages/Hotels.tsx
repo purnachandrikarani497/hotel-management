@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search } from "lucide-react";
+import { Star, MapPin, Wifi, Coffee, Car, Utensils, Waves, Wind, PawPrint, Search } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
@@ -91,12 +91,51 @@ const Hotels = () => {
     return () => window.removeEventListener('storage', handler)
   }, [qc])
   const qLower = q.trim().toLowerCase()
+  const getAmenityIcon = (amenity: string) => {
+    switch (amenity.toLowerCase()) {
+      case 'wifi': return <Wifi className="h-4 w-4" />;
+      case 'pool': return <Waves className="h-4 w-4" />;
+      case 'parking': return <Car className="h-4 w-4" />;
+      case 'breakfast': return <Utensils className="h-4 w-4" />;
+      case 'ac': return <Wind className="h-4 w-4" />;
+      case 'pet friendly': return <PawPrint className="h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  const allAmenities = useMemo(() => {
+    const hotels = data?.hotels || [];
+    const uniqueAmenities = new Map<string, string>();
+    // Add default amenities first to maintain order
+    ["WiFi", "Pool", "Parking", "Breakfast", "AC", "Pet Friendly"].forEach(a => uniqueAmenities.set(a.toLowerCase(), a));
+    // Add any other amenities found in hotels
+    hotels.forEach(h => (h.amenities || []).forEach(a => {
+      if (!uniqueAmenities.has(a.toLowerCase())) {
+        uniqueAmenities.set(a.toLowerCase(), a);
+      }
+    }));
+    return Array.from(uniqueAmenities.values());
+  }, [data?.hotels]);
+
   const displayHotels = useMemo(()=>{
+    if (!qLower) return []
+
     const hotels: Hotel[] = data?.hotels || []
     let list = hotels
-    // qLower filter already applied via server param; keep client-side for robustness
+    // qLower filter already applied via server param; keep client-side for robustness and enhanced matching
     if (qLower) {
-      list = list.filter(h => (h.name||'').toLowerCase().includes(qLower) || (h.location||'').toLowerCase().includes(qLower))
+      list = list.filter(h => {
+        const name = (h.name || '').toLowerCase();
+        const location = (h.location || '').toLowerCase();
+        const description = (h.description || '').toLowerCase();
+        const searchTerms = qLower.split(' ').filter(term => term.length > 0);
+        
+        // Check if ALL search terms match at least one field (name, location, or description)
+        // This allows "hyd sitara" to match a hotel named "Sitara" in "Hyderabad"
+        return searchTerms.every(term => 
+          name.includes(term) || location.includes(term) || description.includes(term)
+        );
+      });
     }
     // enforce hyd location when searching for hyd
     if (qLower.includes('hyd')) {
@@ -139,6 +178,7 @@ const Hotels = () => {
     if (sortBy === 'Price: Low to High') list = [...list].sort((a,b)=>a.price-b.price)
     else if (sortBy === 'Price: High to Low') list = [...list].sort((a,b)=>b.price-a.price)
     else if (sortBy === 'Rating') list = [...list].sort((a,b)=>b.rating-a.rating)
+    else if (sortBy === 'Popularity') list = [...list].sort((a,b)=>b.reviews-a.reviews)
     return list
   }, [data?.hotels, qLower, price, minRating, selectedTypes, selectedAmenities, sortBy, checkIn, totalGuests, roomsNeeded, availabilityQ.data])
 
@@ -236,7 +276,7 @@ const Hotels = () => {
                 <div>
                   <label className="text-sm font-medium mb-3 block">Amenities</label>
                   <div className="space-y-2">
-                    {["WiFi", "Pool", "Parking", "Breakfast", "AC", "Pet Friendly"].map(
+                    {allAmenities.map(
                       (amenity) => (
                         <div key={amenity} className="flex items-center space-x-2">
                           <Checkbox id={amenity} checked={selectedAmenities.includes(amenity)} onCheckedChange={(checked)=>{
@@ -246,7 +286,8 @@ const Hotels = () => {
                               return Array.from(set)
                             })
                           }} />
-                          <label htmlFor={amenity} className="text-sm cursor-pointer">
+                          <label htmlFor={amenity} className="text-sm cursor-pointer flex items-center gap-2">
+                            {getAmenityIcon(amenity)}
                             {amenity}
                           </label>
                         </div>
@@ -255,7 +296,18 @@ const Hotels = () => {
                   </div>
                 </div>
 
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" onClick={() => { /* filters apply automatically */ }}>Apply Filters</Button>
+                <Button 
+                  className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white" 
+                  onClick={() => {
+                    setQ("")
+                    setPrice([0, maxPriceAll])
+                    setMinRating(null)
+                    setSelectedTypes([])
+                    setSelectedAmenities([])
+                  }}
+                >
+                  Clear Filters
+                </Button>
               </div>
             </div>
           </aside>

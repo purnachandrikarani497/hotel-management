@@ -5,7 +5,7 @@ const mode = String(metaEnv?.MODE || '');
 const isProd = mode === 'production';
 const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
 const originBase = (typeof window !== 'undefined' && window?.location?.origin) ? window.location.origin : '';
-const devDefault = 'http://localhost:5000';
+const devDefault = 'http://localhost:3011';
 const base = explicitBase || (isProd ? originBase : devDefault);
 try { console.info('[API] base:', base || '(same-origin)') } catch (_e) { void 0 }
 

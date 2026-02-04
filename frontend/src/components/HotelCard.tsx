@@ -80,7 +80,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
 
         {amenities.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {amenities.slice(0, 3).map((amenity, index) => (
+            {amenities.map((amenity, index) => (
               <div key={index} className="flex items-center space-x-1 text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
                 {getAmenityIcon(amenity)}
                 <span>{amenity}</span>
@@ -92,7 +92,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
         <div className="flex items-end justify-between">
           <div>
             <span className="text-2xl font-bold text-primary">₹{price}</span>
-            <span className="text-muted-foreground"> / night</span>
+            <span className="text-muted-foreground"> / day</span>
           </div>
           <Link to={`/hotel/${id}`}>
             <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">

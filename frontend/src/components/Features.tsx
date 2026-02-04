@@ -26,9 +26,9 @@ const features = [
 const Features = () => {
   return (
     <section className="py-16 bg-gradient-to-br from-white via-purple-50 to-pink-50">
-      <div className="container">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Why Book With Us</h2>
+      <div className="container mx-auto">
+        <div className="text-center mb-10 max-w-3xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent pb-1">Why Book With Us</h2>
           <p className="text-muted-foreground mt-2">Your trusted companion for safe, seamless, and value-packed stays</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
