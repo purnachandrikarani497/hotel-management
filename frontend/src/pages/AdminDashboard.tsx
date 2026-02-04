@@ -420,16 +420,36 @@ const AdminDashboard = () => {
               </select>
               <Button variant="outline" className="shrink-0" onClick={()=>{
                 const data = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined)))
+                if (data.length === 0) {
+                  toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
+                  return;
+                }
                 const rows = data.map(h=>({ id:h.id, name:h.name, location:h.location, status:h.status, featured:h.featured, createdAt:h.createdAt }))
                 downloadCsv(`hotels-${hotelsPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" className="shrink-0" onClick={async ()=>{ const src = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))); if (src.length && window.confirm(`Delete ${src.length} hotel(s) in current filter?`)) { const ids = src.map(h=>h.id); await qc.cancelQueries({ queryKey: ["admin","hotels"] }); const prev = qc.getQueryData<{ hotels: Hotel[] }>(["admin","hotels"]) || { hotels: [] }; qc.setQueryData(["admin","hotels"], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => !ids.includes(h.id)) })); Promise.all(ids.map(id => deleteHotelOwner.mutateAsync(id))).finally(()=> qc.invalidateQueries({ queryKey: ["admin","hotels"] })) } }}>Delete</Button>
+              <Button variant="destructive" className="shrink-0" onClick={async ()=>{ 
+                const src = sortRecent((hotels.data?.hotels||[]).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))); 
+                if (src.length === 0) {
+                  toast({ title: "No data found", description: "Nothing to delete", variant: "destructive" });
+                  return;
+                }
+                if (src.length && window.confirm(`Delete ${src.length} hotel(s) in current filter?`)) { const ids = src.map(h=>h.id); await qc.cancelQueries({ queryKey: ["admin","hotels"] }); const prev = qc.getQueryData<{ hotels: Hotel[] }>(["admin","hotels"]) || { hotels: [] }; qc.setQueryData(["admin","hotels"], (data?: { hotels: Hotel[] }) => ({ hotels: (data?.hotels || []).filter(h => !ids.includes(h.id)) })); Promise.all(ids.map(id => deleteHotelOwner.mutateAsync(id))).finally(()=> qc.invalidateQueries({ queryKey: ["admin","hotels"] })) } 
+              }}>Delete</Button>
             </div>
             <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Name</th><th className="p-3">Location</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {sortRecent((hotels.data?.hotels || []).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined))).map((h, idx) => (
+                  {(() => {
+                    const filteredHotels = sortRecent((hotels.data?.hotels || []).filter(h=> inPeriod(hotelsPeriod, h.createdAt as string | undefined)));
+                    if (filteredHotels.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-muted-foreground">No data found</td>
+                        </tr>
+                      )
+                    }
+                    return filteredHotels.map((h, idx) => (
                     <tr key={h.id} className="border-t">
                       <td className="p-3">{idx+1}</td>
                       <td className="p-3">{h.name}</td>
@@ -441,7 +461,8 @@ const AdminDashboard = () => {
                         <Button size="sm" variant="destructive" disabled={deletingHotelId===h.id || deleteHotelOwner.isPending} onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>{deletingHotelId===h.id || deleteHotelOwner.isPending ? 'Deleting…' : 'Delete'}</Button>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -492,11 +513,36 @@ const AdminDashboard = () => {
               </select>
               <Button variant="outline" className="shrink-0" onClick={()=>{
                 const src = bookings.data?.bookings || []
-                const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined)))
+                const raw = localStorage.getItem('deletedAdminBookings') || '{}';
+                const map = JSON.parse(raw) as { [id:number]: boolean };
+                const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined) && !map[b.id]))
+                if (data.length === 0) {
+                  toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
+                  return;
+                }
                 const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
                 downloadCsv(`bookings-${bookingsPeriod}`, rows)
               }}>Download</Button>
-              <Button variant="destructive" className="shrink-0" onClick={()=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; const src = bookings.data?.bookings || []; const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))); data.forEach(b=>{ map[b.id] = true }); localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${data.length} booking(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
+              <Button variant="destructive" className="shrink-0" onClick={()=>{ 
+                try { 
+                  const raw = localStorage.getItem('deletedAdminBookings') || '{}'; 
+                  const map = JSON.parse(raw) as { [id:number]: boolean }; 
+                  const src = bookings.data?.bookings || []; 
+                  const data = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined) && !map[b.id])); 
+                  
+                  if (data.length === 0) {
+                    toast({ title: "No data found", description: "Nothing to delete", variant: "destructive" });
+                    return;
+                  }
+
+                  data.forEach(b=>{ map[b.id] = true }); 
+                  localStorage.setItem('deletedAdminBookings', JSON.stringify(map)); 
+                  toast({ title: 'Deleted from view', description: `${data.length} booking(s)` });
+                  qc.invalidateQueries({ queryKey: ["admin","bookings"] });
+                } catch { 
+                  toast({ title: 'Delete failed', variant: 'destructive' }) 
+                } 
+              }}>Delete</Button>
             </div>
             <div className="rounded-2xl border overflow-x-auto shadow-md">
               <table className="w-full text-sm">
@@ -507,7 +553,17 @@ const AdminDashboard = () => {
                     const hmap: Record<number, Hotel> = {}
                     hotelsArr.forEach(h => { hmap[h.id] = h })
                     const src = bookings.data?.bookings || []
-                    return sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))).filter(b=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[b.id] } catch { return true } }).map((b, idx) => (
+                    const filteredBookings = sortRecent(src.filter(b=> inPeriod(bookingsPeriod, b.createdAt as string | undefined))).filter(b=>{ try { const raw = localStorage.getItem('deletedAdminBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[b.id] } catch { return true } });
+
+                    if (filteredBookings.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={6} className="p-4 text-center text-muted-foreground">No data found</td>
+                        </tr>
+                      )
+                    }
+
+                    return filteredBookings.map((b, idx) => (
                     <tr key={b.id} className="border-t">
                       <td className="p-3">{idx+1}</td>
                       <td className="p-3">{b.hotel?.name || hmap[b.hotelId]?.name || `#${b.hotelId}`}</td>
@@ -522,7 +578,7 @@ const AdminDashboard = () => {
                     </tr>
                   ))
                 })()}
-              </tbody>
+                </tbody>
               </table>
             </div>
           </CardContent>
