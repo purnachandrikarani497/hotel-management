@@ -50,16 +50,16 @@ const Footer = () => {
               🌟 Your trusted partner for finding extraordinary accommodations worldwide. Where elegance meets unforgettable experiences. 🌟
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="bg-purple-200 p-3 rounded-full text-purple-800 hover:bg-purple-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="bg-purple-200 p-3 rounded-full text-purple-800 hover:bg-purple-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" className="bg-pink-200 p-3 rounded-full text-pink-800 hover:bg-pink-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="bg-pink-200 p-3 rounded-full text-pink-800 hover:bg-pink-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
                 <Twitter className="h-4 w-4" />
               </a>
-              <a href="#" className="bg-blue-200 p-3 rounded-full text-blue-800 hover:bg-blue-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="bg-blue-200 p-3 rounded-full text-blue-800 hover:bg-blue-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="#" className="bg-cyan-200 p-3 rounded-full text-cyan-800 hover:bg-cyan-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="bg-cyan-200 p-3 rounded-full text-cyan-800 hover:bg-cyan-300 hover:rotate-12 hover:scale-110 transform duration-300 shadow-md hover:shadow-lg transition-all">
                 <Linkedin className="h-4 w-4" />
               </a>
             </div>

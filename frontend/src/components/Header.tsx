@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { User, Menu, X, LogOut, ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 
@@ -212,6 +212,10 @@ const Header = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Mobile Menu</SheetTitle>
+                <SheetDescription>Navigation links</SheetDescription>
+              </SheetHeader>
               <nav className="flex flex-col space-y-4 mt-8">
                 {(!hideNavLinks ? navLinks : dashboardLinks).map((link) => (
                   <Link
