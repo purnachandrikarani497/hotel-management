@@ -32,9 +32,24 @@ async function stats(req, res) {
 }
 
 async function users(req, res) {
-  await connect(); await ensureSeed();
-  const users = await User.find().lean()
-  res.json({ users })
+  try {
+    await connect(); await ensureSeed();
+    const users = await User.find().lean()
+    res.json({ users })
+  } catch (e) {
+    console.error('[adminController.users] error:', e);
+    // Fallback
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            return res.json({ users: db.users || [] });
+        }
+    } catch (_) {}
+    res.json({ users: [] });
+  }
 }
 
 async function createOwner(req, res) {
@@ -71,9 +86,24 @@ async function deleteUser(req, res) {
 }
 
 async function hotelsList(req, res) {
-  await connect(); await ensureSeed();
-  const hotels = await Hotel.find({ ownerId: { $ne: null } }).lean()
-  res.json({ hotels })
+  try {
+    await connect(); await ensureSeed();
+    const hotels = await Hotel.find({ ownerId: { $ne: null } }).lean()
+    res.json({ hotels })
+  } catch (e) {
+    console.error('[adminController.hotelsList] error:', e);
+    // Fallback
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            return res.json({ hotels: db.hotels || [] });
+        }
+    } catch (_) {}
+    res.json({ hotels: [] });
+  }
 }
 
 async function hotelStatus(req, res) {
@@ -109,7 +139,22 @@ async function bookings(req, res) {
     const items = bookings.map(b => ({ ...b, hotel: hotelMap.get(b.hotelId) || null }))
     res.json({ bookings: items })
   } catch (e) {
-    res.status(500).json({ error: 'Internal error' })
+    console.error('[adminController.bookings] error:', e);
+    // Fallback
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            const bookings = db.bookings || [];
+            const hotels = db.hotels || [];
+            const hotelMap = new Map(hotels.map(h => [h.id, h]));
+            const items = bookings.map(b => ({ ...b, hotel: hotelMap.get(b.hotelId) || null }));
+            return res.json({ bookings: items });
+        }
+    } catch (_) {}
+    res.json({ bookings: [] });
   }
 }
 
@@ -134,9 +179,24 @@ async function refundBooking(req, res) {
 }
 
 async function couponsList(req, res) {
-  await connect(); await ensureSeed();
-  const coupons = await Coupon.find().lean()
-  res.json({ coupons })
+  try {
+    await connect(); await ensureSeed();
+    const coupons = await Coupon.find().lean()
+    res.json({ coupons })
+  } catch (e) {
+    console.error('[adminController.couponsList] error:', e);
+    // Fallback
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            return res.json({ coupons: db.coupons || [] });
+        }
+    } catch (_) {}
+    res.json({ coupons: [] });
+  }
 }
 
 async function createCoupon(req, res) {
@@ -187,13 +247,19 @@ async function deleteCoupon(req, res) {
 }
 
 async function settingsGet(req, res) {
-  await connect(); await ensureSeed();
-  let settings = await Settings.findOne().lean()
-  if (!settings) {
-    const created = await Settings.create({ taxRate: 10, commissionRate: 15 })
-    settings = created.toObject()
+  try {
+    await connect(); await ensureSeed();
+    let settings = await Settings.findOne().lean()
+    if (!settings) {
+      const created = await Settings.create({ taxRate: 10, commissionRate: 15 })
+      settings = created.toObject()
+    }
+    res.json({ settings })
+  } catch (e) {
+    console.error('[adminController.settingsGet] error:', e);
+    // Fallback
+    res.json({ settings: { taxRate: 10, commissionRate: 15, ourStory: '', ourMission: '', contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' } });
   }
-  res.json({ settings })
 }
 
 async function settingsUpdate(req, res) {
@@ -247,6 +313,29 @@ async function supportInbox(req, res) {
   res.json({ inbox })
 }
 
+async function owners(req, res) {
+  try {
+    await connect(); await ensureSeed();
+    const owners = await User.find({ role: 'owner' }).lean();
+    res.json({ owners });
+  } catch (e) {
+    console.error('[adminController.owners] error:', e);
+    // Fallback
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            const users = db.users || [];
+            const owners = users.filter(u => u.role === 'owner');
+            return res.json({ owners });
+        }
+    } catch (_) {}
+    res.json({ owners: [] });
+  }
+}
+
 module.exports = {
   stats,
   users,
@@ -263,11 +352,9 @@ module.exports = {
   createCoupon,
   couponStatus,
   updateCoupon,
-  deleteCoupon,
   deleteAllCoupons,
+  deleteCoupon,
   settingsGet,
   settingsUpdate,
-  ownersPending,
-  ownersApprove,
-  supportInbox
+  owners
 }

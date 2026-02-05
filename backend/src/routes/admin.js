@@ -26,9 +26,6 @@ router.delete('/coupons', admin.deleteAllCoupons)
 
 router.get('/settings', admin.settingsGet)
 router.post('/settings', admin.settingsUpdate)
-
-
-
-router.get('/support', admin.supportInbox)
+router.get('/owners', admin.owners)
 
 module.exports = router

@@ -68,7 +68,11 @@ const Hero = () => {
                     selected={checkIn}
                     onSelect={setCheckIn}
                     initialFocus
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>
@@ -98,7 +102,18 @@ const Hero = () => {
                     selected={checkOut}
                     onSelect={setCheckOut}
                     initialFocus
-                    disabled={(date) => date < (checkIn || new Date())}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const minDate = checkIn ? new Date(checkIn) : today;
+                      if (checkIn) {
+                        // Check-out must be after check-in
+                        return date <= checkIn;
+                      }
+                      // If no check-in, check-out must be at least tomorrow? 
+                      // User said "today date disable" for checkout.
+                      return date <= today;
+                    }}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>
@@ -108,11 +123,11 @@ const Hero = () => {
             {/* Guests & Rooms selector intentionally removed */}
           </div>
           
-          <Button className="w-full md:w-auto mt-5 h-11 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" onClick={()=>{
+          <Button type="button" className="w-full md:w-auto mt-5 h-11 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" onClick={()=>{
             const params = new URLSearchParams()
             if (query) params.set('q', query)
-            if (checkIn) params.set('checkIn', checkIn.toISOString().slice(0,10))
-            if (checkOut) params.set('checkOut', checkOut.toISOString().slice(0,10))
+            if (checkIn && !isNaN(checkIn.getTime())) params.set('checkIn', checkIn.toISOString().slice(0,10))
+            if (checkOut && !isNaN(checkOut.getTime())) params.set('checkOut', checkOut.toISOString().slice(0,10))
             // No guests/rooms params
             navigate(`/hotels?${params.toString()}`)
           }}>

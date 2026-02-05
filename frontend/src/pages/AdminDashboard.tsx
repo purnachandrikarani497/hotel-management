@@ -93,6 +93,8 @@ const AdminDashboard = () => {
     onSuccess: (_res, vars) => {
       toast({ title: "Owner created", description: vars.email })
       setOwnerForm({ email:"", password:"", firstName:"", lastName:"", phone:"" })
+      setFilterRole('owner') // Switch view to owners so user sees the new entry
+      setUsersPeriod('all') // Ensure date filter doesn't hide it
       qc.invalidateQueries({ queryKey: ["admin","users"] })
     },
     onError: (err: unknown) => {

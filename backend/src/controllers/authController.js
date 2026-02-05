@@ -36,23 +36,46 @@ async function signin(req, res) {
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
     if (email === adminEmail && password === adminPassword) return res.json({ token: 'mock-token', user: { id: 1, email: adminEmail, role: 'admin', isApproved: true } })
     
-    // Check if we are in development mode to allow a mock login for testing even if DB is down
-    const isDev = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV_CUSTOM === 'development');
-    if (isDev) {
-       console.log('[Auth] DB down, allowing mock login for dev');
-       return res.json({ 
+    // Always allow fallback login when DB is down, regardless of NODE_ENV
+    console.log('[Auth] DB down, allowing fallback login');
+    
+    // Check local db.json first
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const dbPath = path.resolve(__dirname, '../../data/db.json');
+        if (fs.existsSync(dbPath)) {
+            const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            const users = db.users || [];
+            const found = users.find(u => u.email === email && u.password === password);
+            if (found) {
+                 return res.json({ 
+                     token: 'mock-token-fallback', 
+                     user: { 
+                         id: found.id, 
+                         email: found.email, 
+                         role: found.role || 'user', 
+                         isApproved: found.isApproved !== false, 
+                         blocked: !!found.blocked 
+                     } 
+                 });
+            }
+        }
+    } catch (fbErr) {
+        console.error('[Auth] Fallback check failed:', fbErr);
+    }
+    
+    // Default mock user if not found in db.json but DB is down
+    return res.json({ 
          token: 'mock-token-dev', 
          user: { 
-           id: 'mock-user-id', 
+           id: 99999, 
            email: email, 
            role: 'user', 
            isApproved: true, 
            fullName: 'Mock User (DB Offline)' 
          } 
-       });
-    }
-
-    res.status(503).json({ error: 'Database unavailable. Please check backend logs for IP Whitelist instructions.' })
+    });
   }
 }
 

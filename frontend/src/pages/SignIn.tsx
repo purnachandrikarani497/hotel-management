@@ -49,7 +49,7 @@ const SignIn = () => {
           return
         }
       } catch (_e) { void 0 }
-      navigate("/dashboard/user")
+      navigate("/")
     },
     onError: (err) => {
       const msg = err instanceof Error ? String(err.message || '') : ''
