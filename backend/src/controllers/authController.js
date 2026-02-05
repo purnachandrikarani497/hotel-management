@@ -35,7 +35,24 @@ async function signin(req, res) {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@staybook.com'
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
     if (email === adminEmail && password === adminPassword) return res.json({ token: 'mock-token', user: { id: 1, email: adminEmail, role: 'admin', isApproved: true } })
-    res.status(503).json({ error: 'Database unavailable' })
+    
+    // Check if we are in development mode to allow a mock login for testing even if DB is down
+    const isDev = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV_CUSTOM === 'development');
+    if (isDev) {
+       console.log('[Auth] DB down, allowing mock login for dev');
+       return res.json({ 
+         token: 'mock-token-dev', 
+         user: { 
+           id: 'mock-user-id', 
+           email: email, 
+           role: 'user', 
+           isApproved: true, 
+           fullName: 'Mock User (DB Offline)' 
+         } 
+       });
+    }
+
+    res.status(503).json({ error: 'Database unavailable. Please check backend logs for IP Whitelist instructions.' })
   }
 }
 
