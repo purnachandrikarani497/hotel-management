@@ -324,6 +324,17 @@ const Hotels = () => {
               </select>
             </div>
 
+            {displayHotels.length === 0 && !isLoading && !isError ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                <div className="rounded-full bg-muted/30 p-4 mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No hotels found</h3>
+                <p className="text-muted-foreground max-w-sm">
+                  We couldn't find any hotels matching your search criteria. Try adjusting your filters or search terms.
+                </p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {displayHotels.map((hotel) => {
                 const rs = (availabilityQ.data || {})[hotel.id] || []
@@ -333,6 +344,7 @@ const Hotels = () => {
                 )
               })}
             </div>
+            )}
           </div>
         </div>
       </main>
