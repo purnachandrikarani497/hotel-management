@@ -810,10 +810,16 @@ const OwnerDashboard = () => {
     onError: () => toast({ title: "Response failed", variant: "destructive" }),
   })
 
-  const [hotelForm, setHotelForm] = React.useState({
+  const [hotelForm, setHotelForm] = React.useState<{
+    name: string
+    location: string
+    price: string | number
+    amenities: string
+    description: string
+  }>({
     name: "",
     location: "",
-    price: 0,
+    price: "",
     amenities: "",
     description: "",
   })
@@ -1212,70 +1218,139 @@ const OwnerDashboard = () => {
                   <Input
                     placeholder="Hotel Name"
                     value={hotelForm.name}
-                    onChange={(e) =>
-                      setHotelForm({ ...hotelForm, name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val.length > 50) {
+                        toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                        return
+                      }
+                      if (!/^[a-zA-Z\s]*$/.test(val)) {
+                        toast({ title: "Invalid hotel name", variant: "destructive" })
+                        return
+                      }
+                      setHotelForm({ ...hotelForm, name: val })
+                    }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
                   <Input
                     placeholder="Location"
                     value={hotelForm.location}
-                    onChange={(e) =>
-                      setHotelForm({ ...hotelForm, location: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val.length > 50) {
+                        toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                        return
+                      }
+                      if (!/^[a-zA-Z0-9\s]*$/.test(val)) {
+                        toast({ title: "Invalid location", variant: "destructive" })
+                        return
+                      }
+                      setHotelForm({ ...hotelForm, location: val })
+                    }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Base Price"
                     value={hotelForm.price}
-                    onChange={(e) =>
-                      setHotelForm({
-                        ...hotelForm,
-                        price: Number(e.target.value),
-                      })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        setHotelForm({ ...hotelForm, price: "" })
+                        return
+                      }
+                      if (val.includes("-")) {
+                        toast({ title: "Negative values not accepted", variant: "destructive" })
+                        return
+                      }
+                      if (!/^\d*$/.test(val)) {
+                        toast({ title: "Invalid price", variant: "destructive" })
+                        return
+                      }
+                      if (val.length > 10) {
+                        toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                        return
+                      }
+                      setHotelForm({ ...hotelForm, price: val })
+                    }}
+                    onKeyDown={(e) => {
+                       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.preventDefault()
+                    }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
                   <Input
                     className="col-span-3"
                     placeholder="Amenities (comma-separated)"
                     value={hotelForm.amenities}
-                    onChange={(e) =>
-                      setHotelForm({ ...hotelForm, amenities: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val.length > 50) {
+                         toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                         return
+                      }
+                      if (!/^[a-zA-Z\s,]*$/.test(val)) {
+                         toast({ title: "Invalid amenities", variant: "destructive" })
+                         return
+                      }
+                      setHotelForm({ ...hotelForm, amenities: val })
+                    }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
                   <Input
                     className="col-span-3"
                     placeholder="Description"
                     value={hotelForm.description}
-                    onChange={(e) =>
-                      setHotelForm({
-                        ...hotelForm,
-                        description: e.target.value,
-                      })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val.length > 150) {
+                        toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                        return
+                      }
+                      if (!/^[a-zA-Z\s]*$/.test(val)) {
+                         toast({ title: "Invalid description", variant: "destructive" })
+                         return
+                      }
+                      setHotelForm({ ...hotelForm, description: val })
+                    }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
               </div>
               <Button
-                onClick={() =>
+                onClick={() => {
+                  if (!hotelForm.name.trim()) {
+                    toast({ title: "Please enter the hotel name", variant: "destructive" })
+                    return
+                  }
+                  if (!hotelForm.location.trim()) {
+                     toast({ title: "Please enter the location", variant: "destructive" })
+                     return
+                  }
+                  if (!String(hotelForm.price).trim()) {
+                     toast({ title: "Please enter the price", variant: "destructive" })
+                     return
+                  }
+                  if (!hotelForm.amenities.trim()) {
+                     toast({ title: "Please enter the amenities", variant: "destructive" })
+                     return
+                  }
+                  if (!hotelForm.description.trim()) {
+                     toast({ title: "Please enter the description", variant: "destructive" })
+                     return
+                  }
                   submitHotel.mutate({
                     name: hotelForm.name,
                     location: hotelForm.location,
-                    price: hotelForm.price,
+                    price: Number(hotelForm.price),
                     amenities: hotelForm.amenities
                       .split(',')
                       .map((s) => s.trim())
                       .filter(Boolean),
                     description: hotelForm.description,
                   })
-                }
+                }}
                 disabled={
-                  (hotelsQ.data?.hotels || []).length > 0 ||
-                  !hotelForm.name ||
-                  !hotelForm.location
+                  (hotelsQ.data?.hotels || []).length > 0
                 }
               >
                 Submit Hotel
@@ -1609,7 +1684,7 @@ const OwnerDashboard = () => {
                       onChange={(e) => setRoomForm({ ...roomForm, roomNumbers: e.target.value })}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     <label className="text-sm font-medium mb-2 block">
                       Amenities (comma-separated)
                     </label>
@@ -1623,18 +1698,25 @@ const OwnerDashboard = () => {
                       }
                     />
                   </div>
-                  <div className="col-span-3 flex items-center gap-3">
+                  <div className="col-span-4 flex items-center gap-3 pt-6">
                     <input
                       type="file"
                       multiple
                       accept="image/*"
+                      className="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-violet-50 file:text-violet-700
+                        hover:file:bg-violet-100
+                      "
                       onChange={(e) =>
                         setRoomPhotoFiles(
                           Array.from(e.target.files || []).slice(0, 10),
                         )
                       }
                     />
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <input
                         type="checkbox"
                         checked={roomForm.availability}
@@ -1774,6 +1856,13 @@ const OwnerDashboard = () => {
                           </td>
                         </tr>
                       ))}
+                      {roomSummaries.length === 0 && (
+                        <tr>
+                          <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                            No data found
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1955,7 +2044,12 @@ const OwnerDashboard = () => {
                     })()}
                     <Button
                       variant="outline"
+                      disabled={bookingsTimeFiltered.length === 0}
                       onClick={() => {
+                        if (bookingsTimeFiltered.length === 0) {
+                          toast({ title: "No data to download", variant: "destructive" })
+                          return
+                        }
                         const rows = bookingsTimeFiltered.map((b) => [
                           `#${b.id}`,
                           String(b.hotelId || ""),
@@ -2022,7 +2116,12 @@ const OwnerDashboard = () => {
                     </Button>
                     <Button
                       variant="destructive"
+                      disabled={bookingsTimeFiltered.length === 0}
                       onClick={() => {
+                        if (bookingsTimeFiltered.length === 0) {
+                          toast({ title: "No data to delete", variant: "destructive" })
+                          return
+                        }
                         try {
                           const raw = localStorage.getItem("deletedOwnerBookings") || "{}"
                           const map = JSON.parse(raw) as { [id: number]: boolean }
@@ -2204,6 +2303,13 @@ const OwnerDashboard = () => {
                           </td>
                         </tr>
                       ))}
+                      {bookingsTimeFiltered.length === 0 && (
+                        <tr>
+                          <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                            No data found
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                   </div>
@@ -2258,7 +2364,12 @@ const OwnerDashboard = () => {
                     })()}
                     <Button
                       variant="outline"
+                      disabled={guestsTimeFiltered.length === 0}
                       onClick={() => {
+                        if (guestsTimeFiltered.length === 0) {
+                          toast({ title: "No data to download", variant: "destructive" })
+                          return
+                        }
                         const rows = guestsTimeFiltered.map((g) => [
                           String(g.user?.id || ""),
                           String(
@@ -2326,7 +2437,12 @@ const OwnerDashboard = () => {
                     </Button>
                     <Button
                       variant="destructive"
+                      disabled={guestsTimeFiltered.length === 0}
                       onClick={() => {
+                        if (guestsTimeFiltered.length === 0) {
+                          toast({ title: "No data to delete", variant: "destructive" })
+                          return
+                        }
                         try {
                           const raw = localStorage.getItem("deletedOwnerGuests") || "{}"
                           const map = JSON.parse(raw) as { [id: number]: boolean }
@@ -3092,6 +3208,13 @@ const OwnerDashboard = () => {
                           </tr>
                         )
                       })}
+                      {hotels.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="p-4 text-center text-muted-foreground">
+                            No data found
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                   </div>
@@ -3174,6 +3297,13 @@ const OwnerDashboard = () => {
                             </tr>
                           )
                         })}
+                        {hotels.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="p-4 text-center text-muted-foreground">
+                              No data found
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                     </div>
