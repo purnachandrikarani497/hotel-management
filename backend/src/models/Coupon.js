@@ -4,6 +4,8 @@ const CouponSchema = new mongoose.Schema({
   id: { type: Number, index: true },
   code: { type: String, unique: true },
   discount: Number,
+  startDate: String,
+  endDate: String,
   expiry: String,
   usageLimit: Number,
   used: { type: Number, default: 0 },

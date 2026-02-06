@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { User, CalendarCheck, XCircle, Wallet, CalendarRange, Users, CheckCircle, ListChecks, Building2, BadgePercent, Headphones } from "lucide-react"
 import * as React from "react"
+import { useEffect } from "react"
 
 const categories = [
   { id: "account", label: "Account Management", icon: User },
@@ -68,6 +69,8 @@ const Help = () => {
   const [search, setSearch] = React.useState("")
   const [messages, setMessages] = React.useState<{ role: "user" | "bot"; text: string }[]>([])
   const [input, setInput] = React.useState("")
+
+  useEffect(() => { window.scrollTo(0, 0); }, []);
 
   const filteredFaqs = React.useMemo(() => {
     const list = faqs[selected] || []

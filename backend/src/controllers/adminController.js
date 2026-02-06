@@ -215,10 +215,10 @@ async function couponsList(req, res) {
 
 async function createCoupon(req, res) {
   await connect(); await ensureSeed();
-  const { code, discount, expiry, usageLimit, enabled, hotelId, ownerId } = req.body || {}
+  const { code, discount, expiry, usageLimit, enabled, hotelId, ownerId, startDate, endDate } = req.body || {}
   if (!code || !discount) return res.status(400).json({ error: 'Missing fields' })
   const id = await nextIdFor('Coupon')
-  await Coupon.create({ id, code, discount: Number(discount), expiry: expiry || null, usageLimit: Number(usageLimit) || 0, used: 0, enabled: enabled !== false, hotelId: hotelId ? Number(hotelId) : null, ownerId: ownerId ? Number(ownerId) : null })
+  await Coupon.create({ id, code, discount: Number(discount), expiry: expiry || null, startDate: startDate || null, endDate: endDate || null, usageLimit: Number(usageLimit) || 0, used: 0, enabled: enabled !== false, hotelId: hotelId ? Number(hotelId) : null, ownerId: ownerId ? Number(ownerId) : null })
   res.json({ status: 'created', id })
 }
 
@@ -236,11 +236,13 @@ async function couponStatus(req, res) {
 async function updateCoupon(req, res) {
   await connect(); await ensureSeed();
   const id = Number(req.params.id)
-  const { discount, expiry, usageLimit } = req.body || {}
+  const { discount, expiry, usageLimit, startDate, endDate } = req.body || {}
   const c = await Coupon.findOne({ id })
   if (!c) return res.status(404).json({ error: 'Coupon not found' })
   if (discount !== undefined) c.discount = Number(discount)
   if (expiry !== undefined) c.expiry = expiry
+  if (startDate !== undefined) c.startDate = startDate
+  if (endDate !== undefined) c.endDate = endDate
   if (usageLimit !== undefined) c.usageLimit = Number(usageLimit)
   await c.save()
   res.json({ status: 'updated' })

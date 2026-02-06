@@ -1387,7 +1387,7 @@ const OwnerDashboard = () => {
                                   onChange={(e)=> setNameEdit({ ...nameEdit, [h.id]: e.target.value })}
                                 />
                               ) : (
-                                <div>{idx + 1} • {h.name}</div>
+                                <div>{h.name}</div>
                               )}
                             </td>
                             <td className="p-3">
@@ -1610,7 +1610,7 @@ const OwnerDashboard = () => {
                       <option value={0}>Select hotel</option>
                       {hotels.map((h) => (
                         <option key={h.id} value={h.id}>
-                          {h.id} • {h.name}
+                          {h.name}
                         </option>
                       ))}
                     </select>
@@ -1640,11 +1640,12 @@ const OwnerDashboard = () => {
                     </label>
                     <Input
                       type="number"
+                      min="0"
                       value={roomForm.price}
                       onChange={(e) =>
                         setRoomForm({
                           ...roomForm,
-                          price: Number(e.target.value),
+                          price: Math.max(0, Number(e.target.value)),
                         })
                       }
                     />
@@ -1655,11 +1656,12 @@ const OwnerDashboard = () => {
                     </label>
                     <Input
                       type="number"
+                      min="0"
                       value={roomForm.members}
                       onChange={(e) =>
                         setRoomForm({
                           ...roomForm,
-                          members: Number(e.target.value),
+                          members: Math.max(0, Number(e.target.value)),
                         })
                       }
                     />
@@ -1686,17 +1688,39 @@ const OwnerDashboard = () => {
                   </div>
                   <div className="col-span-3">
                     <label className="text-sm font-medium mb-2 block">
-                      Amenities (comma-separated)
+                      Amenities
                     </label>
-                    <Input
-                      value={roomForm.amenities}
-                      onChange={(e) =>
-                        setRoomForm({
-                          ...roomForm,
-                          amenities: e.target.value,
-                        })
-                      }
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal h-auto min-h-[40px] whitespace-normal">
+                          {roomForm.amenities ? roomForm.amenities : "Select amenities"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-2" align="start">
+                        <div className="grid gap-2 max-h-[300px] overflow-y-auto">
+                          {Array.from(new Set((hotelsQ.data?.hotels || []).flatMap(h => h.amenities || []))).map(a => (
+                            <div key={a} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={roomForm.amenities.split(',').map(s=>s.trim()).includes(a)}
+                                onChange={(e) => {
+                                  const current = roomForm.amenities.split(',').map(s=>s.trim()).filter(Boolean);
+                                  let next;
+                                  if (e.target.checked) {
+                                    next = [...current, a];
+                                  } else {
+                                    next = current.filter(x => x !== a);
+                                  }
+                                  setRoomForm({ ...roomForm, amenities: next.join(',') });
+                                }}
+                              />
+                              <span className="text-sm">{a}</span>
+                            </div>
+                          ))}
+                          {(!hotelsQ.data?.hotels || hotelsQ.data.hotels.length === 0) && <div className="text-sm text-muted-foreground">No amenities found in your hotels.</div>}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="col-span-4 flex items-center gap-3 pt-6">
                     <input
@@ -1800,17 +1824,17 @@ const OwnerDashboard = () => {
                       {roomSummaries.map((g, idx) => (
                         <tr key={g.key} className="border-t">
                           <td className="p-3">{idx + 1}</td>
-                          <td className="p-3">{g.hotelId} • {hotelName(g.hotelId)}</td>
+                          <td className="p-3">{hotelName(g.hotelId)}</td>
                           <td className="p-3">{g.type}</td>
                           <td className="p-3">
-                            <Input type="number" className="w-24" placeholder="₹" value={roomGroupEdit[g.key]?.price ?? String(g.price)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), price: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
+                            <Input type="number" min="0" className="w-24" placeholder="₹" value={roomGroupEdit[g.key]?.price ?? String(g.price)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), price: String(Math.max(0, Number(e.target.value))) } })} disabled={!roomGroupEditing[g.key]} />
                           </td>
                           <td className="p-3">
-                            <Input type="number" className="w-20" placeholder="#" value={roomGroupEdit[g.key]?.members ?? String(g.members)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), members: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
+                            <Input type="number" min="0" className="w-20" placeholder="#" value={roomGroupEdit[g.key]?.members ?? String(g.members)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), members: String(Math.max(0, Number(e.target.value))) } })} disabled={!roomGroupEditing[g.key]} />
                           </td>
                           <td className="p-3">
                             {roomGroupEditing[g.key] ? (
-                              <Input type="number" className="w-16" value={roomGroupEdit[g.key]?.availableRooms ?? String(availableByGroupKeyToday[g.key] ?? g.count)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availableRooms: e.target.value } })} />
+                              <Input type="number" min="0" className="w-16" value={roomGroupEdit[g.key]?.availableRooms ?? String(availableByGroupKeyToday[g.key] ?? g.count)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availableRooms: String(Math.max(0, Number(e.target.value))) } })} />
                             ) : (
                               <div>{availableByGroupKeyToday[g.key] ?? g.count}</div>
                             )}
@@ -2583,12 +2607,61 @@ const OwnerDashboard = () => {
                   <tbody className="[&_tr:hover]:bg-muted/30">
                     {(hotelsQ.data?.hotels || []).map((h: Hotel)=> (
                       <tr key={`contact-${h.id}`} className="border-t">
-                        <td className="p-3">{h.id} • {h.name}</td>
-                        <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) }} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { const v = (e.target.value||'').replace(/\D/g,'').replace(/^[0-5]/,'').slice(0,10); setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) }} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: e.target.value } })} disabled={!contactEditing[h.id]} /></td>
-                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold shadow-md hover:shadow-lg" onClick={()=> updateInfo.mutate({ id: h.id, contactEmail: contactForm[h.id]?.email || '', contactPhone1: contactForm[h.id]?.phone1 || '', contactPhone2: contactForm[h.id]?.phone2 || '', ownerName: contactForm[h.id]?.ownerName || '' })} disabled={!contactEditing[h.id] || (!!contactForm[h.id]?.phone1 && !/^([6-9]\d{9})$/.test(contactForm[h.id]?.phone1)) || (!!contactForm[h.id]?.phone2 && !/^([6-9]\d{9})$/.test(contactForm[h.id]?.phone2))}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
+                        <td className="p-3">{h.name}</td>
+                        <td className="p-3"><Input placeholder="email" value={contactForm[h.id]?.email ?? ''} onChange={(e)=> {
+                          const val = e.target.value;
+                          if (val.length > 20) {
+                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            return;
+                          }
+                          setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), email: val } })
+                        }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { 
+                          const v = (e.target.value||'').replace(/\D/g,'');
+                          if (v.length > 10) {
+                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            return;
+                          }
+                          setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) 
+                        }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { 
+                          const v = (e.target.value||'').replace(/\D/g,'');
+                          if (v.length > 10) {
+                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            return;
+                          }
+                          setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) 
+                        }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3"><Input placeholder="Owner Name" value={contactForm[h.id]?.ownerName ?? ''} onChange={(e)=> {
+                          const val = e.target.value;
+                          if (val.length > 20) {
+                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            return;
+                          }
+                          if (!/^[a-zA-Z\s]*$/.test(val)) {
+                            return;
+                          }
+                          setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), ownerName: val } })
+                        }} disabled={!contactEditing[h.id]} /></td>
+                        <td className="p-3 flex gap-2"><Button size="sm" variant="outline" onClick={()=> setContactEditing({ ...contactEditing, [h.id]: !(contactEditing[h.id] || false) })}>{contactEditing[h.id] ? 'Stop Edit' : 'Edit'}</Button><Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold shadow-md hover:shadow-lg" onClick={()=> {
+                          const email = (contactForm[h.id]?.email || '').trim();
+                          const phone1 = (contactForm[h.id]?.phone1 || '').trim();
+                          const phone2 = (contactForm[h.id]?.phone2 || '').trim();
+                          const ownerName = (contactForm[h.id]?.ownerName || '').trim();
+
+                          if (!email) { toast({ title: "Please enter the Email", variant: "destructive" }); return; }
+                          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email", variant: "destructive" }); return; }
+                          
+                          if (!phone1) { toast({ title: "Please enter the contract", variant: "destructive" }); return; }
+                          if (phone1.length < 10) { toast({ title: "Invalid contract", description: "Must be 10 digits", variant: "destructive" }); return; }
+                          
+                          if (phone2 && phone2.length < 10) { toast({ title: "Invalid contract 2", description: "Must be 10 digits", variant: "destructive" }); return; }
+
+                          if (!ownerName) { toast({ title: "Please enter the owner name", variant: "destructive" }); return; }
+                          if (ownerName.length < 3) { toast({ title: "Invalid owner name", variant: "destructive" }); return; }
+
+                          updateInfo.mutate({ id: h.id, contactEmail: email, contactPhone1: phone1, contactPhone2: phone2, ownerName: ownerName })
+                        }} disabled={!contactEditing[h.id]}>Save</Button><Button size="sm" variant="destructive" onClick={()=> { setContactForm({ ...contactForm, [h.id]: { email:'', phone1:'', phone2:'', ownerName:'' } }); updateInfo.mutate({ id: h.id, contactEmail: '', contactPhone1: '', contactPhone2: '', ownerName: '' }) }}>Delete</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2615,12 +2688,16 @@ const OwnerDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="[&_tr:hover]:bg-muted/30">
+                    {(!settingsQ.data?.settings?.contactName && !settingsQ.data?.settings?.contactPhone1 && !settingsQ.data?.settings?.contactPhone2 && !settingsQ.data?.settings?.contactEmail) ? (
+                      <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No data found</td></tr>
+                    ) : (
                     <tr className="border-t">
                       <td className="p-3">{settingsQ.data?.settings?.contactName || '-'}</td>
                       <td className="p-3">{settingsQ.data?.settings?.contactPhone1 || '-'}</td>
                       <td className="p-3">{settingsQ.data?.settings?.contactPhone2 || '-'}</td>
                       <td className="p-3">{settingsQ.data?.settings?.contactEmail || '-'}</td>
                     </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -4,8 +4,10 @@ import { Hotel, Users, Award, Globe } from "lucide-react";
 import type { ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
+import { useEffect } from "react";
 
 const About = () => {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
   const { data, isLoading, isError } = useQuery({ queryKey: ["about"], queryFn: () => apiGet<{ stats: { label: string; value: string }[]; ourStory?: string; ourMission?: string; contact?: { name?: string; email?: string; phone1?: string; phone2?: string } }>("/api/about"), staleTime: 60_000, refetchOnWindowFocus: false })
   const stats = data?.stats || []
   const ourStory = data?.ourStory || ""
