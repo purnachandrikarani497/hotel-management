@@ -46,8 +46,8 @@ type Hotel = {
   pricing?: {
     normalPrice?: number
     weekendPrice?: number
-    seasonal?: { start: string; end: string; price: number }[]
-    specials?: { date: string; price: number }[]
+    seasonal?: { start: string; end: string; price: number; description?: string }[]
+    specials?: { date: string; price: number; description?: string }[]
     extraHourRate?: number
     cancellationHourRate?: number
   }
@@ -782,8 +782,8 @@ const OwnerDashboard = () => {
       weekendPrice?: number
       extraHourRate?: number
       cancellationHourRate?: number
-      seasonal?: { start: string; end: string; price: number }[]
-      specials?: { date: string; price: number }[]
+      seasonal?: { start: string; end: string; price: number; description?: string }[]
+      specials?: { date: string; price: number; description?: string }[]
     }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p),
     onSuccess: (_res, vars) => {
       toast({ title: "Pricing updated", description: `Hotel #${vars.hotelId}` })
@@ -860,8 +860,8 @@ const OwnerDashboard = () => {
       weekendPrice: string
       extraHourRate?: string
       cancellationHourRate?: string
-      seasonal: { start: string; end: string; price: string }[]
-      specials: { date: string; price: string }[]
+      seasonal: { start: string; end: string; price: string; description?: string }[]
+      specials: { date: string; price: string; description?: string }[]
     }
   }>({})
 
@@ -870,8 +870,10 @@ const OwnerDashboard = () => {
 
   const [seasonSel, setSeasonSel] = React.useState<{ [id: number]: DateRange | undefined }>({})
   const [seasonPrice, setSeasonPrice] = React.useState<{ [id: number]: string }>({})
+  const [seasonDesc, setSeasonDesc] = React.useState<{ [id: number]: string }>({})
   const [specialSel, setSpecialSel] = React.useState<{ [id: number]: Date[] }>({})
   const [specialPrice, setSpecialPrice] = React.useState<{ [id: number]: string }>({})
+  const [specialDesc, setSpecialDesc] = React.useState<{ [id: number]: string }>({})
 
   const [roomTypes, setRoomTypes] = React.useState<string[]>(() => {
     try {
@@ -2762,14 +2764,15 @@ const OwnerDashboard = () => {
                               start: string
                               end: string
                               price: string
+                              description?: string
                             }[]
-                            specials: { date: string; price: string }[]
+                            specials: { date: string; price: string; description?: string }[]
                           })
 
                         return (
                           <tr key={h.id} className="border-t">
                             <td className="p-2">
-                              {h.id} • {h.name}
+                              {h.name}
                               <div className="mt-2">
                                 <select
                                   className="px-3 py-2 rounded-md border bg-white text-xs shadow-sm"
@@ -2825,15 +2828,18 @@ const OwnerDashboard = () => {
                               <Input
                                 placeholder=""
                                 value={pricingForm[h.id]?.normalPrice ?? ""}
-                                onChange={(e) =>
-                                  setPricingForm({
-                                    ...pricingForm,
-                                    [h.id]: {
-                                      ...(pricingForm[h.id] || pf),
-                                      normalPrice: e.target.value,
-                                    },
-                                  })
-                                }
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  if (/^\d*$/.test(val) && val.length <= 6) {
+                                    setPricingForm({
+                                      ...pricingForm,
+                                      [h.id]: {
+                                        ...(pricingForm[h.id] || pf),
+                                        normalPrice: val,
+                                      },
+                                    })
+                                  }
+                                }}
                                 disabled={!pricingEditing[h.id]}
                               />
                             </td>
@@ -2841,15 +2847,18 @@ const OwnerDashboard = () => {
                             <Input
                               placeholder=""
                               value={pf.weekendPrice}
-                              onChange={(e) =>
-                                setPricingForm({
-                                  ...pricingForm,
-                                  [h.id]: {
-                                    ...pf,
-                                    weekendPrice: e.target.value,
-                                  },
-                                })
-                              }
+                              onChange={(e) => {
+                                const val = e.target.value
+                                if (/^\d*$/.test(val) && val.length <= 6) {
+                                  setPricingForm({
+                                    ...pricingForm,
+                                    [h.id]: {
+                                      ...pf,
+                                      weekendPrice: val,
+                                    },
+                                  })
+                                }
+                              }}
                               disabled={!pricingEditing[h.id]}
                             />
                           </td>
@@ -2857,15 +2866,18 @@ const OwnerDashboard = () => {
                             <Input
                               placeholder=""
                               value={pf.extraHourRate || ""}
-                              onChange={(e) =>
-                                setPricingForm({
-                                  ...pricingForm,
-                                  [h.id]: {
-                                    ...pf,
-                                    extraHourRate: e.target.value,
-                                  },
-                                })
-                              }
+                              onChange={(e) => {
+                                const val = e.target.value
+                                if (/^\d*$/.test(val) && val.length <= 6) {
+                                  setPricingForm({
+                                    ...pricingForm,
+                                    [h.id]: {
+                                      ...pf,
+                                      extraHourRate: val,
+                                    },
+                                  })
+                                }
+                              }}
                               disabled={!pricingEditing[h.id]}
                             />
                           </td>
@@ -2873,15 +2885,18 @@ const OwnerDashboard = () => {
                             <Input
                               placeholder=""
                               value={pf.cancellationHourRate || ""}
-                              onChange={(e) =>
-                                setPricingForm({
-                                  ...pricingForm,
-                                  [h.id]: {
-                                    ...pf,
-                                    cancellationHourRate: e.target.value,
-                                  },
-                                })
-                              }
+                              onChange={(e) => {
+                                const val = e.target.value
+                                if (/^\d*$/.test(val) && val.length <= 6) {
+                                  setPricingForm({
+                                    ...pricingForm,
+                                    [h.id]: {
+                                      ...pf,
+                                      cancellationHourRate: val,
+                                    },
+                                  })
+                                }
+                              }}
                               disabled={!pricingEditing[h.id]}
                             />
                           </td>
@@ -2920,15 +2935,33 @@ const OwnerDashboard = () => {
                                     </PopoverContent>
                                   </Popover>
                                   <Input
-                                    className="w-28"
-                                    placeholder=""
+                                    className="w-24"
+                                    placeholder="Desc"
+                                    value={seasonDesc[h.id] || ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                        setSeasonDesc({
+                                          ...seasonDesc,
+                                          [h.id]: val,
+                                        })
+                                      }
+                                    }}
+                                    disabled={!pricingEditing[h.id]}
+                                  />
+                                  <Input
+                                    className="w-20"
+                                    placeholder="Price"
                                     value={seasonPrice[h.id] || ""}
-                                    onChange={(e) =>
-                                      setSeasonPrice({
-                                        ...seasonPrice,
-                                        [h.id]: e.target.value,
-                                      })
-                                    }
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      if (/^\d*$/.test(val) && val.length <= 6) {
+                                        setSeasonPrice({
+                                          ...seasonPrice,
+                                          [h.id]: val,
+                                        })
+                                      }
+                                    }}
                                     disabled={!pricingEditing[h.id]}
                                   />
                                   <Button
@@ -2937,6 +2970,7 @@ const OwnerDashboard = () => {
                                       const sel: DateRange | undefined =
                                         seasonSel[h.id]
                                       const price = seasonPrice[h.id] || ""
+                                      const desc = seasonDesc[h.id] || ""
                                       const start = sel?.from ? ymdLocal(sel.from) : ""
                                       const end = sel?.to ? ymdLocal(sel.to) : ""
                                       if (start && end) {
@@ -2944,6 +2978,7 @@ const OwnerDashboard = () => {
                                           start,
                                           end,
                                           price,
+                                          description: desc,
                                         })
                                         setPricingForm({
                                           ...pricingForm,
@@ -2962,7 +2997,7 @@ const OwnerDashboard = () => {
                                 {(pf.seasonal || []).map((row, idx) => (
                                   <div
                                     key={idx}
-                                    className="grid grid-cols-4 gap-2"
+                                    className="grid grid-cols-5 gap-2"
                                   >
                                     <Input
                                       placeholder="Start"
@@ -3003,21 +3038,46 @@ const OwnerDashboard = () => {
                                       disabled={!pricingEditing[h.id]}
                                     />
                                     <Input
-                                      placeholder=""
+                                      placeholder="Desc"
+                                      value={row.description || ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                          const next = (pf.seasonal || []).slice()
+                                          next[idx] = {
+                                            ...row,
+                                            description: val,
+                                          }
+                                          setPricingForm({
+                                            ...pricingForm,
+                                            [h.id]: {
+                                              ...pf,
+                                              seasonal: next,
+                                            },
+                                          })
+                                        }
+                                      }}
+                                      disabled={!pricingEditing[h.id]}
+                                    />
+                                    <Input
+                                      placeholder="Price"
                                       value={row.price}
                                       onChange={(e) => {
-                                        const next = (pf.seasonal || []).slice()
-                                        next[idx] = {
-                                          ...row,
-                                          price: e.target.value,
+                                        const val = e.target.value
+                                        if (/^\d*$/.test(val) && val.length <= 6) {
+                                          const next = (pf.seasonal || []).slice()
+                                          next[idx] = {
+                                            ...row,
+                                            price: val,
+                                          }
+                                          setPricingForm({
+                                            ...pricingForm,
+                                            [h.id]: {
+                                              ...pf,
+                                              seasonal: next,
+                                            },
+                                          })
                                         }
-                                        setPricingForm({
-                                          ...pricingForm,
-                                          [h.id]: {
-                                            ...pf,
-                                            seasonal: next,
-                                          },
-                                        })
                                       }}
                                       disabled={!pricingEditing[h.id]}
                                     />
@@ -3095,15 +3155,33 @@ const OwnerDashboard = () => {
                                     </PopoverContent>
                                   </Popover>
                                   <Input
-                                    className="w-28"
-                                    placeholder=""
+                                    className="w-24"
+                                    placeholder="Desc"
+                                    value={specialDesc[h.id] || ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                        setSpecialDesc({
+                                          ...specialDesc,
+                                          [h.id]: val,
+                                        })
+                                      }
+                                    }}
+                                    disabled={!pricingEditing[h.id]}
+                                  />
+                                  <Input
+                                    className="w-20"
+                                    placeholder="Price"
                                     value={specialPrice[h.id] || ""}
-                                    onChange={(e) =>
-                                      setSpecialPrice({
-                                        ...specialPrice,
-                                        [h.id]: e.target.value,
-                                      })
-                                    }
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      if (/^\d*$/.test(val) && val.length <= 6) {
+                                        setSpecialPrice({
+                                          ...specialPrice,
+                                          [h.id]: val,
+                                        })
+                                      }
+                                    }}
                                     disabled={!pricingEditing[h.id]}
                                   />
                                   <Button
@@ -3111,10 +3189,12 @@ const OwnerDashboard = () => {
                                     onClick={() => {
                                       const dates = (specialSel[h.id] || []).map((d) => ymdLocal(d))
                                       const price = specialPrice[h.id] || ""
+                                      const desc = specialDesc[h.id] || ""
                                       if (dates.length) {
                                         const rows = dates.map((date) => ({
                                           date,
                                           price,
+                                          description: desc,
                                         }))
                                         const next = (pf.specials || []).concat(
                                           rows,
@@ -3133,7 +3213,7 @@ const OwnerDashboard = () => {
                                 {(pf.specials || []).map((row, idx) => (
                                   <div
                                     key={idx}
-                                    className="grid grid-cols-3 gap-2"
+                                    className="grid grid-cols-4 gap-2"
                                   >
                                     <Input
                                       placeholder="Date"
@@ -3155,21 +3235,46 @@ const OwnerDashboard = () => {
                                       disabled={!pricingEditing[h.id]}
                                     />
                                     <Input
-                                      placeholder=""
+                                      placeholder="Desc"
+                                      value={row.description || ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                          const next = (pf.specials || []).slice()
+                                          next[idx] = {
+                                            ...row,
+                                            description: val,
+                                          }
+                                          setPricingForm({
+                                            ...pricingForm,
+                                            [h.id]: {
+                                              ...pf,
+                                              specials: next,
+                                            },
+                                          })
+                                        }
+                                      }}
+                                      disabled={!pricingEditing[h.id]}
+                                    />
+                                    <Input
+                                      placeholder="Price"
                                       value={row.price}
                                       onChange={(e) => {
-                                        const next = (pf.specials || []).slice()
-                                        next[idx] = {
-                                          ...row,
-                                          price: e.target.value,
+                                        const val = e.target.value
+                                        if (/^\d*$/.test(val) && val.length <= 6) {
+                                          const next = (pf.specials || []).slice()
+                                          next[idx] = {
+                                            ...row,
+                                            price: val,
+                                          }
+                                          setPricingForm({
+                                            ...pricingForm,
+                                            [h.id]: {
+                                              ...pf,
+                                              specials: next,
+                                            },
+                                          })
                                         }
-                                        setPricingForm({
-                                          ...pricingForm,
-                                          [h.id]: {
-                                            ...pf,
-                                            specials: next,
-                                          },
-                                        })
                                       }}
                                       disabled={!pricingEditing[h.id]}
                                     />
@@ -3258,6 +3363,7 @@ const OwnerDashboard = () => {
                                         start: s.start,
                                         end: s.end,
                                         price: Number(s.price),
+                                        description: s.description,
                                       })),
                                     specials: (pf.specials || [])
                                       .filter(
@@ -3267,6 +3373,7 @@ const OwnerDashboard = () => {
                                       .map((sp) => ({
                                         date: sp.date,
                                         price: Number(sp.price),
+                                        description: sp.description,
                                       })),
                                   })
                                 }
@@ -3320,7 +3427,7 @@ const OwnerDashboard = () => {
                           const specials = Array.isArray(p.specials) ? p.specials : []
                           return (
                             <tr key={`saved-${h.id}`} className="border-t">
-                              <td className="p-2">{h.id} • {h.name}</td>
+                              <td className="p-2">{h.name}</td>
                               <td className="p-2">{p.normalPrice !== undefined ? `₹${Number(p.normalPrice)}` : '-'}</td>
                               <td className="p-2">{p.weekendPrice !== undefined ? `₹${Number(p.weekendPrice)}` : '-'}</td>
                               <td className="p-2">{p.extraHourRate !== undefined ? `₹${Number(p.extraHourRate)}` : '-'}</td>
@@ -3330,10 +3437,10 @@ const OwnerDashboard = () => {
                                   {seasonal.length === 0 && <span className="text-xs text-muted-foreground">None</span>}
                                   {seasonal.map((s, idx) => (
                                     <div key={`season-${h.id}-${idx}`} className="inline-flex items-center gap-2">
-                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{String(s.start)} → {String(s.end)} • ₹{Number(s.price||0)}</span>
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{String(s.start)} → {String(s.end)} • {s.description ? String(s.description) + ' • ' : ''}₹{Number(s.price||0)}</span>
                                       <Button size="sm" variant="outline" onClick={() => {
                                         const next = seasonal.filter((_, i) => i !== idx)
-                                        updatePricing.mutate({ hotelId: h.id, seasonal: next.map(ss => ({ start: String(ss.start), end: String(ss.end), price: Number(ss.price||0) })) })
+                                        updatePricing.mutate({ hotelId: h.id, seasonal: next.map(ss => ({ start: String(ss.start), end: String(ss.end), price: Number(ss.price||0), description: ss.description })) })
                                       }}>Remove</Button>
                                     </div>
                                   ))}
@@ -3344,10 +3451,10 @@ const OwnerDashboard = () => {
                                   {specials.length === 0 && <span className="text-xs text-muted-foreground">None</span>}
                                   {specials.map((sp, idx) => (
                                     <div key={`special-${h.id}-${idx}`} className="inline-flex items-center gap-2">
-                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{String(sp.date)} • ₹{Number(sp.price||0)}</span>
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary">{String(sp.date)} • {sp.description ? String(sp.description) + ' • ' : ''}₹{Number(sp.price||0)}</span>
                                       <Button size="sm" variant="outline" onClick={() => {
                                         const next = specials.filter((_, i) => i !== idx)
-                                        updatePricing.mutate({ hotelId: h.id, specials: next.map(ssp => ({ date: String(ssp.date), price: Number(ssp.price||0) })) })
+                                        updatePricing.mutate({ hotelId: h.id, specials: next.map(ssp => ({ date: String(ssp.date), price: Number(ssp.price||0), description: ssp.description })) })
                                       }}>Remove</Button>
                                     </div>
                                   ))}
@@ -3363,8 +3470,8 @@ const OwnerDashboard = () => {
                                       weekendPrice: String(p.weekendPrice ?? prev[h.id]?.weekendPrice ?? ''),
                                       extraHourRate: String(p.extraHourRate ?? prev[h.id]?.extraHourRate ?? ''),
                                       cancellationHourRate: String(p.cancellationHourRate ?? prev[h.id]?.cancellationHourRate ?? ''),
-                                      seasonal: seasonal.map(s => ({ start: String(s.start||''), end: String(s.end||''), price: String(Number(s.price||0)) })),
-                                      specials: specials.map(sp => ({ date: String(sp.date||''), price: String(Number(sp.price||0)) }))
+                                      seasonal: seasonal.map(s => ({ start: String(s.start||''), end: String(s.end||''), price: String(Number(s.price||0)), description: s.description ? String(s.description) : "" })),
+                                      specials: specials.map(sp => ({ date: String(sp.date||''), price: String(Number(sp.price||0)), description: sp.description ? String(sp.description) : "" }))
                                     }
                                   }))
                                   toast({ title: 'Edit enabled', description: `Pricing • Hotel #${h.id}` })
