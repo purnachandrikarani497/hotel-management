@@ -26,7 +26,15 @@ async function signin(req, res) {
     if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
     const user = await User.findOne({ email }).lean()
     if (!user) return res.status(404).json({ error: 'Email not registered' })
-    if (user.deleted) return res.status(410).json({ error: 'Account deleted' })
+    if (user.deleted) {
+      if (user.password === password) {
+        await User.updateOne({ id: user.id }, { $set: { deleted: false, blocked: false } })
+        user.deleted = false
+        user.blocked = false
+      } else {
+        return res.status(410).json({ error: 'Account deleted' })
+      }
+    }
     if (user.blocked) return res.status(403).json({ error: 'User is blocked' })
     if (user.password !== password) return res.status(401).json({ error: 'Invalid credentials' })
     res.json({ token: 'mock-token', user: { id: user.id, email: user.email, role: user.role, isApproved: user.isApproved !== false, blocked: !!user.blocked } })

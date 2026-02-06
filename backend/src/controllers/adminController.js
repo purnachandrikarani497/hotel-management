@@ -57,7 +57,21 @@ async function createOwner(req, res) {
   const { email, password, firstName, lastName, phone } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Missing fields' })
   const existing = await User.findOne({ email })
-  if (existing) return res.status(409).json({ error: 'Email exists' })
+  if (existing) {
+    if (existing.role === 'admin') return res.status(409).json({ error: 'Cannot convert admin to owner' })
+    if (existing.role === 'owner' && !existing.deleted) return res.status(409).json({ error: 'Owner already exists' })
+    
+    existing.role = 'owner'
+    existing.isApproved = true
+    existing.deleted = false
+    existing.blocked = false
+    if (firstName) existing.firstName = firstName
+    if (lastName) existing.lastName = lastName
+    if (phone) existing.phone = phone
+    if (password) existing.password = password
+    await existing.save()
+    return res.json({ status: 'updated', id: existing.id })
+  }
   const id = await nextIdFor('User')
   await User.create({ id, email, password, firstName, lastName, phone, role: 'owner', isApproved: true })
   res.json({ status: 'created', id })

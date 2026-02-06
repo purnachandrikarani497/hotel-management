@@ -164,8 +164,8 @@ async function details(req, res) {
   await connect(); await ensureSeed();
   const userId = Number(req.query.userId)
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
-  const hasBooking = await Booking.findOne({ userId }).lean()
-  if (!hasBooking) return res.status(403).json({ error: 'No booking yet' })
+  // const hasBooking = await Booking.findOne({ userId }).lean()
+  // if (!hasBooking) return res.status(403).json({ error: 'No booking yet' })
   const u = await User.findOne({ id: userId }).lean()
   if (!u) return res.status(404).json({ error: 'User not found' })
   res.json({ user: u })
@@ -175,8 +175,8 @@ async function updateDetails(req, res) {
   await connect(); await ensureSeed();
   const { userId, firstName, lastName, phone, fullName, dob, address, idType, idNumber, idIssueDate, idExpiryDate, idDocImage } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
-  const hasBooking = await Booking.findOne({ userId: Number(userId) }).lean()
-  if (!hasBooking) return res.status(403).json({ error: 'No booking yet' })
+  // const hasBooking = await Booking.findOne({ userId: Number(userId) }).lean()
+  // if (!hasBooking) return res.status(403).json({ error: 'No booking yet' })
   const u = await User.findOne({ id: Number(userId) })
   if (!u) return res.status(404).json({ error: 'User not found' })
   if (firstName !== undefined) u.firstName = String(firstName)

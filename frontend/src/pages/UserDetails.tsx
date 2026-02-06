@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { apiGet, apiPost } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
@@ -28,34 +28,76 @@ const UserDetails = () => {
   const [form, setForm] = React.useState<User | null>(null)
   React.useEffect(() => { if (u) setForm(u) }, [u])
 
-  type Payload = Partial<User> & { idDocImage?: string }
-  const update = useMutation({ mutationFn: (p: Payload) => apiPost(`/api/user/details`, { userId, ...p }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["user","details",userId] }); toast({ title: "Details updated" }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const [docPreview, setDocPreview] = React.useState<string>("")
   const resolve = (u?: string) => { if (!u) return ""; const s = String(u); const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || env?.VITE_API_BASE || ''; if (s.startsWith("/uploads")) return base ? `${base}${s}` : s; if (s.startsWith("uploads")) return base ? `${base}/${s}` : `/${s}`; return s }
-  const [errors, setErrors] = React.useState<{ [k:string]: string }>({})
-  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v)
-  const validateId = (type?: string, num?: string) => {
-    const t = String(type||"")
-    const n = String(num||"")
-    if (!t || !n) return ""
-    if (t === "Aadhaar Card" && !/^\d{12}$/.test(n)) return "Aadhaar must be exactly 12 digits"
-    if (t === "Passport" && !/^[A-Z][0-9]{7}$/.test(n)) return "Passport: 1 letter + 7 digits"
-    if (t === "Driving Licence" && !/^[A-Z0-9-]{5,20}$/.test(n)) return "DL: 5-20 alphanumeric"
-    if (t === "Voter ID" && !/^[A-Z]{3}[0-9]{7}$/.test(n)) return "Voter ID: 3 letters + 7 digits"
-    if (t === "PAN card" && !/^[A-Z0-9]{10}$/.test(n)) return "PAN: 10 capital alphanumeric characters"
-    return ""
+  
+  const idHints: { [k:string]: string } = {
+    "Aadhaar Card": "12 digits",
+    "Passport": "Letter + 7 digits",
+    "Driving Licence": "8-20 alphanumeric",
+    "Voter ID": "3 letters + 7 digits",
+    "PAN card (usually not accepted as primary ID)": "5 letters, 4 digits, 1 letter (ABCDE1234F)",
+    "PAN card": "5 letters, 4 digits, 1 letter (ABCDE1234F)", // handle both key variants just in case
   }
+
+  type Payload = Partial<User> & { idDocImage?: string }
+  const update = useMutation({ mutationFn: (p: Payload) => apiPost(`/api/user/details`, { userId, ...p }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["user","details",userId] }); toast({ title: "Details updated" }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+
   const validate = (): boolean => {
     if (!form) return false
-    const errs: { [k:string]: string } = {}
-    const idErr = validateId(form.idType, form.idNumber)
-    if (idErr) errs.idNumber = idErr
-    if (form.dob && !isDate(form.dob)) errs.dob = "Use yyyy-mm-dd"
-    if (form.idIssueDate && !isDate(form.idIssueDate)) errs.idIssueDate = "Use yyyy-mm-dd"
-    if (form.idExpiryDate && !isDate(form.idExpiryDate)) errs.idExpiryDate = "Use yyyy-mm-dd"
-    if (form.idIssueDate && form.idExpiryDate && new Date(form.idExpiryDate) < new Date(form.idIssueDate)) errs.idExpiryDate = "Expiry after issue"
-    setErrors(errs)
-    if (Object.keys(errs).length) { toast({ title: "Invalid details", description: Object.values(errs)[0], variant: "destructive" }); return false }
+    
+    // First Name
+    if (!form.firstName?.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z]+$/.test(form.firstName)) { toast({ title: "Invalid first name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (form.firstName.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return false }
+
+    // Last Name
+    if (!form.lastName?.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z]+$/.test(form.lastName)) { toast({ title: "Invalid last name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (form.lastName.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return false }
+
+    // Phone
+    if (!form.phone) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return false }
+    if (!/^[6-9]\d{9}$/.test(form.phone)) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
+
+    // Full Name
+    if (!form.fullName?.trim()) { toast({ title: "Please enter the Full name", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z\s]+$/.test(form.fullName)) { toast({ title: "Invalid Full name", description: "Only characters allowed", variant: "destructive" }); return false }
+    if (form.fullName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return false }
+
+    // DOB
+    if (!form.dob) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (new Date(form.dob) > new Date()) { toast({ title: "Invalid Date of Birth", description: "Future dates not allowed", variant: "destructive" }); return false }
+
+    // Address
+    if (!form.address?.trim()) { toast({ title: "Please enter the Address", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z0-9\s,.-]+$/.test(form.address)) { toast({ title: "Invalid Address", description: "Only characters & numbers allowed", variant: "destructive" }); return false }
+    if (form.address.length > 100) { toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" }); return false }
+
+    // ID Type & Number
+    if (!form.idType) { toast({ title: "Please enter the ID Type", variant: "destructive" }); return false }
+    if (!form.idNumber?.trim()) { toast({ title: "Missing ID Number", variant: "destructive" }); return false }
+
+    const idType = form.idType
+    const idNumber = form.idNumber
+    if (idType === "Aadhaar Card") {
+        if (!/^\d{12}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Aadhaar must be 12 digits number", variant: "destructive" }); return false }
+    } else if (idType === "Passport") {
+        if (!/^[A-Za-z]\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Passport: 1st alphabet & 7 numbers", variant: "destructive" }); return false }
+        if (idNumber.length > 8) { toast({ title: "Maximum limit exceeded", description: "Passport max 8 characters", variant: "destructive" }); return false }
+    } else if (idType === "Driving Licence") {
+        if (!/^[A-Za-z0-9]+$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Driving Licence must be alphanumeric", variant: "destructive" }); return false }
+        if (idNumber.length > 20) { toast({ title: "Maximum limit exceeded", description: "Driving Licence max 20 characters", variant: "destructive" }); return false }
+    } else if (idType === "Voter ID") {
+        if (!/^[A-Za-z]{3}\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Voter ID: 3 letters & 7 numbers", variant: "destructive" }); return false }
+        if (idNumber.length > 10) { toast({ title: "Maximum limit exceeded", description: "Voter ID max 10 characters", variant: "destructive" }); return false }
+    }
+
+    // Dates
+    if (form.idIssueDate && form.idExpiryDate) {
+        if (new Date(form.idIssueDate) >= new Date(form.idExpiryDate)) { toast({ title: "issue Date was must be early than the Expiry Date", variant: "destructive" }); return false }
+    }
+
     return true
   }
 
@@ -84,50 +126,100 @@ const UserDetails = () => {
           </div>
         </section>
         <div className="container py-8">
-          {blocked && (
+          {/* {blocked && (
             <Card className="rounded-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 shadow-2xl border-0">
               <CardHeader><CardTitle>Not Available</CardTitle></CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">Make at least one booking to access your details.</div>
               </CardContent>
             </Card>
-          )}
-          {!blocked && form && (
+          )} */}
+          {form && (
           <Card className="rounded-2xl bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl border-0">
             <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-1">
-                  <Label>Email</Label>
-                  <Input placeholder="Email" value={form.email||""} readOnly />
-                </div>
-                <div className="col-span-1">
-                  <Label>Phone Number</Label>
-                  <Input placeholder="Phone" maxLength={10} value={form.phone||""} onChange={e=>{ const v=(e.target.value||'').replace(/\D/g,'').slice(0,10); setForm({ ...(form as User), phone: v }) }} />
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2 block">First Name</Label>
+                  <Input 
+                    placeholder="First Name" 
+                    value={form.firstName||""} 
+                    onChange={e=>{
+                      const val = e.target.value;
+                      if (val.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return; }
+                      setForm({ ...(form as User), firstName: val })
+                    }} 
+                  />
                 </div>
                 <div>
-                  <Label>First Name</Label>
-                  <Input placeholder="First Name" value={form.firstName||""} onChange={e=>setForm({ ...(form as User), firstName: e.target.value })} />
+                  <Label className="mb-2 block">Last Name</Label>
+                  <Input 
+                    placeholder="Last Name" 
+                    value={form.lastName||""} 
+                    onChange={e=>{
+                        const val = e.target.value;
+                        if (val.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return; }
+                        setForm({ ...(form as User), lastName: val })
+                    }} 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2 block">Email</Label>
+                  <Input placeholder="Email" value={form.email||""} readOnly className="bg-muted" />
                 </div>
                 <div>
-                  <Label>Last Name</Label>
-                  <Input placeholder="Last Name" value={form.lastName||""} onChange={e=>setForm({ ...(form as User), lastName: e.target.value })} />
+                  <Label className="mb-2 block">Phone Number</Label>
+                  <Input 
+                    placeholder="Phone" 
+                    value={form.phone||""} 
+                    onChange={e=>{ 
+                        const v=(e.target.value||'').replace(/\D/g,''); 
+                        if (v.length > 10) { toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" }); return; }
+                        setForm({ ...(form as User), phone: v }) 
+                    }} 
+                  />
                 </div>
-                <div className="col-span-2">
-                  <Label>Full Name</Label>
-                  <Input placeholder="Full Name" value={form.fullName||""} onChange={e=>setForm({ ...(form as User), fullName: e.target.value })} />
+              </div>
+
+              <div>
+                  <Label className="mb-2 block">Full Name</Label>
+                  <Input 
+                    placeholder="Full Name" 
+                    value={form.fullName||""} 
+                    onChange={e=>{
+                        const val = e.target.value;
+                        if (!/^[a-zA-Z\s]*$/.test(val)) { toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" }); return; }
+                        if (val.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return; }
+                        setForm({ ...(form as User), fullName: val })
+                    }} 
+                  />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2 block">Date of Birth</Label>
+                  <Input type="date" value={form.dob||""} onChange={e=>setForm({ ...(form as User), dob: e.target.value })} max={new Date().toISOString().split("T")[0]} />
                 </div>
                 <div>
-                  <Label>Date of Birth</Label>
-                  <Input type="date" value={form.dob||""} onChange={e=>setForm({ ...(form as User), dob: e.target.value })} />
-                  {errors.dob && <div className="text-xs text-destructive mt-1">{errors.dob}</div>}
+                  <Label className="mb-2 block">Address</Label>
+                  <Input 
+                    placeholder="Address" 
+                    value={form.address||""} 
+                    onChange={e=>{
+                        const val = e.target.value;
+                        if (val.length > 100) { toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" }); return; }
+                        setForm({ ...(form as User), address: val })
+                    }} 
+                  />
                 </div>
-                <div className="col-span-2">
-                  <Label>Address</Label>
-                  <Input className="col-span-2" placeholder="Address" value={form.address||""} onChange={e=>setForm({ ...(form as User), address: e.target.value })} />
-                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label>ID Type</Label>
+                  <Label className="mb-2 block">ID Type</Label>
                   <Select value={form.idType||""} onValueChange={(v)=>setForm({ ...(form as User), idType: v })}>
                     <SelectTrigger><SelectValue placeholder="Select ID Type" /></SelectTrigger>
                     <SelectContent>
@@ -135,12 +227,12 @@ const UserDetails = () => {
                       <SelectItem value="Passport">Passport</SelectItem>
                       <SelectItem value="Driving Licence">Driving Licence</SelectItem>
                       <SelectItem value="Voter ID">Voter ID</SelectItem>
-                      <SelectItem value="PAN card">PAN card</SelectItem>
+                      <SelectItem value="PAN card (usually not accepted as primary ID)">PAN card</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>ID Number</Label>
+                  <Label className="mb-2 block">ID Number</Label>
                   <Input 
                     placeholder="ID Number" 
                     value={form.idNumber||""} 
@@ -151,7 +243,7 @@ const UserDetails = () => {
                         v = v.replace(/\D/g, "").slice(0, 12);
                       } else if (type === "Passport") {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
-                      } else if (type === "PAN card") {
+                      } else if (type.includes("PAN")) {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
                       } else {
                         v = v.toUpperCase();
@@ -159,28 +251,42 @@ const UserDetails = () => {
                       setForm({ ...(form as User), idNumber: v }) 
                     }} 
                   />
-                  {errors.idNumber && <div className="text-xs text-destructive mt-1">{errors.idNumber}</div>}
+                  <div className="text-xs text-muted-foreground mt-1">Format: {idHints[form.idType||""] || ""}</div>
                 </div>
                 <div>
-                  <Label>Issue Date</Label>
-                  <Input type="date" value={form.idIssueDate||""} onChange={e=>setForm({ ...(form as User), idIssueDate: e.target.value })} />
-                  {errors.idIssueDate && <div className="text-xs text-destructive mt-1">{errors.idIssueDate}</div>}
-                </div>
-                <div>
-                  <Label>Expiry Date</Label>
-                  <Input type="date" value={form.idExpiryDate||""} onChange={e=>setForm({ ...(form as User), idExpiryDate: e.target.value })} />
-                  {errors.idExpiryDate && <div className="text-xs text-destructive mt-1">{errors.idExpiryDate}</div>}
-                </div>
-                <div className="col-span-2">
-                  <Label>Document Upload</Label>
-                  <Input type="file" accept="image/*" onChange={e=>{ const f=e.target.files?.[0]; if(!f) return; if(!f.type.startsWith('image/')){ toast({ title:'Invalid file type', variant:'destructive' }); return } const max=2*1024*1024; if(f.size>max){ toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return } const r=new FileReader(); r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ toast({ title:'Invalid file content', variant:'destructive' }); return } setDocPreview(s) }; r.readAsDataURL(f) }} />
+                  <Label className="mb-2 block">Document Upload</Label>
+                  <Label 
+                    htmlFor="id-doc-upload-edit" 
+                    className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-10 px-4 py-2 w-full"
+                  >
+                    {docPreview || form.idDocUrl ? "Change File" : "Choose File"}
+                  </Label>
+                  <Input 
+                    id="id-doc-upload-edit"
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden"
+                    onChange={e=>{ const f=e.target.files?.[0]; if(!f) return; if(!f.type.startsWith('image/')){ toast({ title:'Invalid file type', variant:'destructive' }); return } const max=2*1024*1024; if(f.size>max){ toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return } const r=new FileReader(); r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ toast({ title:'Invalid file content', variant:'destructive' }); return } setDocPreview(s) }; r.readAsDataURL(f) }} 
+                  />
                   <div className="mt-2">
                     {form.idDocUrl && !docPreview && <img src={resolve(form.idDocUrl)} alt="ID" className="h-24 border rounded" onError={(ev)=>{ ev.currentTarget.style.display='none' }} />}
                     {docPreview && <img src={docPreview} alt="Preview" className="h-24 border rounded" />}
                   </div>
                 </div>
               </div>
-              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" onClick={()=>{ if(!validate()) return; update.mutate({ ...form!, idDocImage: docPreview && docPreview.startsWith('data:') ? docPreview : undefined }) }}>Save</Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2 block">Issue Date</Label>
+                  <Input type="date" value={form.idIssueDate||""} onChange={e=>setForm({ ...(form as User), idIssueDate: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Expiry Date</Label>
+                  <Input type="date" value={form.idExpiryDate||""} onChange={e=>setForm({ ...(form as User), idExpiryDate: e.target.value })} />
+                </div>
+              </div>
+
+              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" onClick={()=>{ if(!validate()) return; update.mutate({ ...form!, idDocImage: docPreview && docPreview.startsWith('data:') ? docPreview : undefined }) }}>Save Changes</Button>
             </CardContent>
           </Card>
           )}

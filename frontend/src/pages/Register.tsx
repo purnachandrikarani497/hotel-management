@@ -331,7 +331,7 @@ const Register = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">ID Type *</label>
+                  <label className="text-sm font-medium mb-2 block whitespace-nowrap">ID Type *</label>
                   <select className="w-full border rounded h-10 px-3 bg-background" value={idType} onChange={(e)=>setIdType(e.target.value)}>
                     <option>Aadhaar Card</option>
                     <option>Passport</option>
@@ -341,7 +341,7 @@ const Register = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">ID Number *</label>
+                  <label className="text-sm font-medium mb-2 block whitespace-nowrap">ID Number *</label>
                   <Input 
                     placeholder={idHints[idType]} 
                     value={idNumber} 
@@ -362,24 +362,22 @@ const Register = () => {
                   <div className="text-xs text-muted-foreground mt-1">Format: {idHints[idType]}</div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Document Upload *</label>
-                  <div className="flex items-center gap-3">
-                    <label 
-                      htmlFor="id-doc-upload" 
-                      className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-10 px-4 py-2"
-                    >
-                      Choose File
-                    </label>
-                    <span className="text-sm text-muted-foreground">
-                      {idDocImage ? "File selected" : ""}
-                    </span>
-                    <Input 
-                      id="id-doc-upload"
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} 
-                    />
+                  <label className="text-sm font-medium mb-2 block whitespace-nowrap">Document Upload *</label>
+                  <label 
+                    htmlFor="id-doc-upload" 
+                    className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-10 px-4 py-2 w-full"
+                  >
+                    {idDocImage ? "Change File" : "Choose File"}
+                  </label>
+                  <Input 
+                    id="id-doc-upload"
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const d=r.result as string; setIdDocImage(d||"") }; r.readAsDataURL(f) }} 
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {idDocImage ? "File selected" : "No file chosen"}
                   </div>
                 </div>
               </div>

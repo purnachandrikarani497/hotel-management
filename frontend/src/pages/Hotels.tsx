@@ -315,7 +315,7 @@ const Hotels = () => {
           {/* Hotels Grid */}
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
-              <p className="text-muted-foreground">{isLoading ? "Loading..." : isError ? "Failed to load" : `${displayHotels.length} properties found`}</p>
+              <p className="text-muted-foreground">{isLoading ? "Loading..." : isError ? "Failed to load" : ""}</p>
               <select className="rounded-lg px-4 py-2 bg-white border shadow-sm" value={sortBy} onChange={(e)=>setSortBy(e.target.value)}>
                 <option>Price: Low to High</option>
                 <option>Price: High to Low</option>

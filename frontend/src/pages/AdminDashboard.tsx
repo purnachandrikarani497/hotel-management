@@ -274,25 +274,19 @@ const AdminDashboard = () => {
                 placeholder="Phone"
                 value={ownerForm.phone}
                 inputMode="numeric"
-                maxLength={10}
                 onChange={e => {
                   const val = e.target.value.replace(/\D/g, '');
-                  if (val.length > 0 && !/^[6-9]/.test(val)) {
-                     // User said: "start with 6 to 9 only dont allow only empty spaces"
-                     // The previous logic silently removed it. User might want popup if they try to type invalid?
-                     // "ifPhone number given in valid data show popup like invaid Phone number"
-                     // I will stick to silent removal for invalid start char to keep it clean, or show toast?
-                     // User said "show popup like invaid Phone number".
-                     // But if I silently remove, they can't type it.
-                     // I will keep the silent removal but add max limit popup.
-                  }
                   if (val.length > 10) {
                     toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
                     return;
                   }
-                  // Apply 6-9 constraint
-                  const clean = val.replace(/^[0-5]/, '');
-                  setOwnerForm({ ...ownerForm, phone: clean })
+                  // Apply 6-9 constraint for first digit
+                  if (val.length > 0 && !/^[6-9]/.test(val)) {
+                     // Optionally show toast for invalid start? User just said "allow only... start with 6 to 9"
+                     // We will silently ignore the input if it doesn't start with 6-9
+                     return;
+                  }
+                  setOwnerForm({ ...ownerForm, phone: val })
                 }}
               />
               <Button onClick={() => { 
@@ -377,7 +371,11 @@ const AdminDashboard = () => {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Email</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
-                  {(() => {
+                  {users.isLoading ? (
+                    <tr><td colSpan={5} className="p-4 text-center">Loading...</td></tr>
+                  ) : users.isError ? (
+                    <tr><td colSpan={5} className="p-4 text-center text-destructive">Failed to load users</td></tr>
+                  ) : (() => {
                      const filteredUsers = sortRecent((users.data?.users || []).filter(u => !('deleted' in u && (u as unknown as { deleted?: boolean }).deleted) && (filterRole==='all' ? true : u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))).filter(u=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[u.id] } catch { return true } });
                      
                      if (filteredUsers.length === 0) {

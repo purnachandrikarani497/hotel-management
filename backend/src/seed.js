@@ -1,6 +1,6 @@
 const { connect } = require('./config/db')
 const { nextIdFor } = require('./utils/ids')
-const { Hotel, Settings } = require('./models')
+const { Hotel, Settings, User } = require('./models')
 
 async function ensureSeed() {
   try {
@@ -9,6 +9,21 @@ async function ensureSeed() {
     console.error('[Seed] database connect failed, skip seed')
     return
   }
+
+  // Seed Admin if missing
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@staybook.com'
+    const admin = await User.findOne({ email: adminEmail })
+    if (!admin) {
+        const id = await nextIdFor('User')
+        const password = process.env.ADMIN_PASSWORD || 'admin123'
+        await User.create({ id, email: adminEmail, password, role: 'admin', isApproved: true, firstName: 'Admin', lastName: 'User' })
+        console.log('[Seed] admin user created')
+    }
+  } catch (e) {
+    console.warn('[Seed] admin check failed', e.message)
+  }
+
   let count = 0
   try {
     count = await Hotel.countDocuments()

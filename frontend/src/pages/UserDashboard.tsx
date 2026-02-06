@@ -254,7 +254,14 @@ const UserDashboard = () => {
                   )
                 })()}
                 <Button variant="outline" className="shrink-0" onClick={()=>{
-                  const rows = bookingsTimeFiltered.map(b => [
+                  const visible = bookingsTimeFiltered.filter(b => {
+                    try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[b.id] } catch { return true }
+                  });
+                  if (visible.length === 0) {
+                    toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
+                    return;
+                  }
+                  const rows = visible.map(b => [
                     `#${b.id}`,
                     String(b.hotelId||''),
                     String(b.checkIn||''),
@@ -277,7 +284,23 @@ const UserDashboard = () => {
                   a.click()
                   setTimeout(()=>URL.revokeObjectURL(url), 2000)
                 }}>Download Excel</Button>
-                <Button variant="destructive" className="shrink-0" onClick={() => { try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; bookingsTimeFiltered.forEach(b => { map[b.id] = true }); localStorage.setItem('deletedUserBookings', JSON.stringify(map)); toast({ title: 'Deleted from view', description: `${bookingsTimeFiltered.length} item(s)` }) } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } }}>Delete</Button>
+                <Button variant="destructive" className="shrink-0" onClick={() => { 
+                  try { 
+                    const raw = localStorage.getItem('deletedUserBookings') || '{}'; 
+                    const map = JSON.parse(raw) as { [id:number]: boolean }; 
+                    const visible = bookingsTimeFiltered.filter(b => !map[b.id]);
+
+                    if (visible.length === 0) {
+                      toast({ title: "No data found", description: "Nothing to delete", variant: "destructive" });
+                      return;
+                    }
+
+                    visible.forEach(b => { map[b.id] = true }); 
+                    localStorage.setItem('deletedUserBookings', JSON.stringify(map)); 
+                    toast({ title: 'Deleted from view', description: `${visible.length} item(s)` });
+                    setDateFilterBookings(prev => prev); // Force re-render
+                  } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } 
+                }}>Delete</Button>
               </div>
             </div>
           </CardHeader>
