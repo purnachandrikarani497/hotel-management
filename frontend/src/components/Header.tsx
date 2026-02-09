@@ -47,7 +47,8 @@ const Header = () => {
   })()
 
   const hideNavLinks = pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/owner") || pathname.startsWith("/inbox")
-  const logoLink = pathname.startsWith("/dashboard/admin") ? "/dashboard/admin" : (pathname.startsWith("/dashboard/owner") ? "/dashboard/owner" : "/")
+  const isDashboard = pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/owner");
+  const logoLink = isDashboard ? "#" : "/";
 
   const dashboardLinks = (() => {
     if (pathname.startsWith("/dashboard/admin")) {
@@ -98,7 +99,7 @@ const Header = () => {
         <div className="absolute top-8 right-8 w-4 h-4 border border-cyan-300 rotate-45"></div>
       </div>
       <div className="container flex h-16 items-center justify-between relative z-10">
-        <Link to={logoLink} className="flex items-center space-x-2 hover:scale-110 transition-transform duration-500 group animate-heartbeat">
+        <Link to={logoLink} onClick={(e) => isDashboard && e.preventDefault()} className="flex items-center space-x-2 hover:scale-110 transition-transform duration-500 group animate-heartbeat">
           <div className="relative">
             <img src={(() => {
               const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>

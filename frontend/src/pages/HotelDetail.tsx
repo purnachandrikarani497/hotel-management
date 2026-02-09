@@ -835,19 +835,22 @@ const HotelDetail = () => {
                     </div>
                   )}
 
-                  {invoice.data?.invoice && (
-                    <div className="space-y-2 border-t pt-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-medium">₹{invoice.data.invoice.subtotal}</span>
-                      </div>
-                      
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total</span>
-                        <span>₹{invoice.data.invoice.total}</span>
-                      </div>
+                  <div className="space-y-2 border-t pt-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium">₹{subtotal}</span>
                     </div>
-                  )}
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Discount</span>
+                        <span className="font-medium text-green-600">-₹{discountAmount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>Total</span>
+                      <span>₹{grandTotal}</span>
+                    </div>
+                  </div>
 
                   {receiptUrl && (
                     <div className="space-y-2 border-t pt-3">

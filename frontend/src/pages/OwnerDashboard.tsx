@@ -1758,7 +1758,7 @@ const OwnerDashboard = () => {
                       </PopoverTrigger>
                       <PopoverContent className="w-[300px] p-2" align="start">
                         <div className="grid gap-2 max-h-[300px] overflow-y-auto">
-                          {Array.from(new Set((hotelsQ.data?.hotels || []).flatMap(h => h.amenities || []))).map(a => (
+                          {Array.from(new Set((hotelsQ.data?.hotels || []).flatMap(h => h.amenities || []).map(a => a.toLowerCase() === 'btrakfast' ? 'breakfast' : a))).map(a => (
                             <div key={a} className="flex items-center gap-2">
                               <input
                                 type="checkbox"

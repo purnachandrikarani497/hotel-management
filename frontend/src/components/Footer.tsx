@@ -30,7 +30,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex flex-col items-start space-y-2">
-              <Link to="/" className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300 group">
+              <Link to={isOwnerDashboard || isAdminDashboard ? "#" : "/"} onClick={(e) => (isOwnerDashboard || isAdminDashboard) && e.preventDefault()} className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300 group">
                 <img src={(() => {
                   const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>
                   return env?.VITE_LOGO_URL || "/logo.svg";
