@@ -2259,7 +2259,7 @@ const OwnerDashboard = () => {
                       {bookingsTimeFiltered.map((b, idx) => (
                         <tr key={b.id} className="border-t">
                           <td className="p-2">{idx + 1}</td>
-                          <td className="p-2">#{b.id}</td>
+                          <td className="p-2">{b.id}</td>
                           <td className="p-2">{b.hotelId}</td>
                           <td className="p-2">
                             <div className="font-medium">
@@ -2813,10 +2813,10 @@ const OwnerDashboard = () => {
                     <thead>
                       <tr className="text-left">
                         <th className="p-2">Hotel</th>
-                        <th className="p-2">Normal ₹</th>
-                        <th className="p-2">Weekend ₹</th>
-                        <th className="p-2">Extra Hour ₹</th>
-                        <th className="p-2">Cancellation Hour ₹</th>
+                        <th className="p-2 min-w-[120px]">Normal ₹</th>
+                        <th className="p-2 min-w-[120px]">Weekend ₹</th>
+                        <th className="p-2 min-w-[120px]">Extra Hour ₹</th>
+                        <th className="p-2 min-w-[120px]">Cancellation Hour ₹</th>
                         <th className="p-2">Seasonal</th>
                         <th className="p-2">Special Days</th>
                         <th className="p-2">Actions</th>
@@ -2903,6 +2903,7 @@ const OwnerDashboard = () => {
                             </td>
                             <td className="p-2">
                               <Input
+                                className="min-w-[100px]"
                                 placeholder=""
                                 value={pricingForm[h.id]?.normalPrice ?? ""}
                                 onChange={(e) => {
@@ -2922,6 +2923,7 @@ const OwnerDashboard = () => {
                             </td>
                           <td className="p-2">
                             <Input
+                              className="min-w-[100px]"
                               placeholder=""
                               value={pf.weekendPrice}
                               onChange={(e) => {
@@ -2941,6 +2943,7 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-2">
                             <Input
+                              className="min-w-[100px]"
                               placeholder=""
                               value={pf.extraHourRate || ""}
                               onChange={(e) => {
@@ -2960,6 +2963,7 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-2">
                             <Input
+                              className="min-w-[100px]"
                               placeholder=""
                               value={pf.cancellationHourRate || ""}
                               onChange={(e) => {
