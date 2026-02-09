@@ -27,7 +27,11 @@ async function create(req, res) {
     if (ciMinutes < nowMinutes) return res.status(400).json({ error: 'Check-in time must be later than now' })
   }
   const settings = await Settings.findOne().lean()
-  const basePricePerDay = Number(hotel.price || 0)
+  let basePricePerDay = Number(hotel.price || 0)
+  if (roomType) {
+    const r = await Room.findOne({ hotelId: Number(hotelId), type: roomType }).lean()
+    if (r) basePricePerDay = Number(r.price || 0)
+  }
   const diffMs = co.getTime() - ci.getTime()
   const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
   const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)

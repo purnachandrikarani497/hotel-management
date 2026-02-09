@@ -307,6 +307,7 @@ const HotelDetail = () => {
     onSuccess: (res) => {
       toast({ title: "Booking created", description: `Booking #${res.id}` });
       qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
+      qc.invalidateQueries({ queryKey: ["hotel", "coupons", id, checkIn] });
     },
     onError: () => {
       toast({ title: "Reservation failed", variant: "destructive" });
@@ -487,8 +488,8 @@ const HotelDetail = () => {
                             <div className="col-span-6">
                               <div className="font-semibold">{r.type}</div>
                               <div className="text-xs text-muted-foreground">Members: {r.members}</div>
-                              <div className="flex gap-2 mt-2">
-                                {(r.amenities || []).filter(a => { const l = a.toLowerCase(); return l !== 'btrakfast' && l !== 'pet' }).slice(0, 4).map((a) => (
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                {(r.amenities || []).filter(a => { const l = a.toLowerCase(); return l !== 'btrakfast' && l !== 'pet' }).map((a) => (
                                   <span key={a} className="px-2 py-1 bg-muted rounded text-xs">
                                     {a}
                                   </span>
@@ -598,21 +599,27 @@ const HotelDetail = () => {
                             <div className="text-sm">₹{price}</div>
                             <div></div>
                           </div>
-                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${weekendExtra>0 ? 'bg-secondary' : 'bg-card'}`}>
+                          {weekendExtra > 0 && (
+                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 bg-secondary`}>
                             <div className="text-sm">Weekend</div>
                             <div className="text-sm">₹{weekendExtra}</div>
                             <div></div>
                           </div>
-                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${seasonalExtra>0 ? 'bg-secondary' : 'bg-card'}`}>
+                          )}
+                          {seasonalExtra > 0 && (
+                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 bg-secondary`}>
                             <div className="text-sm">Seasonal</div>
                             <div className="text-sm">₹{seasonalExtra}</div>
                             <div></div>
                           </div>
-                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 ${specialExtra>0 ? 'bg-secondary' : 'bg-card'}`}>
+                          )}
+                          {specialExtra > 0 && (
+                          <div className={`grid grid-cols-3 items-center gap-2 rounded border px-3 py-2 bg-secondary`}>
                             <div className="text-sm">Special Day</div>
                             <div className="text-sm">₹{specialExtra}</div>
                             <div></div>
                           </div>
+                          )}
                           <div className="mt-4 text-xs text-muted-foreground">Coupons</div>
                           {(couponsQ.data?.coupons || []).length ? (
                             <div className="space-y-2">
