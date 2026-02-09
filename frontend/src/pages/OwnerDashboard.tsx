@@ -835,11 +835,20 @@ const OwnerDashboard = () => {
   const [imageFiles, setImageFiles] = React.useState<{ [id: number]: File[] }>({})
   const [imageUploaded, setImageUploaded] = React.useState<{ [id: number]: boolean }>({})
 
-  const [roomForm, setRoomForm] = React.useState({
+  const [roomForm, setRoomForm] = React.useState<{
+    hotelId: number
+    type: string
+    price: string | number
+    members: string | number
+    amenities: string
+    availability: boolean
+    count: string | number
+    roomNumbers: string
+  }>({
     hotelId: 0,
     type: "Standard",
-    price: 0,
-    members: 1,
+    price: "",
+    members: "",
     amenities: "",
     availability: true,
     count: 1,
@@ -1647,7 +1656,7 @@ const OwnerDashboard = () => {
                       onChange={(e) =>
                         setRoomForm({
                           ...roomForm,
-                          price: Math.max(0, Number(e.target.value)),
+                          price: e.target.value,
                         })
                       }
                     />
@@ -1663,29 +1672,31 @@ const OwnerDashboard = () => {
                       onChange={(e) =>
                         setRoomForm({
                           ...roomForm,
-                          members: Math.max(0, Number(e.target.value)),
+                          members: e.target.value,
                         })
                       }
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">No. of Rooms</label>
-                    <select
-                      className="w-full px-4 py-2 rounded-lg border bg-background"
+                    <Input
+                      type="number"
+                      min="1"
                       value={roomForm.count}
-                      onChange={(e)=>setRoomForm({ ...roomForm, count: Number(e.target.value)||1 })}
-                    >
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
-                        <option key={`rooms-count-${n}`} value={n}>{n}</option>
-                      ))}
-                    </select>
+                      onChange={(e) => setRoomForm({ ...roomForm, count: e.target.value })}
+                    />
                   </div>
                   <div className="col-span-2">
                     <label className="text-sm font-medium mb-2 block">Room Numbers (comma-separated)</label>
                     <Input
                       placeholder="e.g., 501, 502, 503"
                       value={roomForm.roomNumbers}
-                      onChange={(e) => setRoomForm({ ...roomForm, roomNumbers: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (/^[0-9,\s]*$/.test(val)) {
+                          setRoomForm({ ...roomForm, roomNumbers: val })
+                        }
+                      }}
                     />
                   </div>
                   <div className="col-span-3">
@@ -1767,6 +1778,25 @@ const OwnerDashboard = () => {
                             r.onerror = reject
                             r.readAsDataURL(f)
                           })
+                        
+                        const countVal = parseInt(String(roomForm.count || "0"), 10)
+                        if (isNaN(countVal) || countVal < 1) {
+                            toast({ title: "Invalid room count", description: "Please enter at least 1 room.", variant: "destructive" })
+                            return
+                        }
+
+                        const nums = String(roomForm.roomNumbers||"").split(",").map(s=>s.trim()).filter(Boolean)
+                        
+                        if (nums.length > 100) {
+                             toast({ title: "Too many room numbers", description: "Max limit is 100.", variant: "destructive" })
+                             return
+                        }
+                        
+                        if (nums.length > 0 && nums.length !== countVal) {
+                             toast({ title: "Mismatch", description: `You specified ${countVal} rooms but provided ${nums.length} room numbers.`, variant: "destructive" })
+                             return
+                        }
+
                         const photos = files.length
                           ? await Promise.all(files.map(toDataUrl))
                           : []
@@ -1778,8 +1808,8 @@ const OwnerDashboard = () => {
                         const payloadBase = {
                           hotelId: resolvedId,
                           type: roomForm.type,
-                          price: roomForm.price,
-                          members: roomForm.members,
+                          price: Number(roomForm.price) || 0,
+                          members: Number(roomForm.members) || 0,
                           amenities: roomForm.amenities
                             .split(",")
                             .map((s) => s.trim())
@@ -1787,8 +1817,7 @@ const OwnerDashboard = () => {
                           photos,
                           availability: roomForm.availability,
                         }
-                        const n = Math.max(1, Math.min(20, Number(roomForm.count)||1))
-                        const nums = String(roomForm.roomNumbers||"").split(",").map(s=>s.trim()).filter(Boolean)
+                        const n = countVal
                         for (let i = 0; i < n; i++) {
                           const roomNumber = nums[i] || ""
                           const payload: { hotelId:number; type:string; price:number; members:number; amenities:string[]; photos:string[]; availability:boolean; roomNumber?: string } = { ...payloadBase, roomNumber }
