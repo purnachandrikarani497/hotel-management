@@ -110,8 +110,10 @@ const Hotels = () => {
     ["WiFi", "Pool", "Parking", "Breakfast", "AC", "Pet Friendly"].forEach(a => uniqueAmenities.set(a.toLowerCase(), a));
     // Add any other amenities found in hotels
     hotels.forEach(h => (h.amenities || []).forEach(a => {
-      if (!uniqueAmenities.has(a.toLowerCase())) {
-        uniqueAmenities.set(a.toLowerCase(), a);
+      const lower = a.toLowerCase();
+      if (lower === 'btrakfast' || lower === 'pet') return; // Filter out invalid amenities
+      if (!uniqueAmenities.has(lower)) {
+        uniqueAmenities.set(lower, a);
       }
     }));
     return Array.from(uniqueAmenities.values());

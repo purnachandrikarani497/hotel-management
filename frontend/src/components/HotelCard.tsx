@@ -80,7 +80,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
 
         {amenities.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {amenities.map((amenity, index) => (
+            {amenities.filter(a => { const l = a.toLowerCase(); return l !== 'btrakfast' && l !== 'pet' }).map((amenity, index) => (
               <div key={index} className="flex items-center space-x-1 text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
                 {getAmenityIcon(amenity)}
                 <span>{amenity}</span>

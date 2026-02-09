@@ -488,7 +488,7 @@ const HotelDetail = () => {
                               <div className="font-semibold">{r.type}</div>
                               <div className="text-xs text-muted-foreground">Members: {r.members}</div>
                               <div className="flex gap-2 mt-2">
-                                {(r.amenities || []).slice(0, 4).map((a) => (
+                                {(r.amenities || []).filter(a => { const l = a.toLowerCase(); return l !== 'btrakfast' && l !== 'pet' }).slice(0, 4).map((a) => (
                                   <span key={a} className="px-2 py-1 bg-muted rounded text-xs">
                                     {a}
                                   </span>
