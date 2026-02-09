@@ -259,6 +259,12 @@ const OwnerDashboard = () => {
     refetchInterval: 5000,
   })
 
+  const aboutQ = useQuery({
+    queryKey: ["about"],
+    queryFn: () => apiGet<{ stats: { label: string; value: string }[]; ourStory?: string; ourMission?: string; contact?: { name?: string; email?: string; phone1?: string; phone2?: string } }>("/api/about"),
+    staleTime: 60_000,
+  })
+
   const guestsQ = useQuery({
     queryKey: ["owner", "guests", ownerId],
     queryFn: () => apiGet<{ guests: GuestItem[] }>(`/api/owner/guests?ownerId=${ownerId}`),
@@ -2656,6 +2662,41 @@ const OwnerDashboard = () => {
                   </div>
                 </div>
               </CardContent>
+          </Card>
+        )}
+
+        {/* ABOUT */}
+        {feature === "about" && (
+          <Card className="shadow-2xl hover:shadow-purple-500/20 bg-gradient-to-br from-white via-purple-50 to-pink-50 border-0 scale-100 hover:scale-[1.01] transition-all duration-500 ease-out">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent drop-shadow-sm">About Sana Stayz</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {(aboutQ.data?.stats || []).map((stat) => (
+                  <div key={stat.label} className="text-center p-4 bg-white/60 rounded-xl shadow-sm">
+                    <div className="text-2xl font-black mb-1 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stat.value}</div>
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+              
+              {aboutQ.data?.ourStory && (
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Our Story</h3>
+                  <p className="text-muted-foreground leading-relaxed">{aboutQ.data.ourStory}</p>
+                </div>
+              )}
+
+              {aboutQ.data?.ourMission && (
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Our Mission</h3>
+                  <div className="p-4 bg-white/60 rounded-xl shadow-sm border-l-4 border-purple-400">
+                    <p className="text-muted-foreground italic">"{aboutQ.data.ourMission}"</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
         )}
 

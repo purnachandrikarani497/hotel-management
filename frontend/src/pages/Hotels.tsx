@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Star, MapPin, Wifi, Coffee, Car, Utensils, Waves, Wind, PawPrint, Search } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
@@ -237,11 +238,14 @@ const Hotels = () => {
 
                 {/* Rating */}
                 <div>
-                  <label className="text-sm font-medium mb-3 block">Rating</label>
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium block">Rating</label>
+                    {minRating && <Button variant="ghost" size="sm" onClick={() => setMinRating(null)} className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground">Clear</Button>}
+                  </div>
+                  <RadioGroup value={minRating ? String(minRating) : ""} onValueChange={(v) => setMinRating(Number(v))}>
                     {[5, 4, 3].map((rating) => (
                       <div key={rating} className="flex items-center space-x-2">
-                        <Checkbox id={`rating-${rating}`} checked={minRating === rating} onCheckedChange={(checked) => setMinRating(checked ? rating : null)} />
+                        <RadioGroupItem value={String(rating)} id={`rating-${rating}`} />
                         <label
                           htmlFor={`rating-${rating}`}
                           className="text-sm cursor-pointer"
@@ -250,7 +254,7 @@ const Hotels = () => {
                         </label>
                       </div>
                     ))}
-                  </div>
+                  </RadioGroup>
                 </div>
 
                 {/* Property Type */}

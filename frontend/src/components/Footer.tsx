@@ -71,7 +71,7 @@ const Footer = () => {
               <div className="absolute -bottom-1 left-0 w-12 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
             </h4>
             <ul className="space-y-3">
-              <li><Link to="/about" className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
+              <li><Link to={isOwnerDashboard ? "/dashboard/owner/about" : "/about"} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
             </ul>
           </div>
 

@@ -29,7 +29,7 @@ async function create(req, res) {
   const settings = await Settings.findOne().lean()
   let basePricePerDay = Number(hotel.price || 0)
   if (roomType) {
-    const r = await Room.findOne({ hotelId: Number(hotelId), type: roomType }).lean()
+    const r = await Room.findOne({ hotelId: Number(hotelId), type: { $regex: new RegExp(`^${String(roomType).trim()}$`, 'i') } }).lean()
     if (r) basePricePerDay = Number(r.price || 0)
   }
   const diffMs = co.getTime() - ci.getTime()
