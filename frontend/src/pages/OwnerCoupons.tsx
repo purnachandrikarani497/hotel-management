@@ -72,18 +72,74 @@ const OwnerCoupons: React.FC = () => {
                           {(hotels.data?.hotels||[]).map(h => (<option key={h.id} value={h.id}>{h.name}</option>))}
                         </select>
                       </td>
-                      <td className="p-3"><Input placeholder="Code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} /></td>
-                      <td className="p-3"><Input type="number" min="0" placeholder="%" value={form.discount} onChange={e => setForm({ ...form, discount: e.target.value })} /></td>
+                      <td className="p-3">
+                        <Input 
+                          placeholder="Code" 
+                          value={form.code} 
+                          onChange={e => {
+                            const val = e.target.value
+                            if (val.length > 20) {
+                              toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                              return
+                            }
+                            if (!/^[a-zA-Z0-9\s]*$/.test(val)) {
+                               toast({ title: "Invalid coupon code", description: "Only alphanumeric allowed", variant: "destructive" })
+                               return
+                            }
+                            setForm({ ...form, code: val })
+                          }} 
+                        />
+                      </td>
+                      <td className="p-3">
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          placeholder="%" 
+                          value={form.discount} 
+                          onChange={e => {
+                            const val = e.target.value
+                            if (val !== "" && (Number(val) < 1 || Number(val) > 100)) {
+                                toast({ title: "Invalid discount", description: "Must be 1-100", variant: "destructive" })
+                                return
+                            }
+                            setForm({ ...form, discount: val })
+                          }} 
+                        />
+                      </td>
                       <td className="p-3"><Input type="date" min={new Date().toISOString().slice(0,10)} value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} /></td>
                       <td className="p-3"><Input type="date" min={form.startDate || new Date().toISOString().slice(0,10)} value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} /></td>
-                      <td className="p-3"><Input type="number" min="0" placeholder="0 = unlimited" value={form.usageLimit} onChange={e => setForm({ ...form, usageLimit: e.target.value })} /></td>
+                      <td className="p-3">
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          placeholder="1-100" 
+                          value={form.usageLimit} 
+                          onChange={e => {
+                             const val = e.target.value
+                             if (val !== "" && (Number(val) < 1 || Number(val) > 100)) {
+                                 toast({ title: "Invalid usage limit", description: "Must be 1-100", variant: "destructive" })
+                                 return
+                             }
+                             setForm({ ...form, usageLimit: val })
+                          }} 
+                        />
+                      </td>
                     </tr>
                   </tbody>
                 </table>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => createCoupon.mutate({ ...form, discount: Number(form.discount), usageLimit: Number(form.usageLimit), hotelId, ownerId })} disabled={!hotelId || !form.code || Number(form.discount)<=0 || !form.startDate || !form.endDate}>Create Coupon</Button>
+                <Button onClick={() => {
+                   if (!hotelId) { toast({ title: "Please select a hotel", variant: "destructive" }); return; }
+                   if (!form.code.trim()) { toast({ title: "Please enter coupon code", variant: "destructive" }); return; }
+                   if (!form.discount) { toast({ title: "Please enter discount", variant: "destructive" }); return; }
+                   if (!form.startDate) { toast({ title: "Please enter start date", variant: "destructive" }); return; }
+                   if (!form.endDate) { toast({ title: "Please enter end date", variant: "destructive" }); return; }
+                   if (!form.usageLimit) { toast({ title: "Please enter usage limit", variant: "destructive" }); return; }
+                   
+                   createCoupon.mutate({ ...form, discount: Number(form.discount), usageLimit: Number(form.usageLimit), hotelId, ownerId })
+                }}>Create Coupon</Button>
                 <Button variant="destructive" onClick={() => { 
                   const list = (coupons.data?.coupons || []).filter(c => c.ownerId === ownerId || (hotels.data?.hotels||[]).some(h=>h.id===c.hotelId));
                   if (list.length === 0) {

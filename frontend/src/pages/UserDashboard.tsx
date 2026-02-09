@@ -311,9 +311,15 @@ const UserDashboard = () => {
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
-                    return ordered.filter(b => {
+                    const visible = ordered.filter(b => {
                       try { const raw = localStorage.getItem('deletedUserBookings') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[b.id] } catch { return true }
-                    }).map((b, idx) => (
+                    })
+
+                    if (visible.length === 0) {
+                      return <tr><td className="p-3 text-muted-foreground text-center" colSpan={12}>No data found</td></tr>
+                    }
+
+                    return visible.map((b, idx) => (
                       <tr key={b.id} className="border-t">
                         <td className="p-3">{idx + 1}</td>
                         <td className="p-3">#{b.id}</td>
@@ -356,7 +362,6 @@ const UserDashboard = () => {
                       </tr>
                     ))
                   })()}
-                  {bookings.length === 0 && <tr><td className="p-3 text-muted-foreground" colSpan={12}>No bookings found</td></tr>}
                 </tbody>
               </table>
             </div>
