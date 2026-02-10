@@ -316,7 +316,7 @@ const AdminDashboard = () => {
               }} disabled={createOwner.isPending}>{createOwner.isPending ? "Adding..." : "Add Hotel Owner"}</Button>
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="text-sm text-muted-foreground">Show</span>
+              <span className="text-sm text-muted-foreground">Role</span>
               <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'all'|'user'|'owner')}>
                 <option value="all">All</option>
                 <option value="user">Users</option>
@@ -457,7 +457,6 @@ const AdminDashboard = () => {
                       <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${h.status === 'approved' ? 'bg-primary/15 text-primary' : h.status === 'rejected' ? 'bg-destructive/15 text-destructive' : h.status === 'suspended' ? 'bg-accent/15 text-foreground' : 'bg-muted text-foreground'}`}>{h.status}</span></td>
                       <td className="p-3 flex gap-2 flex-wrap">
                         <Button size="sm" variant={h.status === 'suspended' ? 'outline' : 'destructive'} onClick={() => setHotelStatus.mutate({ id: h.id, status: h.status === 'suspended' ? 'approved' : 'suspended' })}>{h.status === 'suspended' ? 'Unblock' : 'Block'}</Button>
-                        <Button size="sm" variant="outline" onClick={() => setHotelFeatured.mutate({ id: h.id, featured: !h.featured })}>{h.featured ? 'Unfeature' : 'Feature'}</Button>
                         <Button size="sm" variant="destructive" disabled={deletingHotelId===h.id || deleteHotelOwner.isPending} onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>{deletingHotelId===h.id || deleteHotelOwner.isPending ? 'Deleting…' : 'Delete'}</Button>
                       </td>
                     </tr>
