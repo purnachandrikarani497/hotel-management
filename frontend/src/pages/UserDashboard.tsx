@@ -307,7 +307,7 @@ const UserDashboard = () => {
           <CardContent>
             <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-x-auto backdrop-blur-sm">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3">S.No</th><th className="p-3">Booking</th><th className="p-3">Hotel</th><th className="p-3">Room</th><th className="p-3">Dates</th><th className="p-3">Guests</th><th className="p-3">Extra Time</th><th className="p-3">Extra Charges</th><th className="p-3">Cancellation Fee</th><th className="p-3">Total</th><th className="p-3">Status</th><th className="p-3 min-w-[300px]">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3 whitespace-nowrap">S.No</th><th className="p-3 whitespace-nowrap">Booking</th><th className="p-3 whitespace-nowrap">Hotel</th><th className="p-3 whitespace-nowrap">Room</th><th className="p-3 whitespace-nowrap">Dates</th><th className="p-3 whitespace-nowrap">Guests</th><th className="p-3 whitespace-nowrap">Extra Time</th><th className="p-3 whitespace-nowrap">Extra Charges</th><th className="p-3 whitespace-nowrap">Cancellation Fee</th><th className="p-3 whitespace-nowrap">Total</th><th className="p-3 whitespace-nowrap">Status</th><th className="p-3 min-w-[300px] whitespace-nowrap">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
@@ -323,12 +323,11 @@ const UserDashboard = () => {
                       <tr key={b.id} className="border-t">
                         <td className="p-3">{idx + 1}</td>
                         <td className="p-3">{b.id}</td>
-                        <td className="p-3">
+                        <td className="p-3 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <img src={resolveImage(hotelInfo(b.hotelId)?.image)} alt={hotelInfo(b.hotelId)?.name||`Hotel ${b.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
                             <div className="flex flex-col">
                               <Link to={`/hotel/${b.hotelId}`} className="font-medium hover:underline">{hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`}</Link>
-                              <span className="text-xs text-muted-foreground">#{b.hotelId}</span>
                             </div>
                           </div>
                         </td>

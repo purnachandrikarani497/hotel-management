@@ -2266,7 +2266,7 @@ const OwnerDashboard = () => {
                         <tr key={b.id} className="border-t">
                           <td className="p-2">{idx + 1}</td>
                           <td className="p-2">{b.id}</td>
-                          <td className="p-2">{b.hotelId}</td>
+                          <td className="p-2">{hotelName(b.hotelId) || b.hotelId}</td>
                           <td className="p-2">
                             <div className="font-medium">
                               {b.user?.fullName ||
@@ -2636,8 +2636,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             {g.lastBooking ? (
                               <div className="text-sm">
-                                Hotel{" "}
-                                {g.lastBooking.hotelId}
+                                {hotelName(g.lastBooking.hotelId) || `Hotel ${g.lastBooking.hotelId}`}
                               </div>
                             ) : (
                               <div className="text-sm text-muted-foreground">

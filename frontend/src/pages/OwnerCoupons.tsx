@@ -110,14 +110,14 @@ const OwnerCoupons: React.FC = () => {
                       <td className="p-3"><Input type="date" min={form.startDate || new Date().toISOString().slice(0,10)} value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} /></td>
                       <td className="p-3">
                         <Input 
-                          type="number" 
-                          min="0" 
-                          placeholder="1-100" 
+                          type="text" 
+                          placeholder="Limit" 
+                          maxLength={4}
                           value={form.usageLimit} 
                           onChange={e => {
                              const val = e.target.value
-                             if (val !== "" && (Number(val) < 1 || Number(val) > 100)) {
-                                 toast({ title: "Invalid usage limit", description: "Must be 1-100", variant: "destructive" })
+                             if (val !== "" && !/^\d*$/.test(val)) {
+                                 toast({ title: "Invalid usage limit", description: "Must be numeric", variant: "destructive" })
                                  return
                              }
                              setForm({ ...form, usageLimit: val })
