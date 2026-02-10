@@ -101,6 +101,7 @@ const Hero = () => {
                     mode="single"
                     selected={checkOut}
                     onSelect={setCheckOut}
+                    showOutsideDays={false}
                     initialFocus
                     disabled={(date) => {
                       const today = new Date();

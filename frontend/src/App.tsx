@@ -24,6 +24,8 @@ const OwnerCoupons = React.lazy(() => import("./pages/OwnerCoupons"));
 const MessageInbox = React.lazy(() => import("./pages/MessageInbox"));
 const UserDetails = React.lazy(() => import("./pages/UserDetails"));
 
+import ScrollToTop from "./components/ScrollToTop";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -32,6 +34,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ScrollToTop />
         <React.Suspense fallback={<div className="container py-8">Loading...</div>}>
         <Routes>
           <Route path="/" element={<Index />} />

@@ -245,40 +245,44 @@ const Register = () => {
                 />
               </div>
 
-              <div className="relative">
+              <div>
                 <label className="text-sm font-medium mb-2 block">Password *</label>
-                <Input 
-                  type={showA?"text":"password"} 
-                  placeholder="Create a strong password" 
-                  value={password} 
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length > 12) {
-                      toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
-                      return;
-                    }
-                    setPassword(val);
-                  }} 
-                />
-                <button type="button" className="absolute right-3 top-[52px] text-muted-foreground" onClick={()=>setShowA(!showA)}>{showA? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                <div className="relative">
+                  <Input 
+                    type={showA?"text":"password"} 
+                    placeholder="Create a strong password" 
+                    value={password} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length > 12) {
+                        toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
+                        return;
+                      }
+                      setPassword(val);
+                    }} 
+                  />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={()=>setShowA(!showA)}>{showA? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                </div>
               </div>
 
-              <div className="relative">
+              <div>
                 <label className="text-sm font-medium mb-2 block">Confirm Password *</label>
-                <Input 
-                  type={showB?"text":"password"} 
-                  placeholder="Confirm your password" 
-                  value={confirm} 
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length > 12) {
-                      toast({ title: "Maximum limit exceeded", description: "Confirm Password max 12 characters", variant: "destructive" });
-                      return;
-                    }
-                    setConfirm(val);
-                  }} 
-                />
-                <button type="button" className="absolute right-3 top-[52px] text-muted-foreground" onClick={()=>setShowB(!showB)}>{showB? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                <div className="relative">
+                  <Input 
+                    type={showB?"text":"password"} 
+                    placeholder="Confirm your password" 
+                    value={confirm} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length > 12) {
+                        toast({ title: "Maximum limit exceeded", description: "Confirm Password max 12 characters", variant: "destructive" });
+                        return;
+                      }
+                      setConfirm(val);
+                    }} 
+                  />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={()=>setShowB(!showB)}>{showB? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                </div>
               </div>
               {password && confirm && password !== confirm && (
                 <div className="text-xs text-destructive">Passwords must match</div>

@@ -116,7 +116,7 @@ async function create(req, res) {
   const id = await nextIdFor('Booking')
   const ownerActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
   const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomNumber: '', checkIn, checkOut, guests: Number(guests), total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
   if (appliedCouponId) {
     try { await Coupon.updateOne({ id: Number(appliedCouponId) }, { $inc: { used: 1 } }) } catch {}
   }

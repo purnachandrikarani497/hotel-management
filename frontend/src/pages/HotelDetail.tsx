@@ -118,6 +118,7 @@ const HotelDetail = () => {
   const [checkInTime, setCheckInTime] = useState<string>(curHMInit);
   const [checkOutTime, setCheckOutTime] = useState<string>(curHMInit);
   const [guests, setGuests] = useState<number>(1);
+  const [roomCount, setRoomCount] = useState<number>(1);
 
   // fetch rooms
   const roomsQuery = useQuery({
@@ -207,6 +208,7 @@ const HotelDetail = () => {
     const rs = availableRooms;
     if (rs.length && !rs.find((r) => r.type === roomType)) {
       setRoomType(rs[0].type);
+      setRoomCount(1);
     }
   }, [availableRooms, roomType]);
 
@@ -735,6 +737,7 @@ const HotelDetail = () => {
                           checkIn: ciStr,
                           checkOut: coStr,
                           guests,
+                          roomCount,
                           roomType,
                           couponCode: appliedCoupon?.code || undefined,
                         });
@@ -749,13 +752,13 @@ const HotelDetail = () => {
 
                       <div className="space-y-2 pt-4 border-t">
                         <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">₹{price} × {stayDays} days</span>
-                        <span className="font-medium">₹{baseAmount}</span>
+                        <span className="text-muted-foreground">₹{price} × {stayDays} days × {roomCount} rooms</span>
+                        <span className="font-medium">₹{baseAmount * roomCount}</span>
                         </div>
                         {extraHours > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Extra hours {extraHours}h</span>
-                            <span className="font-medium">₹{extraAmount}</span>
+                            <span className="font-medium">₹{extraAmount * roomCount}</span>
                           </div>
                         )}
                       {/* manual rate discount removed; additive pricing applied above */}
@@ -823,7 +826,7 @@ const HotelDetail = () => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="cod" id="pm-cod" />
-                        <Label htmlFor="pm-cod">Cash on Delivery</Label>
+                        <Label htmlFor="pm-cod">Pay Cash</Label>
                       </div>
                     </RadioGroup>
                   </div>

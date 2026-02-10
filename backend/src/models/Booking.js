@@ -9,6 +9,7 @@ const BookingSchema = new mongoose.Schema({
   checkIn: String,
   checkOut: String,
   guests: Number,
+  roomCount: { type: Number, default: 1 },
   total: Number,
   couponId: { type: Number, default: null },
   couponCode: { type: String, default: '' },

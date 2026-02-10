@@ -101,10 +101,12 @@ const SignIn = () => {
                   <Input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
 
-              <div className="relative">
+              <div>
                 <label className="text-sm font-medium mb-2 block">Password</label>
-                <Input type={show?"text":"password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <button type="button" className="absolute right-3 top-[52px] text-muted-foreground" onClick={()=>setShow(!show)}>{show? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                <div className="relative">
+                  <Input type={show?"text":"password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={()=>setShow(!show)}>{show? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
