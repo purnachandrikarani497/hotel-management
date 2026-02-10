@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { Building2, Calendar as CalendarIcon, LogIn, LogOut } from "lucide-react"
+import { Building2, Calendar as CalendarIcon, LogIn, LogOut, Trash2 } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import RoomTypeManager from "@/components/RoomTypeManager"
@@ -2852,7 +2852,7 @@ const OwnerDashboard = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left">
-                        <th className="p-2">Hotel</th>
+                        <th className="p-2 min-w-[200px]">Hotel</th>
                         <th className="p-2 min-w-[120px]">Normal ₹</th>
                         <th className="p-2 min-w-[120px]">Weekend ₹</th>
                         <th className="p-2 min-w-[120px]">Extra Hour ₹</th>
@@ -2887,12 +2887,12 @@ const OwnerDashboard = () => {
                           })
 
                         return (
-                          <tr key={h.id} className="border-t">
+                          <tr key={h.id} className="border-t align-bottom">
                             <td className="p-2">
                               {h.name}
-                              <div className="mt-2">
+                              <div className="mt-2 w-full">
                                 <select
-                                  className="px-3 py-2 rounded-md border bg-white text-xs shadow-sm"
+                                  className="w-full h-10 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                                   value={pricingType[h.id] || ""}
                                   onChange={(e) => {
                                     const sel = e.target.value
@@ -3094,56 +3094,19 @@ const OwnerDashboard = () => {
                                 {(pf.seasonal || []).map((row, idx) => (
                                   <div
                                     key={idx}
-                                    className="grid grid-cols-5 gap-2"
+                                    className="flex items-center gap-2 mb-2"
                                   >
                                     <Input
                                       placeholder="Start"
                                       value={row.start}
-                                      onChange={(e) => {
-                                        const next = (pf.seasonal || []).slice()
-                                        next[idx] = {
-                                          ...row,
-                                          start: e.target.value,
-                                        }
-                                        setPricingForm({
-                                          ...pricingForm,
-                                          [h.id]: {
-                                            ...pf,
-                                            seasonal: next,
-                                          },
-                                        })
-                                      }}
-                                      disabled={!pricingEditing[h.id]}
-                                    />
-                                    <Input
-                                      placeholder="End"
-                                      value={row.end}
-                                      onChange={(e) => {
-                                        const next = (pf.seasonal || []).slice()
-                                        next[idx] = {
-                                          ...row,
-                                          end: e.target.value,
-                                        }
-                                        setPricingForm({
-                                          ...pricingForm,
-                                          [h.id]: {
-                                            ...pf,
-                                            seasonal: next,
-                                          },
-                                        })
-                                      }}
-                                      disabled={!pricingEditing[h.id]}
-                                    />
-                                    <Input
-                                      placeholder="Desc"
-                                      value={row.description || ""}
+                                      maxLength={10}
                                       onChange={(e) => {
                                         const val = e.target.value
-                                        if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                        if (/^[0-9-]*$/.test(val)) {
                                           const next = (pf.seasonal || []).slice()
                                           next[idx] = {
                                             ...row,
-                                            description: val,
+                                            start: val,
                                           }
                                           setPricingForm({
                                             ...pricingForm,
@@ -3155,6 +3118,32 @@ const OwnerDashboard = () => {
                                         }
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="w-28"
+                                    />
+                                    <span className="text-muted-foreground">→</span>
+                                    <Input
+                                      placeholder="End"
+                                      value={row.end}
+                                      maxLength={10}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        if (/^[0-9-]*$/.test(val)) {
+                                          const next = (pf.seasonal || []).slice()
+                                          next[idx] = {
+                                            ...row,
+                                            end: val,
+                                          }
+                                          setPricingForm({
+                                            ...pricingForm,
+                                            [h.id]: {
+                                              ...pf,
+                                              seasonal: next,
+                                            },
+                                          })
+                                        }
+                                      }}
+                                      disabled={!pricingEditing[h.id]}
+                                      className="w-28"
                                     />
                                     <Input
                                       placeholder="Price"
@@ -3177,9 +3166,11 @@ const OwnerDashboard = () => {
                                         }
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="w-20"
                                     />
                                     <Button
-                                      variant="outline"
+                                      variant="ghost"
+                                      size="icon"
                                       onClick={() => {
                                         const next = (pf.seasonal || []).filter(
                                           (_r, i) => i !== idx,
@@ -3193,8 +3184,9 @@ const OwnerDashboard = () => {
                                         })
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="text-destructive hover:text-destructive/90"
                                     >
-                                      Remove
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 ))}
@@ -3286,37 +3278,19 @@ const OwnerDashboard = () => {
                                 {(pf.specials || []).map((row, idx) => (
                                   <div
                                     key={idx}
-                                    className="grid grid-cols-4 gap-2"
+                                    className="flex items-center gap-2 mb-2"
                                   >
                                     <Input
                                       placeholder="Date"
                                       value={row.date}
-                                      onChange={(e) => {
-                                        const next = (pf.specials || []).slice()
-                                        next[idx] = {
-                                          ...row,
-                                          date: e.target.value,
-                                        }
-                                        setPricingForm({
-                                          ...pricingForm,
-                                          [h.id]: {
-                                            ...pf,
-                                            specials: next,
-                                          },
-                                        })
-                                      }}
-                                      disabled={!pricingEditing[h.id]}
-                                    />
-                                    <Input
-                                      placeholder="Desc"
-                                      value={row.description || ""}
+                                      maxLength={10}
                                       onChange={(e) => {
                                         const val = e.target.value
-                                        if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
+                                        if (/^[0-9-]*$/.test(val)) {
                                           const next = (pf.specials || []).slice()
                                           next[idx] = {
                                             ...row,
-                                            description: val,
+                                            date: val,
                                           }
                                           setPricingForm({
                                             ...pricingForm,
@@ -3328,6 +3302,7 @@ const OwnerDashboard = () => {
                                         }
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="w-32"
                                     />
                                     <Input
                                       placeholder="Price"
@@ -3350,9 +3325,11 @@ const OwnerDashboard = () => {
                                         }
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="w-20"
                                     />
                                     <Button
-                                      variant="outline"
+                                      variant="ghost"
+                                      size="icon"
                                       onClick={() => {
                                         const next = (pf.specials || []).filter(
                                           (_r, i) => i !== idx,
@@ -3366,8 +3343,9 @@ const OwnerDashboard = () => {
                                         })
                                       }}
                                       disabled={!pricingEditing[h.id]}
+                                      className="text-destructive hover:text-destructive/90"
                                     >
-                                      Remove
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 ))}

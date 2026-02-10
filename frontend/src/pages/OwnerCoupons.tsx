@@ -136,6 +136,7 @@ const OwnerCoupons: React.FC = () => {
                    if (!form.discount) { toast({ title: "Please enter discount", variant: "destructive" }); return; }
                    if (!form.startDate) { toast({ title: "Please enter start date", variant: "destructive" }); return; }
                    if (!form.endDate) { toast({ title: "Please enter end date", variant: "destructive" }); return; }
+                   if (form.startDate >= form.endDate) { toast({ title: "Invalid dates", description: "Start date must be earlier than end date", variant: "destructive" }); return; }
                    if (!form.usageLimit) { toast({ title: "Please enter usage limit", variant: "destructive" }); return; }
                    
                    createCoupon.mutate({ ...form, discount: Number(form.discount), usageLimit: Number(form.usageLimit), hotelId, ownerId })
