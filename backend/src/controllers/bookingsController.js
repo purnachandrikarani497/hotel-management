@@ -7,7 +7,8 @@ try { mailer = require('nodemailer') } catch { mailer = null }
 
 async function create(req, res) {
   await connect(); await ensureSeed();
-  const { hotelId, checkIn, checkOut, guests, userId, roomType, couponCode, couponId } = req.body || {}
+  const { hotelId, checkIn, checkOut, guests, userId, roomType, couponCode, couponId, roomCount } = req.body || {}
+  const roomsQty = Number(roomCount || 1)
   if (!hotelId || !checkIn || !checkOut || !guests) return res.status(400).json({ error: 'Missing booking fields' })
   const hotel = await Hotel.findOne({ id: Number(hotelId) })
   if (!hotel) return res.status(404).json({ error: 'Hotel not found' })

@@ -118,7 +118,6 @@ const HotelDetail = () => {
   const [checkInTime, setCheckInTime] = useState<string>(curHMInit);
   const [checkOutTime, setCheckOutTime] = useState<string>(curHMInit);
   const [guests, setGuests] = useState<number>(1);
-  const [roomCount, setRoomCount] = useState<number>(1);
 
   // fetch rooms
   const roomsQuery = useQuery({
@@ -208,7 +207,6 @@ const HotelDetail = () => {
     const rs = availableRooms;
     if (rs.length && !rs.find((r) => r.type === roomType)) {
       setRoomType(rs[0].type);
-      setRoomCount(1);
     }
   }, [availableRooms, roomType]);
 
@@ -302,6 +300,7 @@ const HotelDetail = () => {
       checkIn: string;
       checkOut: string;
       guests: number;
+      roomCount: number;
       roomType: string;
       couponCode?: string;
     }) => apiPost<ReserveResp, typeof body>("/api/bookings", body),
@@ -737,7 +736,7 @@ const HotelDetail = () => {
                           checkIn: ciStr,
                           checkOut: coStr,
                           guests,
-                          roomCount,
+                          roomCount: 1,
                           roomType,
                           couponCode: appliedCoupon?.code || undefined,
                         });
@@ -752,13 +751,13 @@ const HotelDetail = () => {
 
                       <div className="space-y-2 pt-4 border-t">
                         <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">₹{price} × {stayDays} days × {roomCount} rooms</span>
-                        <span className="font-medium">₹{baseAmount * roomCount}</span>
+                        <span className="text-muted-foreground">₹{price} × {stayDays} days</span>
+                        <span className="font-medium">₹{baseAmount}</span>
                         </div>
                         {extraHours > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Extra hours {extraHours}h</span>
-                            <span className="font-medium">₹{extraAmount * roomCount}</span>
+                            <span className="font-medium">₹{extraAmount}</span>
                           </div>
                         )}
                       {/* manual rate discount removed; additive pricing applied above */}
