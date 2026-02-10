@@ -1890,22 +1890,22 @@ const OwnerDashboard = () => {
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr className="text-left">
-                        <th className="p-3">S.No</th>
-                        <th className="p-3">Hotel</th>
-                        <th className="p-3">Type</th>
-                        <th className="p-3">Price</th>
-                        <th className="p-3">Members</th>
-                        <th className="p-3">Rooms Available</th>
-                        <th className="p-3">Room Numbers</th>
-                        <th className="p-3">Amenities</th>
-                        <th className="p-3">Photos</th>
-                        <th className="p-3">Availability</th>
-                        <th className="p-3">Actions</th>
+                        <th className="p-3 whitespace-nowrap">S.No</th>
+                        <th className="p-3 whitespace-nowrap">Hotel</th>
+                        <th className="p-3 whitespace-nowrap">Type</th>
+                        <th className="p-3 whitespace-nowrap">Price</th>
+                        <th className="p-3 whitespace-nowrap">Members</th>
+                        <th className="p-3 whitespace-nowrap">Rooms Available</th>
+                        <th className="p-3 whitespace-nowrap">Room Numbers</th>
+                        <th className="p-3 whitespace-nowrap">Amenities</th>
+                        <th className="p-3 whitespace-nowrap">Photos</th>
+                        <th className="p-3 whitespace-nowrap">Availability</th>
+                        <th className="p-3 whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="[&_tr:hover]:bg-muted/30">
                       {roomSummaries.map((g, idx) => (
-                        <tr key={g.key} className="border-t">
+                        <tr key={g.key} className="border-t align-top">
                           <td className="p-3">{idx + 1}</td>
                           <td className="p-3">{hotelName(g.hotelId)}</td>
                           <td className="p-3">{g.type}</td>
