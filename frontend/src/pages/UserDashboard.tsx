@@ -322,7 +322,7 @@ const UserDashboard = () => {
                     return visible.map((b, idx) => (
                       <tr key={b.id} className="border-t">
                         <td className="p-3">{idx + 1}</td>
-                        <td className="p-3">#{b.id}</td>
+                        <td className="p-3">{b.id}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-3">
                             <img src={resolveImage(hotelInfo(b.hotelId)?.image)} alt={hotelInfo(b.hotelId)?.name||`Hotel ${b.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
