@@ -3055,43 +3055,13 @@ const OwnerDashboard = () => {
                                       />
                                     </PopoverContent>
                                   </Popover>
-                                  <Input
-                                    className="w-24"
-                                    placeholder="Desc"
-                                    value={seasonDesc[h.id] || ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
-                                        setSeasonDesc({
-                                          ...seasonDesc,
-                                          [h.id]: val,
-                                        })
-                                      }
-                                    }}
-                                    disabled={!pricingEditing[h.id]}
-                                  />
-                                  <Input
-                                    className="w-20"
-                                    placeholder="Price"
-                                    value={seasonPrice[h.id] || ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      if (/^\d*$/.test(val) && val.length <= 6) {
-                                        setSeasonPrice({
-                                          ...seasonPrice,
-                                          [h.id]: val,
-                                        })
-                                      }
-                                    }}
-                                    disabled={!pricingEditing[h.id]}
-                                  />
                                   <Button
                                     size="sm"
                                     onClick={() => {
                                       const sel: DateRange | undefined =
                                         seasonSel[h.id]
-                                      const price = seasonPrice[h.id] || ""
-                                      const desc = seasonDesc[h.id] || ""
+                                      const price = ""
+                                      const desc = ""
                                       const start = sel?.from ? ymdLocal(sel.from) : ""
                                       const end = sel?.to ? ymdLocal(sel.to) : ""
                                       
@@ -3281,42 +3251,12 @@ const OwnerDashboard = () => {
                                       />
                                     </PopoverContent>
                                   </Popover>
-                                  <Input
-                                    className="w-24"
-                                    placeholder="Desc"
-                                    value={specialDesc[h.id] || ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      if (/^[a-zA-Z\s]*$/.test(val) && val.length <= 20) {
-                                        setSpecialDesc({
-                                          ...specialDesc,
-                                          [h.id]: val,
-                                        })
-                                      }
-                                    }}
-                                    disabled={!pricingEditing[h.id]}
-                                  />
-                                  <Input
-                                    className="w-20"
-                                    placeholder="Price"
-                                    value={specialPrice[h.id] || ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value
-                                      if (/^\d*$/.test(val) && val.length <= 6) {
-                                        setSpecialPrice({
-                                          ...specialPrice,
-                                          [h.id]: val,
-                                        })
-                                      }
-                                    }}
-                                    disabled={!pricingEditing[h.id]}
-                                  />
                                   <Button
                                     size="sm"
                                     onClick={() => {
                                       const dates = (specialSel[h.id] || []).map((d) => ymdLocal(d))
-                                      const price = specialPrice[h.id] || ""
-                                      const desc = specialDesc[h.id] || ""
+                                      const price = ""
+                                      const desc = ""
 
                                       if (dates.length === 0) {
                                         toast({ title: "Please select dates", variant: "destructive" })
