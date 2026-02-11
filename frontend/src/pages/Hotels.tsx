@@ -16,6 +16,7 @@ const Hotels = () => {
   type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[]; description?: string }
   const [searchParams] = useSearchParams()
   const [q, setQ] = useState("")
+  const [searchError, setSearchError] = useState("")
   useEffect(()=>{ setQ(searchParams.get('q') || '') }, [searchParams])
   const checkIn = searchParams.get('checkIn') || ''
   const checkOut = searchParams.get('checkOut') || ''
@@ -214,8 +215,30 @@ const Hotels = () => {
                   <label className="text-sm font-medium mb-2 block">Search</label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Hotel name..." className="pl-9 h-11" value={q} onChange={(e) => setQ(e.target.value)} />
+                    <Input 
+                      placeholder="Hotel name..." 
+                      className="pl-9 h-11" 
+                      value={q} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.trim().length === 0 && val.length > 0) {
+                          setSearchError("Empty spaces not allowed");
+                          return;
+                        }
+                        if (val.length > 30) {
+                          setSearchError("Max limit 30 characters only");
+                          return;
+                        }
+                        if (!/^[a-zA-Z0-9\s]*$/.test(val)) {
+                          setSearchError("Only alphanumeric characters allowed");
+                          return;
+                        }
+                        setSearchError("");
+                        setQ(val);
+                      }} 
+                    />
                   </div>
+                  {searchError && <p className="text-red-500 text-xs mt-1">{searchError}</p>}
                 </div>
 
                 {/* Price Range */}
@@ -308,6 +331,7 @@ const Hotels = () => {
                     setMinRating(null)
                     setSelectedTypes([])
                     setSelectedAmenities([])
+                    setSearchError("")
                   }}
                 >
                   Clear Filters
