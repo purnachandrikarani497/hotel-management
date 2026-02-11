@@ -2532,7 +2532,7 @@ const OwnerDashboard = () => {
                                 .toLowerCase()
                               const canCancel = s === "confirmed"
                               const canCheckin = s === "confirmed"
-                              const canCheckout = s === "confirmed" || s === "checked_in"
+                              const canCheckout = s === "checked_in"
                               return (
                                 <div className="flex flex-wrap items-center gap-2 w-full justify-between">
                                   <div className="flex items-center gap-2 flex-wrap">

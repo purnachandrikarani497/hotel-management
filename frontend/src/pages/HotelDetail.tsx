@@ -833,7 +833,19 @@ const HotelDetail = () => {
                   {paymentMethod === "upi" && (
                     <div className="space-y-2">
                       <Label htmlFor="upi-id">UPI ID</Label>
-                      <Input id="upi-id" placeholder="name@bank" value={upiId} onChange={(e) => setUpiId(e.target.value)} />
+                      <Input 
+                        id="upi-id" 
+                        placeholder="name@bank" 
+                        maxLength={30}
+                        value={upiId} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\s/g, '')
+                          setUpiId(val)
+                        }} 
+                      />
+                      {upiId && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId) && (
+                        <p className="text-xs text-red-500">Invalid UPI ID format</p>
+                      )}
                     </div>
                   )}
 
@@ -871,7 +883,7 @@ const HotelDetail = () => {
                     <Button
                       disabled={
                         paymentMethod === "" ||
-                        (paymentMethod === "upi" && !upiId)
+                        (paymentMethod === "upi" && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId))
                       }
                       onClick={() => {
                         const bid = reserve.data?.id;

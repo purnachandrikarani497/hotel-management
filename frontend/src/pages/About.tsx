@@ -21,7 +21,7 @@ const About = () => {
         <section className="bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600 text-primary-foreground py-20 relative overflow-hidden">
           <div className="container text-center">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">About Sana Stayz</h1>
-            <p className="text-xl opacity-90 max-w-2xl mx-auto">Your trusted partner in finding the perfect accommodation worldwide</p>
+            <p className="mt-6 text-xl opacity-90 max-w-2xl mx-auto">Your trusted partner in finding the perfect accommodation worldwide</p>
           </div>
         </section>
 

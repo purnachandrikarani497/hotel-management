@@ -434,6 +434,7 @@ async function checkoutBooking(req, res) {
   const id = Number(req.params.id);
   const b = await Booking.findOne({ id });
   if (!b) return res.status(404).json({ error: 'Booking not found' });
+  if (String(b.status||'') !== 'checked_in') return res.status(400).json({ error: 'Booking must be checked-in first' });
   const now = new Date();
   b.status = 'checked_out';
   b.checkoutAt = now;

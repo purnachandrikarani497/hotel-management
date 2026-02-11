@@ -318,7 +318,13 @@ async function getCoupons(req, res) {
 
     const filtered = items.filter(c => {
       const hasQuota = Number(c.usageLimit || 0) === 0 || Number(c.used || 0) < Number(c.usageLimit || 0);
-      const matchesDate = date ? String(c.expiry || '').slice(0,10) === date : true;
+      let matchesDate = true;
+      if (date) {
+        const start = c.startDate ? String(c.startDate).slice(0, 10) : null;
+        const end = c.endDate ? String(c.endDate).slice(0, 10) : (c.expiry ? String(c.expiry).slice(0, 10) : null);
+        if (start && date < start) matchesDate = false;
+        if (end && date > end) matchesDate = false;
+      }
       return hasQuota && matchesDate;
     });
 
