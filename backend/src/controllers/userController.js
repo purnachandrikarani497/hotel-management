@@ -109,6 +109,11 @@ async function createReview(req, res) {
     await connect(); await ensureSeed();
     const { userId, hotelId, bookingId, rating, comment } = req.body || {}
     if (!userId || !hotelId || !rating) return res.status(400).json({ error: 'Missing fields' })
+    
+    const commentStr = String(comment||'').trim()
+    if (commentStr.length > 50) return res.status(400).json({ error: 'Feedback exceeds 50 characters' })
+    if (commentStr && !/^[a-zA-Z\s]*$/.test(commentStr)) return res.status(400).json({ error: 'Feedback must contain only characters' })
+
     let bid = bookingId ? Number(bookingId) : null
     if (!bid) {
       const last = await Booking.find({ userId: Number(userId), hotelId: Number(hotelId) }).sort({ id: -1 }).limit(1).lean()

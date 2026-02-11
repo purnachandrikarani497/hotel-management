@@ -234,7 +234,28 @@ const MessageInbox = () => {
                         <Star key={n} className={`h-6 w-6 ${n <= rating ? 'fill-current text-accent' : 'text-muted-foreground'}`} style={{cursor:'pointer'}} onClick={()=>setRating(n)} />
                       ))}
                     </div>
-                    <Input placeholder="Feedback (optional)" value={feedback} onChange={e=>setFeedback(e.target.value)} />
+                    <div className="relative">
+                      <Input 
+                        placeholder="Feedback (optional)" 
+                        value={feedback} 
+                        onChange={e => {
+                          const val = e.target.value
+                          if (/^[a-zA-Z\s]*$/.test(val)) {
+                            setFeedback(val)
+                          }
+                        }} 
+                        maxLength={50}
+                        className={feedback.length >= 50 ? "border-red-500 focus-visible:ring-red-500" : ""}
+                      />
+                      <div className={`absolute bottom-2 right-2 text-[10px] px-1 rounded pointer-events-none ${feedback.length >= 50 ? "text-red-500 font-bold bg-red-50" : "text-muted-foreground bg-background/80"}`}>
+                        {feedback.length}/50
+                      </div>
+                    </div>
+                    {feedback.length >= 50 && (
+                      <div className="text-[11px] text-red-500 font-medium mt-1 ml-1">
+                        Maximum 50 characters allowed
+                      </div>
+                    )}
                     <div className="mt-3 text-right">
                       <Button onClick={()=>createReview.mutate()} disabled={!userId || createReview.isPending || createReview.isSuccess}>{createReview.isPending ? 'Submitting...' : (createReview.isSuccess ? 'Submitted' : 'Submit')}</Button>
                     </div>
