@@ -270,19 +270,24 @@ async function about(req, res) {
     await ensureSeed();
 
     const totalHotels = await Hotel.countDocuments({ ownerId: { $ne: null }, status: 'approved' });
-    const totalBookings = await Booking.countDocuments();
+    // Count distinct users who have booked as "Happy Customers"
+    const distinctUsers = await Booking.distinct('userId');
+    const happyCustomers = distinctUsers.length;
 
     const s = await Settings.findOne().lean();
     const activeHotels = await Hotel.find({ ownerId: { $ne: null }, status: 'approved' }).lean();
     const citiesSet = new Set(
       activeHotels
-        .map(h => String(h?.location || '').split(',')[0].trim())
+        .map(h => String(h?.location || '').split(',')[0].trim().toLowerCase()) // Normalize to lowercase
         .filter(Boolean)
     );
+    // Capitalize first letter for display if needed, but for counting unique cities, lowercase is safer.
+    // The frontend just displays the count.
+    
     const citiesCount = citiesSet.size;
     const stats = [
       { label: 'Hotels', value: String(totalHotels) },
-      { label: 'Happy Customers', value: String(totalBookings) },
+      { label: 'Happy Customers', value: String(happyCustomers) },
       { label: 'Cities', value: String(citiesCount) }
     ];
     const ourStory = s?.ourStory || '';
