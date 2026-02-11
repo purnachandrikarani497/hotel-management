@@ -310,8 +310,8 @@ const HotelDetail = () => {
       qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
       qc.invalidateQueries({ queryKey: ["hotel", "coupons", id, checkIn] });
     },
-    onError: () => {
-      toast({ title: "Reservation failed", variant: "destructive" });
+    onError: (err: Error) => {
+      toast({ title: "Reservation failed", description: err.message, variant: "destructive" });
     },
   });
 

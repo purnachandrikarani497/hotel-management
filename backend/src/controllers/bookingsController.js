@@ -100,7 +100,9 @@ async function create(req, res) {
     if (!q.id && couponCode) q.code = String(couponCode)
     const c = await Coupon.findOne({ ...q, enabled: true }).lean()
     if (c) {
-      const hasQuota = Number(c.usageLimit||0) === 0 || Number(c.used||0) < Number(c.usageLimit||0)
+      const limit = Number(c.usageLimit);
+      const used = Number(c.used || 0);
+      const hasQuota = limit === 0 || used < limit;
       
       let matchesDate = true
       const sDate = c.startDate ? String(c.startDate).slice(0,10) : null
@@ -116,15 +118,20 @@ async function create(req, res) {
       }
 
       const matchesHotel = !c.hotelId || Number(c.hotelId) === Number(hotelId)
-      if (hasQuota && matchesDate && matchesHotel) {
-        const pct = Number(c.discount||0)
-        if (!isNaN(pct) && pct > 0) {
-          const cut = Math.round(computedTotal * pct / 100)
-          computedTotal = Math.max(0, computedTotal - cut)
-          appliedCouponId = Number(c.id) || null
-          appliedCouponCode = String(c.code||'')
-        }
+      
+      if (!hasQuota) return res.status(400).json({ error: 'Coupon usage limit reached' })
+      if (!matchesDate) return res.status(400).json({ error: 'Coupon expired or not valid for this date' })
+      if (!matchesHotel) return res.status(400).json({ error: 'Coupon not valid for this hotel' })
+
+      const pct = Number(c.discount||0)
+      if (!isNaN(pct) && pct > 0) {
+        const cut = Math.round(computedTotal * pct / 100)
+        computedTotal = Math.max(0, computedTotal - cut)
+        appliedCouponId = Number(c.id) || null
+        appliedCouponCode = String(c.code||'')
       }
+    } else {
+        if (couponCode || couponId) return res.status(400).json({ error: 'Invalid coupon code' })
     }
   }
   const id = await nextIdFor('Booking')

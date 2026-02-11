@@ -317,7 +317,11 @@ async function getCoupons(req, res) {
     const items = await Coupon.find(q).lean();
 
     const filtered = items.filter(c => {
-      const hasQuota = Number(c.usageLimit || 0) === 0 || Number(c.used || 0) < Number(c.usageLimit || 0);
+      const limit = Number(c.usageLimit);
+      const used = Number(c.used || 0);
+      // usageLimit 0 means unlimited
+      const hasQuota = limit === 0 || used < limit;
+      
       let matchesDate = true;
       if (date) {
         const start = c.startDate ? String(c.startDate).slice(0, 10) : null;

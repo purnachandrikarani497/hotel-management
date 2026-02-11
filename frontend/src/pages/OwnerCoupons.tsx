@@ -186,9 +186,9 @@ const OwnerCoupons: React.FC = () => {
                         </td>
                         <td className="p-3">
                           {editing[c.id] ? (
-                            <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{c.used}</span>/<Input type="number" min="0" value={editing[c.id]?.usageLimit ?? c.usageLimit} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), usageLimit: Math.max(0, Number(e.target.value)) } })} /></div>
+                            <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{Math.min(c.used, c.usageLimit)}</span>/<Input type="number" min="0" value={editing[c.id]?.usageLimit ?? c.usageLimit} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), usageLimit: Math.max(0, Number(e.target.value)) } })} /></div>
                           ) : (
-                            <>{c.used}/{c.usageLimit}</>
+                            <>{Math.min(c.used, c.usageLimit)}/{c.usageLimit}</>
                           )}
                         </td>
                         <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${c.enabled ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{c.enabled ? 'Enabled' : 'Disabled'}</span></td>

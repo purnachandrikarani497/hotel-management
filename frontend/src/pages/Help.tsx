@@ -139,7 +139,16 @@ const Help = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="mb-4 flex gap-2">
-                      <Input placeholder="Search questions" value={search} onChange={(e) => setSearch(e.target.value)} />
+                      <Input 
+                        placeholder="Search questions" 
+                        value={search} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val.length > 100) return;
+                          if (!/^[a-zA-Z\s]*$/.test(val)) return;
+                          setSearch(val);
+                        }} 
+                      />
                       <Button variant="outline" onClick={() => setSearch("")}>Clear</Button>
                     </div>
                     <Accordion type="single" collapsible className="w-full">
@@ -173,8 +182,21 @@ const Help = () => {
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <Textarea className="min-h-[48px]" placeholder="Type your message" value={input} onChange={(e) => setInput(e.target.value)} />
-                        <Button onClick={sendMessage}>Send</Button>
+                        <Textarea 
+                          className="min-h-[48px]" 
+                          placeholder="Type your message" 
+                          value={input} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val.length > 200) return;
+                            if (!/^[a-zA-Z\s]*$/.test(val)) return;
+                            setInput(val);
+                          }} 
+                        />
+                        <Button onClick={() => {
+                          if (!input.trim()) return;
+                          sendMessage();
+                        }}>Send</Button>
                       </div>
                     </div>
                   </CardContent>
