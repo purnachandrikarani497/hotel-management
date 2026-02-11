@@ -24,7 +24,6 @@ const Hotels = () => {
   const roomsNeeded = Math.max(1, Number(searchParams.get('rooms') || '1'))
   const totalGuests = Math.max(1, adults + children)
   const [price, setPrice] = useState<[number, number]>([0, 100000])
-  const [didInitPriceRange, setDidInitPriceRange] = useState(false)
   const [minRating, setMinRating] = useState<number | null>(null)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
@@ -65,23 +64,18 @@ const Hotels = () => {
     const max = Math.max(100000, ...hotels.map(h => Number(h.price || 0)))
     return max
   }, [data?.hotels])
+
+  // Ensure price range is initialized correctly and doesn't collapse to 0
   useEffect(() => {
-    if (!didInitPriceRange && maxPriceAll) {
-      setPrice([0, maxPriceAll])
-      setDidInitPriceRange(true)
-      return
-    }
-    if (maxPriceAll) {
-      setPrice((prev) => {
-        const pMin = Math.min(prev[0], prev[1])
-        const pMax = Math.max(prev[0], prev[1])
-        if (pMax > maxPriceAll) {
-          return [pMin, maxPriceAll]
-        }
-        return prev
-      })
-    }
-  }, [maxPriceAll, didInitPriceRange])
+    setPrice((prev) => {
+      // Fix [0,0] bug if it occurs
+      if (prev[1] === 0 && maxPriceAll > 0) return [0, maxPriceAll];
+      // Auto-expand if max price increases beyond current selection (e.g. data loaded)
+      // This ensures "full range" logic is respected without overwriting manual reductions
+      if (maxPriceAll > prev[1]) return [prev[0], maxPriceAll];
+      return prev;
+    })
+  }, [maxPriceAll])
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === 'hotelUpdated' && e.newValue) {
@@ -121,8 +115,6 @@ const Hotels = () => {
   }, [data?.hotels]);
 
   const displayHotels = useMemo(()=>{
-    if (!qLower) return []
-
     const hotels: Hotel[] = data?.hotels || []
     let list = hotels
     // qLower filter already applied via server param; keep client-side for robustness and enhanced matching
@@ -146,20 +138,26 @@ const Hotels = () => {
     }
     const pMin = Math.min(price[0], price[1])
     const pMax = Math.max(price[0], price[1])
-    list = list.filter(h => h.price >= pMin && h.price <= pMax)
-    if (minRating) list = list.filter(h => Math.floor(h.rating) >= (minRating || 0))
+    list = list.filter(h => {
+      const p = Number(h.price || 0)
+      return p >= pMin && p <= pMax
+    })
+    if (minRating) list = list.filter(h => Math.floor(Number(h.rating || 0)) >= (minRating || 0))
     if (selectedTypes.length > 0) {
       list = list.filter(h => {
         const name = (h.name||'').toLowerCase()
         const desc = (h.description||'').toLowerCase()
-        const text = name + ' ' + desc
+        // Check amenities too just in case the type is listed there
+        const ams = (h.amenities||[]).join(' ').toLowerCase()
+        const text = name + ' ' + desc + ' ' + ams
         return selectedTypes.some(t => text.includes(t.toLowerCase()))
       })
     }
     if ((selectedAmenities||[]).length > 0) {
       list = list.filter(h => {
         const ams = (h.amenities||[]).map(a=>a.toLowerCase())
-        return selectedAmenities.every(a => ams.includes(a.toLowerCase()))
+        // Use partial match (e.g. "wifi" matches "free wifi")
+        return selectedAmenities.every(req => ams.some(exist => exist.includes(req.toLowerCase())))
       })
     }
     // Availability filter: only if checkIn provided
