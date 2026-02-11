@@ -21,7 +21,37 @@ const ymdLocal = (d: Date) => {
   return `${y}-${m}-${da}`
 }
 
-type OwnerStats = {
+const CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
+  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur",
+  "Indore", "Thane", "Bhopal", "Visakhapatnam", "Pimpri-Chinchwad",
+  "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik",
+  "Faridabad", "Meerut", "Rajkot", "Kalyan-Dombivli", "Vasai-Virar",
+  "Varanasi", "Srinagar", "Aurangabad", "Dhanbad", "Amritsar",
+  "Navi Mumbai", "Allahabad", "Ranchi", "Howrah", "Coimbatore",
+  "Jabalpur", "Gwalior", "Vijayawada", "Jodhpur", "Madurai",
+  "Raipur", "Kota", "Guwahati", "Chandigarh", "Solapur",
+  "Hubballi-Dharwad", "Mysore", "Tiruchirappalli", "Bareilly",
+  "Aligarh", "Tiruppur", "Gurgaon", "Moradabad", "Jalandhar",
+  "Bhubaneswar", "Salem", "Warangal", "Guntur", "Bhiwandi",
+  "Saharanpur", "Gorakhpur", "Bikaner", "Amravati", "Noida",
+  "Jamshedpur", "Bhilai", "Cuttack", "Firozabad", "Kochi",
+  "Nellore", "Bhavnagar", "Dehradun", "Durgapur", "Asansol",
+  "Rourkela", "Nanded", "Kolhapur", "Ajmer", "Akola",
+  "Gulbarga", "Jamnagar", "Ujjain", "Loni", "Siliguri",
+  "Jhansi", "Ulhasnagar", "Jammu", "Sangli-Miraj & Kupwad",
+  "Mangalore", "Erode", "Belgaum", "Ambattur", "Tirunelveli",
+  "Malegaon", "Gaya", "Jalgaon", "Udaipur", "Maheshtala"
+ ].sort();
+ 
+ const BASIC_AMENITIES = [
+   "WiFi", "Parking", "Swimming Pool", "Gym", "Restaurant", 
+   "Room Service", "Spa", "Bar", "Air Conditioning", "Laundry",
+   "Conference Room", "Banquet Hall", "Doctor on Call", "Travel Desk",
+   "Power Backup", "Lift", "CCTV", "Geyser", "TV"
+ ].sort();
+
+ type OwnerStats = {
   totalRooms: number
   totalBookings: number
   totalRevenue: number
@@ -1282,23 +1312,17 @@ const OwnerDashboard = () => {
                     }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
-                  <Input
-                    placeholder="Location"
-                    value={hotelForm.location}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val.length > 50) {
-                        toast({ title: "Maximum limit exceeded", variant: "destructive" })
-                        return
-                      }
-                      if (!/^[a-zA-Z0-9\s]*$/.test(val)) {
-                        toast({ title: "Invalid location", variant: "destructive" })
-                        return
-                      }
-                      setHotelForm({ ...hotelForm, location: val })
-                    }}
-                    disabled={(hotelsQ.data?.hotels || []).length > 0}
-                  />
+                  <div className="relative">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={hotelForm.location}
+                      onChange={(e) => setHotelForm({ ...hotelForm, location: e.target.value })}
+                      disabled={(hotelsQ.data?.hotels || []).length > 0}
+                    >
+                      <option value="" disabled>Select Location</option>
+                      {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+                    </select>
+                  </div>
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -1329,24 +1353,45 @@ const OwnerDashboard = () => {
                     }}
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
-                  <Input
-                    className="col-span-3"
-                    placeholder="Amenities (comma-separated)"
-                    value={hotelForm.amenities}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val.length > 50) {
-                         toast({ title: "Maximum limit exceeded", variant: "destructive" })
-                         return
-                      }
-                      if (!/^[a-zA-Z\s,]*$/.test(val)) {
-                         toast({ title: "Invalid amenities", variant: "destructive" })
-                         return
-                      }
-                      setHotelForm({ ...hotelForm, amenities: val })
-                    }}
-                    disabled={(hotelsQ.data?.hotels || []).length > 0}
-                  />
+                  <div className="col-span-3 flex gap-2">
+                    <div className="relative min-w-[160px]">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return;
+                          const current = hotelForm.amenities ? hotelForm.amenities.split(',').map(s => s.trim()).filter(Boolean) : [];
+                          if (!current.includes(val)) {
+                             const next = [...current, val].join(', ');
+                             setHotelForm({ ...hotelForm, amenities: next });
+                          }
+                          e.target.value = "";
+                        }}
+                        disabled={(hotelsQ.data?.hotels || []).length > 0}
+                      >
+                        <option value="">Select Amenity...</option>
+                        {BASIC_AMENITIES.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <Input
+                      className="flex-1"
+                      placeholder="Amenities (comma-separated, or select from dropdown)"
+                      value={hotelForm.amenities}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val.length > 200) {
+                           toast({ title: "Maximum limit exceeded", variant: "destructive" })
+                           return
+                        }
+                        if (!/^[a-zA-Z0-9\s,\-]*$/.test(val)) {
+                           toast({ title: "Invalid amenities", variant: "destructive" })
+                           return
+                        }
+                        setHotelForm({ ...hotelForm, amenities: val })
+                      }}
+                      disabled={(hotelsQ.data?.hotels || []).length > 0}
+                    />
+                  </div>
                   <Input
                     className="col-span-3"
                     placeholder="Description"

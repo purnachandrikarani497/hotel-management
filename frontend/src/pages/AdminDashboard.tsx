@@ -116,7 +116,7 @@ const AdminDashboard = () => {
   const [missionEditing, setMissionEditing] = React.useState(false)
   
   const [ownerForm, setOwnerForm] = React.useState({ email:"", password:"", firstName:"", lastName:"", phone:"" })
-  const [filterRole, setFilterRole] = React.useState<'all'|'user'|'owner'>('all')
+  const [filterRole, setFilterRole] = React.useState<'user'|'owner'|'admin'>('user')
   const [contactName, setContactName] = React.useState("")
   const [contactPhone1, setContactPhone1] = React.useState("")
   const [contactPhone2, setContactPhone2] = React.useState("")
@@ -317,10 +317,10 @@ const AdminDashboard = () => {
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-sm text-muted-foreground">Role</span>
-              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'all'|'user'|'owner')}>
-                <option value="all">All</option>
+              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'user'|'owner'|'admin')}>
                 <option value="user">Users</option>
                 <option value="owner">Hotel Owners</option>
+                <option value="admin">Admins</option>
               </select>
               <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={usersPeriod} onChange={e=>setUsersPeriod(e.target.value as typeof usersPeriod)}>
                 <option value="all">All</option>
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
                 const deletedMap = JSON.parse(raw) as { [id:number]: boolean };
                 
                 const data = sortRecent((users.data?.users||[]).filter(u => 
-                  (filterRole==='all' ? true : u.role===filterRole) && 
+                  ((u.role || 'user')===filterRole) && 
                   inPeriod(usersPeriod, u.createdAt) &&
                   !deletedMap[u.id] // Exclude deleted
                 ))
@@ -352,7 +352,7 @@ const AdminDashboard = () => {
                 try { 
                   const raw = localStorage.getItem('deletedAdminUsers') || '{}'; 
                   const map = JSON.parse(raw) as { [id:number]: boolean }; 
-                  const data = sortRecent((users.data?.users||[]).filter(u=> (filterRole==='all'?true:u.role===filterRole) && inPeriod(usersPeriod, u.createdAt) && !map[u.id])); 
+                  const data = sortRecent((users.data?.users||[]).filter(u=> ((u.role || 'user')===filterRole) && inPeriod(usersPeriod, u.createdAt) && !map[u.id])); 
                   
                   if (data.length === 0) {
                     toast({ title: "No data found", description: "Nothing to delete", variant: "destructive" });
@@ -376,7 +376,7 @@ const AdminDashboard = () => {
                   ) : users.isError ? (
                     <tr><td colSpan={5} className="p-4 text-center text-destructive">Failed to load users</td></tr>
                   ) : (() => {
-                     const filteredUsers = sortRecent((users.data?.users || []).filter(u => !('deleted' in u && (u as unknown as { deleted?: boolean }).deleted) && (filterRole==='all' ? true : u.role===filterRole) && inPeriod(usersPeriod, u.createdAt))).filter(u=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[u.id] } catch { return true } });
+                     const filteredUsers = sortRecent((users.data?.users || []).filter(u => !('deleted' in u && (u as unknown as { deleted?: boolean }).deleted) && ((u.role || 'user')===filterRole) && inPeriod(usersPeriod, u.createdAt))).filter(u=>{ try { const raw = localStorage.getItem('deletedAdminUsers') || '{}'; const map = JSON.parse(raw) as { [id:number]: boolean }; return !map[u.id] } catch { return true } });
                      
                      if (filteredUsers.length === 0) {
                        return (
