@@ -64,7 +64,7 @@ const Register = () => {
     if (email.length > 20) { toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" }); return false }
 
     // Phone
-    if (!phone) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false } // Keeping existing generic or specific?
+    if (!phone) { toast({ title: "Please enter the Phone Number", variant: "destructive" }); return false }
     // User didn't specify phone rules in prompt but existing code has it. I'll keep existing check but maybe after others.
     if (!phoneRe.test(String(phone).trim())) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
 
@@ -90,12 +90,12 @@ const Register = () => {
     if (fullName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return false }
 
     // Date of Birth
-    if (!dob) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (!dob) { toast({ title: "Please enter the Date of Birth", variant: "destructive" }); return false }
     if (new Date(dob) > new Date()) { toast({ title: "Invalid Date of Birth", description: "Future dates not allowed", variant: "destructive" }); return false }
 
     // Address
     if (!address.trim()) { toast({ title: "Please enter the Address", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z0-9\s,.-]+$/.test(address)) { toast({ title: "Invalid Address", description: "Only characters & numbers allowed", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z0-9\s,.-]+$/.test(address)) { toast({ title: "Invalid Address", description: "Only characters, numbers, space, comma, dot, hyphen allowed", variant: "destructive" }); return false }
     // Length check already done via onChange toast but keeping double check
     if (address.length > 100) { toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" }); return false }
 
@@ -186,6 +186,10 @@ const Register = () => {
                       value={firstName} 
                       onChange={(e) => {
                         const val = e.target.value;
+                        if (!/^[a-zA-Z]*$/.test(val)) {
+                          toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" });
+                          return;
+                        }
                         if (val.length > 20) {
                           toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" });
                           return;
@@ -201,6 +205,10 @@ const Register = () => {
                     value={lastName} 
                     onChange={(e) => {
                       const val = e.target.value;
+                      if (!/^[a-zA-Z]*$/.test(val)) {
+                        toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" });
+                        return;
+                      }
                       if (val.length > 20) {
                         toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" });
                         return;
@@ -235,7 +243,11 @@ const Register = () => {
                   placeholder="10 digits, starts 6-9" 
                   value={phone} 
                   onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g,"");
+                    const raw = e.target.value;
+                    if (/[^0-9]/.test(raw)) {
+                      toast({ title: "Invalid input", description: "Only numbers allowed", variant: "destructive" });
+                    }
+                    const val = raw.replace(/\D/g,"");
                     if (val.length > 10) {
                       toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
                       return;
@@ -325,6 +337,10 @@ const Register = () => {
                   value={address} 
                   onChange={(e)=>{
                     const val = e.target.value;
+                    if (!/^[a-zA-Z0-9\s,.-]*$/.test(val)) {
+                      toast({ title: "Invalid Address", description: "Only characters, numbers, space, comma, dot, hyphen allowed", variant: "destructive" });
+                      return;
+                    }
                     if (val.length > 100) {
                       toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" });
                       return;
@@ -352,11 +368,18 @@ const Register = () => {
                     onChange={(e)=>{ 
                       let v = e.target.value;
                       if (idType === "Aadhaar Card") {
+                        if (/[^0-9]/.test(v)) {
+                           // optional: toast({ title: "Invalid input", description: "Only numbers allowed", variant: "destructive" });
+                        }
                         v = v.replace(/\D/g, "").slice(0, 12);
                       } else if (idType === "Passport") {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
                       } else if (idType.includes("PAN")) {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                      } else if (idType === "Driving Licence") {
+                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
+                      } else if (idType === "Voter ID") {
+                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
                       } else {
                         v = v.toUpperCase();
                       }
