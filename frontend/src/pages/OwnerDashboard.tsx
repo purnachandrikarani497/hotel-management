@@ -1795,37 +1795,71 @@ const OwnerDashboard = () => {
                     <label className="text-sm font-medium mb-2 block">
                       Amenities
                     </label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal h-auto min-h-[40px] whitespace-normal">
-                          {roomForm.amenities ? roomForm.amenities : "Select amenities"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-2" align="start">
-                        <div className="grid gap-2 max-h-[300px] overflow-y-auto">
-                          {Array.from(new Set((hotelsQ.data?.hotels || []).flatMap(h => h.amenities || []).map(a => a.toLowerCase() === 'btrakfast' ? 'breakfast' : a))).map(a => (
-                            <div key={a} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={roomForm.amenities.split(',').map(s=>s.trim()).includes(a)}
-                                onChange={(e) => {
-                                  const current = roomForm.amenities.split(',').map(s=>s.trim()).filter(Boolean);
-                                  let next;
-                                  if (e.target.checked) {
-                                    next = [...current, a];
-                                  } else {
-                                    next = current.filter(x => x !== a);
-                                  }
-                                  setRoomForm({ ...roomForm, amenities: next.join(',') });
-                                }}
-                              />
-                              <span className="text-sm">{a}</span>
-                            </div>
-                          ))}
-                          {(!hotelsQ.data?.hotels || hotelsQ.data.hotels.length === 0) && <div className="text-sm text-muted-foreground">No amenities found in your hotels.</div>}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <div className="flex gap-2">
+                      <Input
+                        value={roomForm.amenities}
+                        onChange={(e) =>
+                          setRoomForm({ ...roomForm, amenities: e.target.value })
+                        }
+                        placeholder="WiFi, Pool..."
+                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline">Select</Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-2" align="end">
+                          <div className="grid gap-2 max-h-[300px] overflow-y-auto">
+                            {Array.from(
+                              new Set([
+                                ...(hotelsQ.data?.hotels || []).flatMap(
+                                  (h) => h.amenities || []
+                                ).map(a => a.toLowerCase() === 'btrakfast' ? 'breakfast' : a),
+                                ...roomForm.amenities
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                              ])
+                            )
+                              .filter(Boolean)
+                              .map((a) => (
+                                <div key={a} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={roomForm.amenities
+                                      .split(",")
+                                      .map((s) => s.trim())
+                                      .includes(a)}
+                                    onChange={(e) => {
+                                      const current = roomForm.amenities
+                                        .split(",")
+                                        .map((s) => s.trim())
+                                        .filter(Boolean)
+                                      let next
+                                      if (e.target.checked) {
+                                        next = [...current, a]
+                                      } else {
+                                        next = current.filter((x) => x !== a)
+                                      }
+                                      setRoomForm({
+                                        ...roomForm,
+                                        amenities: next.join(","),
+                                      })
+                                    }}
+                                  />
+                                  <span className="text-sm">{a}</span>
+                                </div>
+                              ))}
+                            {(!hotelsQ.data?.hotels ||
+                              hotelsQ.data.hotels.length === 0) &&
+                              !roomForm.amenities && (
+                                <div className="text-sm text-muted-foreground">
+                                  No amenities found.
+                                </div>
+                              )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
                   <div className="col-span-4 flex items-center gap-3 pt-6">
                     <input
@@ -2027,11 +2061,9 @@ const OwnerDashboard = () => {
             <div className="fixed inset-0 flex items-center justify-center">
               <div className="bg-card border rounded-lg shadow-card p-6 w-full max-w-sm sm:max-w-md">
                 <div className="text-lg font-semibold mb-2">
-                  {uploadInfo.type === "images"
-                    ? "Images uploaded"
-                    : uploadInfo.type === "documents"
-                      ? "Documents uploaded"
-                      : "Room photos added"}
+                  {uploadInfo.type === "documents"
+                    ? "Documents uploaded"
+                    : "Images uploaded"}
                 </div>
                 <div className="text-sm text-muted-foreground mb-4">Files:</div>
                 <div className="space-y-1 max-h-40 overflow-auto">
@@ -2056,7 +2088,10 @@ const OwnerDashboard = () => {
             const lr = rooms.find((x) => x.id === lastRoomId)
             return lr ? (
               <div className="rounded-lg border p-4 mt-4">
-                <div className="text-lg font-bold mb-2">Room Details</div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-lg font-bold">Room Details</div>
+                  <Button size="sm" variant="outline" onClick={() => setUploadInfo({ type: null, names: [] })}>Close</Button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-sm text-muted-foreground">ID</span>

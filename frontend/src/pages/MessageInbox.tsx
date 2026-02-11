@@ -4,6 +4,7 @@ import Footer from "@/components/Footer"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Star, ArrowLeft } from "lucide-react"
 import { apiGet, apiPost } from "@/lib/api"
@@ -49,8 +50,17 @@ const MessageInbox = () => {
   const orderedMessages = React.useMemo(() => {
     const arr = [...messages]
     arr.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    return arr
+    return arr.reverse() // Display oldest to newest
   }, [messages])
+
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const conversationRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [orderedMessages.length, activeId])
+
   const markRead = useMutation({ mutationFn: (id:number) => apiPost(`/api/messages/thread/${id}/read`, { role: role==='owner'?'owner':'user' }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["inbox","threads",role,userId] }) }, onError: () => {} , retry: false })
   const lastReadRef = React.useRef<number>(0)
   React.useEffect(() => { if (activeId && lastReadRef.current !== activeId && !markRead.isPending) { lastReadRef.current = activeId; markRead.mutate(activeId); qc.setQueryData(["inbox","threads",role,userId], (data?: { threads: Thread[] }) => { const arr = (data?.threads||[]).map(t => t.id===activeId ? { ...t, unreadForUser: 0, unreadForOwner: 0 } : t); return { threads: arr } }) } }, [activeId, markRead.isPending, markRead, qc, role, userId])
@@ -142,7 +152,7 @@ const MessageInbox = () => {
               <CardContent>
                 <div className="rounded border overflow-hidden max-h-[320px] overflow-y-auto sm:max-h-none">
                   {(orderedThreads||[]).map(t => (
-                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={()=>setActiveId(t.id)}>
+                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={() => { setActiveId(t.id); setTimeout(() => conversationRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }}>
                       <div className="flex items-center gap-3">
                         <img src={resolveImage(hotelMap[t.hotelId]?.image)} alt={hotelMap[t.hotelId]?.name||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
                         <div className="flex-1">
@@ -162,10 +172,10 @@ const MessageInbox = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="md:col-span-2 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
+            <Card ref={conversationRef} className="md:col-span-2 rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 scroll-mt-32">
               <CardHeader><CardTitle>Conversation</CardTitle></CardHeader>
               <CardContent>
-                <div className="h-[320px] sm:h-[400px] overflow-y-auto rounded border p-3 bg-card">
+                <div ref={scrollRef} className="h-[320px] sm:h-[400px] overflow-y-auto rounded border p-3 bg-card">
                   {(orderedMessages||[]).map(m => {
                     const youRole = role==='owner' ? 'owner' : 'user'
                     const isYou = m.senderRole === youRole
@@ -177,17 +187,45 @@ const MessageInbox = () => {
                     return (
                       <div key={m.id} className={`my-2 ${alignCls}`}>
                         <div className="text-[10px] mb-1 text-muted-foreground">{who}</div>
-                        <div className={`inline-block px-3 py-2 rounded ${bubbleCls}${highlight}`}>{m.content}</div>
+                        <div className={`inline-block px-3 py-2 rounded ${bubbleCls}${highlight} text-left whitespace-pre-wrap`}>{m.content}</div>
                         <div className="text-[10px] text-muted-foreground mt-1">{new Date(m.createdAt).toLocaleString()}</div>
                       </div>
                     )
                   })}
                   {messages.length===0 && <div className="text-sm text-muted-foreground">Select a thread</div>}
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <Input placeholder={isCancelled?"Conversation closed":"Type a message"} value={draft} onChange={e=>setDraft(e.target.value)} disabled={isCancelled} />
-                  <Button onClick={()=>send.mutate({ id: activeId, content: draft })} disabled={isCancelled || !draft || !activeId}>Send</Button>
+                <div className="flex gap-2 mt-3 items-end">
+                  <div className="relative flex-1">
+                    <Textarea
+                      placeholder={isCancelled ? "Conversation closed" : "Type a message"}
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      maxLength={300}
+                      disabled={isCancelled}
+                      className={`min-h-[40px] max-h-[120px] pr-14 ${draft.length >= 300 ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          if (draft.trim()) send.mutate({ id: activeId, content: draft })
+                        }
+                      }}
+                    />
+                    <div className={`absolute bottom-2 right-2 text-[10px] px-1 rounded pointer-events-none ${draft.length >= 300 ? "text-red-500 font-bold bg-red-50" : "text-muted-foreground bg-background/80"}`}>
+                      {draft.length}/300
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => send.mutate({ id: activeId, content: draft })}
+                    disabled={isCancelled || !draft.trim() || !activeId}
+                  >
+                    Send
+                  </Button>
                 </div>
+                {draft.length >= 300 && (
+                  <div className="text-[11px] text-red-500 font-medium mt-1 ml-1">
+                    Maximum character limit reached (300 characters)
+                  </div>
+                )}
                 {(!isCancelled && canReview) && (
                   <div className="mt-4 p-4 rounded border bg-muted/30">
                     <div className="mb-2 font-semibold">Rate your stay</div>
