@@ -27,7 +27,7 @@ const OwnerCoupons: React.FC = () => {
 
   const [form, setForm] = React.useState({ code:"", discount:"", startDate:"", endDate:"", usageLimit:"", enabled:true })
   const [hotelId, setHotelId] = React.useState<number>(0)
-  const [editing, setEditing] = React.useState<{ [id:number]: { discount?: number; usageLimit?: number; startDate?: string|null; endDate?: string|null } }>({})
+  const [editing, setEditing] = React.useState<{ [id:number]: { discount?: string; usageLimit?: string; startDate?: string|null; endDate?: string|null } }>({})
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -165,7 +165,19 @@ const OwnerCoupons: React.FC = () => {
                         <td className="p-3">{c.code}</td>
                         <td className="p-3">
                           {editing[c.id] ? (
-                            <Input type="number" min="0" value={editing[c.id]?.discount ?? c.discount} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), discount: Math.max(0, Number(e.target.value)) } })} />
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              value={editing[c.id]?.discount ?? String(c.discount)} 
+                              onChange={e=> {
+                                const val = e.target.value;
+                                if (val !== "" && (Number(val) < 1 || Number(val) > 100)) {
+                                  toast({ title: "Invalid discount", description: "Must be 1-100", variant: "destructive" });
+                                  return;
+                                }
+                                setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), discount: val } })
+                              }} 
+                            />
                           ) : (
                             <>{c.discount}%</>
                           )}
@@ -186,7 +198,23 @@ const OwnerCoupons: React.FC = () => {
                         </td>
                         <td className="p-3">
                           {editing[c.id] ? (
-                            <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{Math.min(c.used, c.usageLimit)}</span>/<Input type="number" min="0" value={editing[c.id]?.usageLimit ?? c.usageLimit} onChange={e=> setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), usageLimit: Math.max(0, Number(e.target.value)) } })} /></div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{Math.min(c.used, c.usageLimit)}</span>/
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                value={editing[c.id]?.usageLimit ?? String(c.usageLimit)} 
+                                onChange={e=> {
+                                  const val = e.target.value;
+                                  if (val !== "" && !/^\d*$/.test(val)) {
+                                    toast({ title: "Invalid usage limit", description: "Must be numeric", variant: "destructive" });
+                                    return;
+                                  }
+                                  if (val.length > 4) return;
+                                  setEditing({ ...editing, [c.id]: { ...(editing[c.id]||{}), usageLimit: val } })
+                                }} 
+                              />
+                            </div>
                           ) : (
                             <>{Math.min(c.used, c.usageLimit)}/{c.usageLimit}</>
                           )}
@@ -196,11 +224,27 @@ const OwnerCoupons: React.FC = () => {
                           <Button size="sm" onClick={() => setCouponStatus.mutate({ id: c.id, enabled: !c.enabled })}>{c.enabled ? 'Disable' : 'Enable'}</Button>
                           {editing[c.id] ? (
                             <>
-                              <Button size="sm" onClick={()=>{ const payload = { id: c.id, discount: editing[c.id]?.discount ?? c.discount, usageLimit: editing[c.id]?.usageLimit ?? c.usageLimit, startDate: (editing[c.id]?.startDate ?? c.startDate ?? null), endDate: (editing[c.id]?.endDate ?? c.endDate ?? null) }; updateCoupon.mutate(payload); setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next }) }}>Save</Button>
+                              <Button size="sm" onClick={()=>{ 
+                                const data = editing[c.id];
+                                const discountStr = data?.discount ?? String(c.discount);
+                                const usageLimitStr = data?.usageLimit ?? String(c.usageLimit);
+                                const startDate = data?.startDate ?? c.startDate ?? null;
+                                const endDate = data?.endDate ?? c.endDate ?? c.expiry ?? null;
+
+                                if (!discountStr) { toast({ title: "Please enter discount", variant: "destructive" }); return; }
+                                if (!startDate) { toast({ title: "Please enter start date", variant: "destructive" }); return; }
+                                if (!endDate) { toast({ title: "Please enter end date", variant: "destructive" }); return; }
+                                if (startDate >= endDate) { toast({ title: "Invalid dates", description: "Start date must be earlier than end date", variant: "destructive" }); return; }
+                                if (!usageLimitStr) { toast({ title: "Please enter usage limit", variant: "destructive" }); return; }
+
+                                const payload = { id: c.id, discount: Number(discountStr), usageLimit: Number(usageLimitStr), startDate, endDate }; 
+                                updateCoupon.mutate(payload); 
+                                setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next }) 
+                              }}>Save</Button>
                               <Button size="sm" variant="outline" onClick={()=> setEditing(prev => { const next = { ...prev }; delete next[c.id]; return next })}>Cancel</Button>
                             </>
                           ) : (
-                            <Button size="sm" variant="outline" onClick={()=> setEditing({ ...editing, [c.id]: { discount: c.discount, usageLimit: c.usageLimit, startDate: c.startDate ?? null, endDate: c.endDate ?? null } })}>Edit</Button>
+                            <Button size="sm" variant="outline" onClick={()=> setEditing({ ...editing, [c.id]: { discount: String(c.discount), usageLimit: String(c.usageLimit), startDate: c.startDate ?? null, endDate: c.endDate ?? null } })}>Edit</Button>
                           )}
                           <Button size="sm" variant="destructive" onClick={() => deleteCoupon.mutate(c.id)}>Delete</Button>
                         </td>
