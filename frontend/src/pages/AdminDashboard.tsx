@@ -116,7 +116,7 @@ const AdminDashboard = () => {
   const [missionEditing, setMissionEditing] = React.useState(false)
   
   const [ownerForm, setOwnerForm] = React.useState({ email:"", password:"", firstName:"", lastName:"", phone:"" })
-  const [filterRole, setFilterRole] = React.useState<'user'|'owner'|'admin'>('user')
+  const [filterRole, setFilterRole] = React.useState<'user'|'owner'>('user')
   const [contactName, setContactName] = React.useState("")
   const [contactPhone1, setContactPhone1] = React.useState("")
   const [contactPhone2, setContactPhone2] = React.useState("")
@@ -317,10 +317,9 @@ const AdminDashboard = () => {
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-sm text-muted-foreground">Role</span>
-              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'user'|'owner'|'admin')}>
+              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'user'|'owner')}>
                 <option value="user">Users</option>
                 <option value="owner">Hotel Owners</option>
-                <option value="admin">Admins</option>
               </select>
               <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={usersPeriod} onChange={e=>setUsersPeriod(e.target.value as typeof usersPeriod)}>
                 <option value="all">All</option>
