@@ -82,8 +82,8 @@ const OwnerCoupons: React.FC = () => {
                               toast({ title: "Maximum limit exceeded", variant: "destructive" })
                               return
                             }
-                            if (!/^[a-zA-Z0-9\s]*$/.test(val)) {
-                               toast({ title: "Invalid coupon code", description: "Only alphanumeric allowed", variant: "destructive" })
+                            if (!/^[a-zA-Z0-9]*$/.test(val)) {
+                               toast({ title: "Invalid coupon code", description: "Only alphanumeric allowed (no spaces)", variant: "destructive" })
                                return
                             }
                             setForm({ ...form, code: val })
