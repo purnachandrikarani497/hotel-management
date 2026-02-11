@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-resort.jpg";
 // Guests & Rooms selection removed per request
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 const Hero = () => {
   const [checkIn, setCheckIn] = useState<Date>();
@@ -16,6 +17,66 @@ const Hero = () => {
   const [query, setQuery] = useState("");
   // Removed guests/rooms state
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Check for max limit
+    if (value.length > 30) {
+      toast({
+        variant: "destructive",
+        title: "Limit Reached",
+        description: "Max limit is 30 characters",
+      });
+      return;
+    }
+
+    // Check for alphanumeric and spaces only
+    const regex = /^[a-zA-Z0-9 ]*$/;
+    if (!regex.test(value)) {
+      return; // Simply block invalid characters
+    }
+
+    setQuery(value);
+  };
+
+  const handleSearch = () => {
+    // Validation for empty fields
+    if (!query || !query.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Where field cannot be empty or just spaces",
+      });
+      return;
+    }
+
+    if (!checkIn) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select a Check-in date",
+      });
+      return;
+    }
+
+    if (!checkOut) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select a Check-out date",
+      });
+      return;
+    }
+
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    if (checkIn && !isNaN(checkIn.getTime())) params.set('checkIn', checkIn.toISOString().slice(0,10))
+    if (checkOut && !isNaN(checkOut.getTime())) params.set('checkOut', checkOut.toISOString().slice(0,10))
+    // No guests/rooms params
+    navigate(`/hotels?${params.toString()}`)
+  };
 
   return (
     <section className="relative py-14 flex items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 via-purple-700 to-pink-600">
@@ -40,7 +101,7 @@ const Hero = () => {
                   placeholder="Search by hotel or place"
                    className="pl-10 h-11 border focus-visible:ring-primary"
                   value={query}
-                  onChange={(e)=>setQuery(e.target.value)}
+                  onChange={handleQueryChange}
                 />
               </div>
             </div>
@@ -124,14 +185,7 @@ const Hero = () => {
             {/* Guests & Rooms selector intentionally removed */}
           </div>
           
-          <Button type="button" className="w-full md:w-auto mt-5 h-11 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" onClick={()=>{
-            const params = new URLSearchParams()
-            if (query) params.set('q', query)
-            if (checkIn && !isNaN(checkIn.getTime())) params.set('checkIn', checkIn.toISOString().slice(0,10))
-            if (checkOut && !isNaN(checkOut.getTime())) params.set('checkOut', checkOut.toISOString().slice(0,10))
-            // No guests/rooms params
-            navigate(`/hotels?${params.toString()}`)
-          }}>
+          <Button type="button" className="w-full md:w-auto mt-5 h-11 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" onClick={handleSearch}>
             <Search className="mr-2 h-5 w-5" />
             Search Hotels
           </Button>
