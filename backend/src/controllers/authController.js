@@ -35,7 +35,7 @@ async function signin(req, res) {
         return res.status(410).json({ error: 'Account deleted' })
       }
     }
-    if (user.blocked) return res.status(403).json({ error: 'User is blocked' })
+    if (user.blocked) return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.' })
     if (user.password !== password) return res.status(401).json({ error: 'Invalid credentials' })
     res.json({ token: 'mock-token', user: { id: user.id, email: user.email, role: user.role, isApproved: user.isApproved !== false, blocked: !!user.blocked } })
   } catch (e) {

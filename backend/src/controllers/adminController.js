@@ -56,6 +56,9 @@ async function createOwner(req, res) {
   await connect(); await ensureSeed();
   const { email, password, firstName, lastName, phone } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Missing fields' })
+  if (email.length > 50) return res.status(400).json({ error: 'Email max 50 characters' })
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email format' })
+  
   const existing = await User.findOne({ email })
   if (existing) {
     if (existing.role === 'admin') return res.status(409).json({ error: 'Cannot convert admin to owner' })
@@ -281,6 +284,12 @@ async function settingsGet(req, res) {
 async function settingsUpdate(req, res) {
   await connect(); await ensureSeed();
   const { taxRate, commissionRate, ourStory, ourMission, contactName, contactEmail, contactPhone1, contactPhone2 } = req.body || {}
+  
+  if (contactEmail && typeof contactEmail === 'string') {
+    if (contactEmail.length > 50) return res.status(400).json({ error: 'Contact email max 50 characters' })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return res.status(400).json({ error: 'Invalid contact email format' })
+  }
+
   const s = await Settings.findOne()
   if (!s) {
     await Settings.create({

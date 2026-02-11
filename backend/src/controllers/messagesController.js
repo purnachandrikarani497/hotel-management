@@ -1,7 +1,7 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
-const { MessageThread, Message } = require('../models')
+const { MessageThread, Message, User } = require('../models')
 
 async function threads(req, res) {
   await connect(); await ensureSeed();
@@ -62,6 +62,16 @@ async function unreadCount(req, res) {
   await connect(); await ensureSeed();
   const userId = Number(req.query.userId)
   const ownerId = Number(req.query.ownerId)
+
+  // Blocked user check for immediate logout
+  const checkId = userId || ownerId;
+  if (checkId) {
+    const user = await User.findOne({ id: checkId }).lean();
+    if (user && user.blocked) {
+      return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+    }
+  }
+
   const filter = {}
   if (userId) filter.userId = userId
   if (ownerId) filter.ownerId = ownerId

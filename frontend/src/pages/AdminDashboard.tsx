@@ -141,21 +141,38 @@ const AdminDashboard = () => {
     }
   }, [settings.data])
 
-  const periodStart = (p: 'all'|'yearly'|'monthly'|'weekly'|'daily') => {
-    const now = new Date()
-    if (p==='daily') return new Date(now.getTime() - 24*60*60*1000)
-    if (p==='weekly') return new Date(now.getTime() - 7*24*60*60*1000)
-    if (p==='monthly') return new Date(now.getTime() - 30*24*60*60*1000)
-    if (p==='yearly') return new Date(now.getTime() - 365*24*60*60*1000)
-    return null
-  }
-  const inPeriod = (p: 'all'|'yearly'|'monthly'|'weekly'|'daily', dt?: string) => {
-    const start = periodStart(p)
-    if (!start) return true
-    if (!dt) return false
-    const d = new Date(dt)
-    return d >= start
-  }
+  const periodStart = (p: 'all' | 'yearly' | 'monthly' | 'weekly' | 'daily') => {
+    const now = new Date();
+    // Use start of day for more intuitive filtering (e.g. Daily = Today)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    if (p === 'daily') return startOfToday;
+    if (p === 'weekly') {
+      const d = new Date(startOfToday);
+      d.setDate(d.getDate() - 7);
+      return d;
+    }
+    if (p === 'monthly') {
+      const d = new Date(startOfToday);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    }
+    if (p === 'yearly') {
+      const d = new Date(startOfToday);
+      d.setFullYear(d.getFullYear() - 1);
+      return d;
+    }
+    return null;
+  };
+
+  const inPeriod = (p: 'all' | 'yearly' | 'monthly' | 'weekly' | 'daily', dt?: string | Date) => {
+    if (p === 'all') return true;
+    if (!dt) return false;
+    const start = periodStart(p);
+    if (!start) return true;
+    const d = new Date(dt);
+    return d >= start;
+  };
   const sortRecent = <T extends { createdAt?: string; id?: number }>(arr: T[]): T[] => {
     return [...arr].sort((a, b) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
@@ -215,8 +232,12 @@ const AdminDashboard = () => {
                 value={ownerForm.email} 
                 onChange={e => {
                   const val = e.target.value;
-                  if (val.length > 20) {
-                    toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" });
+                  if (val.length > 50) {
+                    toast({ title: "Maximum limit exceeded", description: "Email max 50 characters", variant: "destructive" });
+                    return;
+                  }
+                  if (val.length > 0 && !/^[a-zA-Z0-9@._-]*$/.test(val)) {
+                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, -", variant: "destructive" });
                     return;
                   }
                   setOwnerForm({ ...ownerForm, email: val })
@@ -295,6 +316,7 @@ const AdminDashboard = () => {
 
                 // Email
                 if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return; }
+                if (email.length > 50) { toast({ title: "Email too long", description: "Max 50 characters", variant: "destructive" }); return; }
                 if (!email.includes('@')) { toast({ title: "missing @", description: "Email must contain '@'", variant: "destructive" }); return; }
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "invaid email", variant: "destructive" }); return; }
 
@@ -626,7 +648,15 @@ const AdminDashboard = () => {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Input placeholder="Full Name" value={contactName} onChange={e=>{ const v=e.target.value; if(v.length>20){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(!/^[a-zA-Z\s]*$/.test(v)){toast({title:"Invalid full name",variant:"destructive"});return} setContactName(v) }} disabled={!contactEditing} />
-                <Input placeholder="Email" value={contactEmail} onChange={e=>{ const v=e.target.value; if(v.length>20){toast({title:"Maximum limit exceeded",variant:"destructive"});return} setContactEmail(v) }} disabled={!contactEditing} />
+                <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
+                  const v=e.target.value; 
+                  if(v.length>50){toast({title:"Maximum limit exceeded",description:"Email max 50 characters",variant:"destructive"});return} 
+                  if (v.length > 0 && !/^[a-zA-Z0-9@._-]*$/.test(v)) {
+                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, -", variant: "destructive" });
+                    return;
+                  }
+                  setContactEmail(v) 
+                }} disabled={!contactEditing} />
                 <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone1(v) }} disabled={!contactEditing} />
                 <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone2(v) }} disabled={!contactEditing} />
               </div>
@@ -636,6 +666,7 @@ const AdminDashboard = () => {
                   if (!contactEditing) return; 
                   if (!contactName?.trim()) { toast({ title: "Please enter the full name", variant: "destructive" }); return }
                   if (!contactEmail?.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return }
+                  if (contactEmail.length > 50) { toast({ title: "Email too long", description: "Max 50 characters", variant: "destructive" }); return }
                   if (!contactEmail.includes('@')) { toast({ title: "Missing @", variant: "destructive" }); return }
                   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { toast({ title: "Invalid email", variant: "destructive" }); return }
                   if (!contactPhone1?.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return }

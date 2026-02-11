@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "@/lib/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 type SignInResponse = {
@@ -27,6 +27,20 @@ const SignIn = () => {
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
   const { toast } = useToast()
+  const location = useLocation()
+  const query = new URLSearchParams(location.search)
+  const errorParam = query.get('error')
+
+  useEffect(() => {
+    if (errorParam === 'blocked') {
+      toast({ 
+        title: "Account Blocked", 
+        description: "Your account has been blocked. Please contact admin.", 
+        variant: "destructive" 
+      })
+    }
+  }, [errorParam, toast])
+
   const [show, setShow] = useState(false)
   const mutation = useMutation({ mutationFn: () => apiPost<SignInResponse, { email: string; password: string }>("/api/auth/signin", { email, password }) ,
     onSuccess: (data) => {
@@ -58,7 +72,7 @@ const SignIn = () => {
       if (lower.includes('account deleted') || lower.includes('deleted')) {
         toast({ title: "Sign in failed", description: "Your account has been deleted", variant: "destructive" })
       } else if (lower.includes('blocked')) {
-        toast({ title: "Sign in failed", description: "Your account is blocked", variant: "destructive" })
+        toast({ title: "Sign in failed", description: "Your account has been blocked. Please contact admin.", variant: "destructive" })
       } else if (lower.includes('email not registered') || lower.includes('not registered')) {
         toast({ title: "Sign in failed", description: "Account not registered. Please sign up and then sign in", variant: "destructive" })
       } else if (lower.includes('invalid credentials') || lower.includes('invalid')) {
@@ -122,7 +136,7 @@ const SignIn = () => {
               </div>
 
               <Button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white" disabled={mutation.isPending}>{mutation.isPending ? "Signing in..." : "Sign In"}</Button>
-              {mutation.isError && (()=>{ const m = mutation.error instanceof Error ? String(mutation.error.message||'') : ''; const lower = m.toLowerCase(); const txt = lower.includes('deleted') ? 'Sign in failed: your account has been deleted' : (lower.includes('blocked') ? 'Sign in failed: your account is blocked' : (lower.includes('email not registered') || lower.includes('not registered') ? 'Sign in failed: account not registered — please sign up and then sign in' : (lower.includes('invalid credentials') || lower.includes('invalid') ? 'Sign in failed: invalid credentials' : 'Sign in failed'))); return (<div className="text-red-600 text-sm">{txt}</div>) })()}
+              {mutation.isError && (()=>{ const m = mutation.error instanceof Error ? String(mutation.error.message||'') : ''; const lower = m.toLowerCase(); const txt = lower.includes('deleted') ? 'Sign in failed: your account has been deleted' : (lower.includes('blocked') ? 'Your account has been blocked. Please contact admin.' : (lower.includes('email not registered') || lower.includes('not registered') ? 'Sign in failed: account not registered — please sign up and then sign in' : (lower.includes('invalid credentials') || lower.includes('invalid') ? 'Sign in failed: invalid credentials' : 'Sign in failed'))); return (<div className="text-red-600 text-sm">{txt}</div>) })()}
               {mutation.isSuccess && <div className="text-green-600 text-sm">Signed in</div>}
 
               </form>

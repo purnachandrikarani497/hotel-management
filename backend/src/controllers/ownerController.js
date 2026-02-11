@@ -58,6 +58,15 @@ async function saveImagesFromDataUrls(prefix, entityId, list) {
 async function stats(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
+
+  // Check if owner is blocked
+  if (ownerId) {
+    const owner = await User.findOne({ id: ownerId }).lean();
+    if (owner && owner.blocked) {
+      return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+    }
+  }
+
   const hotels = await Hotel.find({ ownerId }).lean();
   const hotelIds = hotels.map(h => Number(h.id)).filter(Boolean);
   const ownerBookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean();
@@ -87,6 +96,15 @@ async function stats(req, res) {
 async function hotels(req, res) {
   await connect(); await ensureSeed();
   const ownerId = Number(req.query.ownerId);
+
+  // Check if owner is blocked
+  if (ownerId) {
+    const owner = await User.findOne({ id: ownerId }).lean();
+    if (owner && owner.blocked) {
+      return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+    }
+  }
+
   const hotels = await Hotel.find({ ownerId }).lean();
   res.json({ hotels });
 }
@@ -131,6 +149,7 @@ async function updateAmenities(req, res) {
   const { amenities } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
   h.amenities = Array.isArray(amenities) ? amenities : [];
   await h.save();
   res.json({ status: 'updated' });
@@ -142,6 +161,7 @@ async function updateDescription(req, res) {
   const { description } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
   h.description = String(description || '');
   await h.save();
   res.json({ status: 'updated' });
@@ -153,6 +173,7 @@ async function updateImages(req, res) {
   const { images } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
   const savedUrls = await saveImagesFromDataUrls('hotel', id, Array.isArray(images) ? images : []);
   h.images = savedUrls.length ? savedUrls : (Array.isArray(images) ? images : []);
   if (h.images.length > 0) h.image = h.images[0];
@@ -166,6 +187,7 @@ async function updateDocs(req, res) {
   const { docs } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
   h.docs = Array.isArray(docs) ? docs : [];
   await h.save();
   res.json({ status: 'updated' });
@@ -177,6 +199,7 @@ async function updateInfo(req, res) {
   const { name, location, price, description, status, featured, contactEmail, contactPhone1, contactPhone2, ownerName } = req.body || {};
   const h = await Hotel.findOne({ id });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
   if (name !== undefined) h.name = String(name);
   if (location !== undefined) h.location = String(location);
   if (price !== undefined) h.price = Number(price) || 0;
@@ -270,6 +293,13 @@ async function updateRoom(req, res) {
   if (!r) {
     return res.json({ status: 'not_found' });
   }
+
+  // Check if hotel is blocked
+  const h = await Hotel.findOne({ id: r.hotelId }).lean();
+  if (h && h.status === 'suspended') {
+    return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+  }
+
   const $set = {};
   if (price !== undefined) $set.price = Number(price);
   if (availability !== undefined) $set.availability = !!availability;
@@ -293,6 +323,13 @@ async function blockRoom(req, res) {
   if (!r) {
     return res.json({ status: 'not_found' });
   }
+
+  // Check if hotel is blocked
+  const h = await Hotel.findOne({ id: r.hotelId }).lean();
+  if (h && h.status === 'suspended') {
+    return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+  }
+
   await Room.updateOne({ id }, { $set: { blocked: !!blocked } });
   res.json({ status: 'updated' });
 }
@@ -304,6 +341,13 @@ async function deleteRoom(req, res) {
   if (!r) {
     return res.json({ status: 'not_found' });
   }
+
+  // Check if hotel is blocked
+  const h = await Hotel.findOne({ id: r.hotelId }).lean();
+  if (h && h.status === 'suspended') {
+    return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+  }
+
   await Room.deleteOne({ id });
   res.json({ status: 'deleted' });
 }
@@ -537,6 +581,10 @@ async function pricing(req, res) {
   const { normalPrice, weekendPrice, seasonal, specials, extraHourRate, cancellationHourRate } = req.body || {};
   const h = await Hotel.findOne({ id: hotelId });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+  
+  // Check if hotel is blocked
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+
   if (!h.pricing) {
     h.pricing = {
       normalPrice: Number(h.price) || 0,
@@ -573,6 +621,10 @@ async function deletePricing(req, res) {
   const hotelId = Number(req.params.hotelId);
   const h = await Hotel.findOne({ id: hotelId });
   if (!h) return res.status(404).json({ error: 'Hotel not found' });
+
+  // Check if hotel is blocked
+  if (h.status === 'suspended') return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+
   h.pricing = {
     normalPrice: Number(h.price) || 0,
     weekendPrice: Number(h.price) || 0,
@@ -606,6 +658,13 @@ async function respondReview(req, res) {
   const { response } = req.body || {};
   const r = await Review.findOne({ id });
   if (!r) return res.status(404).json({ error: 'Review not found' });
+
+  // Check if hotel is blocked
+  const h = await Hotel.findOne({ id: r.hotelId }).lean();
+  if (h && h.status === 'suspended') {
+    return res.status(403).json({ error: 'This hotel is blocked. Please contact admin.' });
+  }
+
   r.response = String(response || '');
   await r.save();
   res.json({ status: 'updated' });

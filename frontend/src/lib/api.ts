@@ -14,10 +14,20 @@ export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) {
     let msg = ''
+    let isBlocked = false;
     try {
-      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string } | null
+      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string; blocked?: boolean } | null
       msg = (j?.error || j?.message || res.statusText || '').trim()
+      isBlocked = !!j?.blocked || msg.toLowerCase().includes('blocked');
     } catch (_) { /* ignore */ }
+    
+    if (res.status === 403 && isBlocked) {
+      try {
+        localStorage.removeItem("auth");
+        window.location.href = "/signin?error=blocked";
+      } catch { /* ignore */ }
+    }
+    
     throw new Error(msg || `GET ${path} ${res.status}`)
   }
   return res.json() as Promise<T>;
@@ -32,10 +42,20 @@ export async function apiPost<T, B extends object>(path: string, body: B): Promi
   });
   if (!res.ok) {
     let msg = ''
+    let isBlocked = false;
     try {
-      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string } | null
+      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string; blocked?: boolean } | null
       msg = (j?.error || j?.message || res.statusText || '').trim()
+      isBlocked = !!j?.blocked || msg.toLowerCase().includes('blocked');
     } catch (_) { /* ignore */ }
+
+    if (res.status === 403 && isBlocked) {
+      try {
+        localStorage.removeItem("auth");
+        window.location.href = "/signin?error=blocked";
+      } catch { /* ignore */ }
+    }
+
     throw new Error(msg || `POST ${path} ${res.status}`)
   }
   return res.json() as Promise<T>;
@@ -46,10 +66,20 @@ export async function apiDelete<T = { status: string }>(path: string): Promise<T
   const res = await fetch(url, { method: 'DELETE' });
   if (!res.ok) {
     let msg = ''
+    let isBlocked = false;
     try {
-      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string } | null
+      const j = await res.json().catch(() => null) as unknown as { error?: string; message?: string; blocked?: boolean } | null
       msg = (j?.error || j?.message || res.statusText || '').trim()
+      isBlocked = !!j?.blocked || msg.toLowerCase().includes('blocked');
     } catch (_) { /* ignore */ }
+
+    if (res.status === 403 && isBlocked) {
+      try {
+        localStorage.removeItem("auth");
+        window.location.href = "/signin?error=blocked";
+      } catch { /* ignore */ }
+    }
+
     throw new Error(msg || `DELETE ${path} ${res.status}`)
   }
   return res.json() as Promise<T>;

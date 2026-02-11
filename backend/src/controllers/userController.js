@@ -21,6 +21,15 @@ function dataUrlToBuffer(dataUrl) { if (typeof dataUrl !== 'string') return null
 async function bookings(req, res) {
   await connect(); await ensureSeed();
   const userId = Number(req.query.userId)
+
+  // Blocked user check
+  if (userId) {
+    const user = await User.findOne({ id: userId }).lean();
+    if (user && user.blocked) {
+      return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+    }
+  }
+
   const items = await Booking.find({ userId }).lean()
   
   // Populate roomType
@@ -180,10 +189,15 @@ async function details(req, res) {
   await connect(); await ensureSeed();
   const userId = Number(req.query.userId)
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
-  // const hasBooking = await Booking.findOne({ userId }).lean()
-  // if (!hasBooking) return res.status(403).json({ error: 'No booking yet' })
+
   const u = await User.findOne({ id: userId }).lean()
   if (!u) return res.status(404).json({ error: 'User not found' })
+  
+  // Blocked user check
+  if (u.blocked) {
+    return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+  }
+
   res.json({ user: u })
 }
 

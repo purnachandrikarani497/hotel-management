@@ -478,24 +478,33 @@ const OwnerDashboard = () => {
     }
   })
 
-  const inRange = React.useCallback((iso?: string, kind: string = "all") => {
-    if (!iso || kind === "all") return true
-    const d = new Date(iso)
-    if (!(d instanceof Date) || isNaN(d.getTime())) return false
-    const now = new Date()
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const inRange = React.useCallback((iso?: string | Date, kind: string = "all") => {
+    if (!iso || kind === "all") return true;
+    const d = new Date(iso);
+    if (!(d instanceof Date) || isNaN(d.getTime())) return false;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     if (kind === "daily") {
-      return d >= startOfDay && d < new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+      return d >= startOfToday;
     }
     if (kind === "weekly") {
-      return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const d2 = new Date(startOfToday);
+      d2.setDate(d2.getDate() - 7);
+      return d >= d2;
     }
     if (kind === "monthly") {
-      return d >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const d2 = new Date(startOfToday);
+      d2.setMonth(d2.getMonth() - 1);
+      return d >= d2;
     }
-    return true
-  }, [])
+    if (kind === "yearly") {
+      const d2 = new Date(startOfToday);
+      d2.setFullYear(d2.getFullYear() - 1);
+      return d >= d2;
+    }
+    return true;
+  }, []);
 
   const bookingsTimeFiltered = React.useMemo(
     () =>
@@ -2317,6 +2326,7 @@ const OwnerDashboard = () => {
                         { k: "daily", v: "Daily" },
                         { k: "weekly", v: "Weekly" },
                         { k: "monthly", v: "Monthly" },
+                        { k: "yearly", v: "Yearly" },
                       ]
                       return (
                         <select
@@ -2637,6 +2647,7 @@ const OwnerDashboard = () => {
                         { k: "daily", v: "Daily" },
                         { k: "weekly", v: "Weekly" },
                         { k: "monthly", v: "Monthly" },
+                        { k: "yearly", v: "Yearly" },
                       ]
                       return (
                         <select

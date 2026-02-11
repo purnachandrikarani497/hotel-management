@@ -20,6 +20,13 @@ async function list(req, res) {
     const { q, minPrice, maxPrice, minRating } = req.query;
     const filter = { ownerId: { $ne: null }, status: 'approved' };
 
+    // Find blocked owners and exclude their hotels
+    const blockedOwners = await User.find({ role: 'owner', blocked: true }).select('id').lean();
+    const blockedOwnerIds = blockedOwners.map(u => u.id);
+    if (blockedOwnerIds.length > 0) {
+      filter.ownerId = { $ne: null, $nin: blockedOwnerIds };
+    }
+
     if (q && typeof q === 'string') {
       const qstr = String(q).trim();
       if (qstr) {
