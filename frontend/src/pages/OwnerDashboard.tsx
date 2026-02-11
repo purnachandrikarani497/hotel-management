@@ -461,9 +461,7 @@ const OwnerDashboard = () => {
       if (s === "checkout") return "checked_out"
       return s
     }
-    if (statusFilter === "all") return bookingsOrdered.filter(
-      (b: Booking) => String(b.status).trim().toLowerCase() !== 'pending'
-    )
+    if (statusFilter === "all") return bookingsOrdered
     return bookingsOrdered.filter(
       (b: Booking) => String(b.status).trim().toLowerCase() === m(statusFilter),
     )
@@ -471,6 +469,14 @@ const OwnerDashboard = () => {
 
   // Time filters for bookings & guests
   const [dateFilterBookings, setDateFilterBookings] = React.useState<string>("all")
+  const [deletedBookings, setDeletedBookings] = React.useState<{ [id: number]: boolean }>(() => {
+    try {
+      const raw = localStorage.getItem("deletedOwnerBookings") || "{}"
+      return JSON.parse(raw)
+    } catch {
+      return {}
+    }
+  })
 
   const inRange = React.useCallback((iso?: string, kind: string = "all") => {
     if (!iso || kind === "all") return true
@@ -495,16 +501,8 @@ const OwnerDashboard = () => {
     () =>
       bookingsFiltered
         .filter((b) => inRange(b.checkIn || b.createdAt || "", dateFilterBookings))
-        .filter((b) => {
-          try {
-            const raw = localStorage.getItem("deletedOwnerBookings") || "{}"
-            const map = JSON.parse(raw) as { [id: number]: boolean }
-            return !map[b.id]
-          } catch {
-            return true
-          }
-        }),
-    [bookingsFiltered, dateFilterBookings, inRange],
+        .filter((b) => !deletedBookings[b.id]),
+    [bookingsFiltered, dateFilterBookings, inRange, deletedBookings],
   )
 
   const reviews = reviewsQ.data?.reviews || []
@@ -1219,7 +1217,10 @@ const OwnerDashboard = () => {
               <Card className="group shadow-2xl hover:shadow-purple-500/30 bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0 hover:scale-110 transition-all duration-700 ease-out backdrop-blur-sm">
                 <CardHeader className="pb-3 text-center"><CardTitle className="text-sm font-bold text-purple-700 uppercase tracking-wider">Total Bookings</CardTitle></CardHeader>
                 <CardContent className="pt-0 text-center">
-                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{stats.data?.totalBookings ?? 0}</div>
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg mb-2">{(() => {
+                    if (bookingsQ.isLoading) return stats.data?.totalBookings ?? 0
+                    return bookings.filter(b => !deletedBookings[b.id]).length
+                  })()}</div>
                   <div className="text-xs text-purple-600 opacity-70 uppercase tracking-wide">Reservations</div>
                 </CardContent>
               </Card>
@@ -2309,11 +2310,11 @@ const OwnerDashboard = () => {
                           toast({ title: "No data to delete", variant: "destructive" })
                           return
                         }
+                        const next = { ...deletedBookings }
+                        bookingsTimeFiltered.forEach((b) => { next[b.id] = true })
+                        setDeletedBookings(next)
                         try {
-                          const raw = localStorage.getItem("deletedOwnerBookings") || "{}"
-                          const map = JSON.parse(raw) as { [id: number]: boolean }
-                          bookingsTimeFiltered.forEach((b) => { map[b.id] = true })
-                          localStorage.setItem("deletedOwnerBookings", JSON.stringify(map))
+                          localStorage.setItem("deletedOwnerBookings", JSON.stringify(next))
                         } catch { void 0 }
                       }}
                     >
