@@ -1,7 +1,7 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
-const { Booking, Review, Wishlist, MessageThread, Message, Hotel, User } = require('../models')
+const { Booking, Review, Wishlist, MessageThread, Message, Hotel, User, Room } = require('../models')
 let mailer = null
 try { mailer = require('nodemailer') } catch { mailer = null }
 let cloudinary = null
@@ -22,7 +22,18 @@ async function bookings(req, res) {
   await connect(); await ensureSeed();
   const userId = Number(req.query.userId)
   const items = await Booking.find({ userId }).lean()
-  res.json({ bookings: items })
+  
+  // Populate roomType
+  const roomIds = items.map(b => b.roomId).filter(Boolean)
+  const rooms = await Room.find({ id: { $in: roomIds } }).lean()
+  const roomMap = new Map(rooms.map(r => [r.id, r]))
+  
+  const populatedItems = items.map(b => ({
+    ...b,
+    roomType: roomMap.get(b.roomId)?.type || ''
+  }))
+
+  res.json({ bookings: populatedItems })
 }
 
 async function cancelBooking(req, res) {

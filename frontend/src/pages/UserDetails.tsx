@@ -259,14 +259,14 @@ const UserDetails = () => {
                     htmlFor="id-doc-upload-edit" 
                     className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-10 px-4 py-2 w-full"
                   >
-                    {docPreview || form.idDocUrl ? "Change File" : "Choose File"}
+                    Choose File
                   </Label>
                   <Input 
                     id="id-doc-upload-edit"
                     type="file" 
                     accept="image/*" 
                     className="hidden"
-                    onChange={e=>{ const f=e.target.files?.[0]; if(!f) return; if(!f.type.startsWith('image/')){ toast({ title:'Invalid file type', variant:'destructive' }); return } const max=2*1024*1024; if(f.size>max){ toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return } const r=new FileReader(); r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ toast({ title:'Invalid file content', variant:'destructive' }); return } setDocPreview(s) }; r.readAsDataURL(f) }} 
+                    onChange={e=>{ const f=e.target.files?.[0]; if(!f) return; if(!f.type.startsWith('image/')){ toast({ title:'Invalid file type', variant:'destructive' }); return } const max=2*1024*1024; if(f.size>max){ toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return } const r=new FileReader(); r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ toast({ title:'Invalid file content', variant:'destructive' }); return } setDocPreview(s); toast({ title: 'Updated' }) }; r.readAsDataURL(f) }} 
                   />
                   <div className="mt-2">
                     {form.idDocUrl && !docPreview && <img src={resolve(form.idDocUrl)} alt="ID" className="h-24 border rounded" onError={(ev)=>{ ev.currentTarget.style.display='none' }} />}

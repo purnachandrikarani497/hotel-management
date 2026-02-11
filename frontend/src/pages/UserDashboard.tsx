@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiGet, apiPost } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-type Booking = { id:number; hotelId:number; roomId?:number; roomNumber?:string; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string; extraHours?: number; extraCharges?: number; cancellationFee?: number }
+type Booking = { id:number; hotelId:number; roomId?:number; roomNumber?:string; roomType?:string; checkIn:string; checkOut:string; guests:number; total:number; status:string; createdAt:string; extraHours?: number; extraCharges?: number; cancellationFee?: number }
 
 const UserDashboard = () => {
   const raw = typeof window !== "undefined" ? localStorage.getItem("auth") : null
@@ -307,7 +307,7 @@ const UserDashboard = () => {
           <CardContent>
             <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-x-auto backdrop-blur-sm">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3 whitespace-nowrap">S.No</th><th className="p-3 whitespace-nowrap">Booking</th><th className="p-3 whitespace-nowrap">Hotel</th><th className="p-3 whitespace-nowrap">Room</th><th className="p-3 whitespace-nowrap">Dates</th><th className="p-3 whitespace-nowrap">Guests</th><th className="p-3 whitespace-nowrap">Extra Time</th><th className="p-3 whitespace-nowrap">Extra Charges</th><th className="p-3 whitespace-nowrap">Cancellation Fee</th><th className="p-3 whitespace-nowrap">Total</th><th className="p-3 whitespace-nowrap">Status</th><th className="p-3 min-w-[300px] whitespace-nowrap">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3 whitespace-nowrap">S.No</th><th className="p-3 whitespace-nowrap">Booking</th><th className="p-3 whitespace-nowrap">Hotel</th><th className="p-3 whitespace-nowrap">Room Type</th><th className="p-3 whitespace-nowrap">Dates</th><th className="p-3 whitespace-nowrap">Guests</th><th className="p-3 whitespace-nowrap">Extra Time</th><th className="p-3 whitespace-nowrap">Extra Charges</th><th className="p-3 whitespace-nowrap">Cancellation Fee</th><th className="p-3 whitespace-nowrap">Total</th><th className="p-3 whitespace-nowrap">Status</th><th className="p-3 min-w-[140px] whitespace-nowrap">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
@@ -323,20 +323,23 @@ const UserDashboard = () => {
                       <tr key={b.id} className="border-t">
                         <td className="p-3">{idx + 1}</td>
                         <td className="p-3">{b.id}</td>
-                        <td className="p-3 whitespace-nowrap">
+                        <td className="p-3 min-w-[180px]">
                           <div className="flex items-center gap-3">
                             <img src={resolveImage(hotelInfo(b.hotelId)?.image)} alt={hotelInfo(b.hotelId)?.name||`Hotel ${b.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/160x120?text=Hotel' }} />
                             <div className="flex flex-col">
-                              <Link to={`/hotel/${b.hotelId}`} className="font-medium hover:underline">{hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`}</Link>
+                              <Link to={`/hotel/${b.hotelId}`} className="font-medium hover:underline line-clamp-2">{hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`}</Link>
                             </div>
                           </div>
                         </td>
-                        <td className="p-3">{b.roomNumber ? b.roomNumber : (b.roomId ? `#${b.roomId}` : '-')}</td>
+                        <td className="p-3">
+                          <div className="font-medium">{b.roomType || '-'}</div>
+                          <div className="text-xs text-muted-foreground">{b.roomNumber ? `No: ${b.roomNumber}` : (b.roomId ? `#${b.roomId}` : '')}</div>
+                        </td>
                         <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                         <td className="p-3">{b.guests}</td>
-                        <td className="p-3">{Number(b.extraHours||0) > 0 ? `${Number(b.extraHours||0)}h` : '-'}</td>
-                        <td className="p-3">{Number(b.extraCharges||0) > 0 ? `₹${Number(b.extraCharges||0)}` : '-'}</td>
-                        <td className="p-3">{String(b.status).toLowerCase()==='cancelled' && Number(b.cancellationFee||0) > 0 ? `₹${Number(b.cancellationFee||0)}` : '-'}</td>
+                        <td className="p-3">{Number(b.extraHours||0) > 0 ? `${Number(b.extraHours||0)}h` : '0h'}</td>
+                        <td className="p-3">{Number(b.extraCharges||0) > 0 ? `₹${Number(b.extraCharges||0)}` : '₹0'}</td>
+                        <td className="p-3">{Number(b.cancellationFee||0) > 0 ? `₹${Number(b.cancellationFee||0)}` : '₹0'}</td>
                         <td className="p-3">₹{b.total}</td>
                         <td className="p-3"><span className={`text-xs font-semibold ${statusTextClass(String(b.status||''))}`}>{b.status}</span></td>
                         <td className="p-3">
