@@ -671,7 +671,7 @@ const OwnerDashboard = () => {
       if (res?.id) {
         addId("rooms", res.id)
         setLastRoomId(res.id)
-        toast({ title: "Room added", description: `#${res.id}` })
+        toast({ title: "Room added successfully", description: `#${res.id}` })
         qc.setQueryData(["owner", "rooms", ownerId], (prev: { rooms: Room[] } | undefined) => {
           const base = prev?.rooms || []
           const next: Room = {
@@ -717,7 +717,7 @@ const OwnerDashboard = () => {
       roomNumber?: string
     }) => apiPost(`/api/owner/rooms/${p.id}`, p),
     onSuccess: (_res, vars) => {
-      toast({ title: "Room updated", description: `#${vars.id}` })
+      toast({ title: "Room updated successfully", description: `#${vars.id}` })
       qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
     },
   })
@@ -1480,7 +1480,11 @@ const OwnerDashboard = () => {
                                   className="w-full"
                                   placeholder="Hotel Name"
                                   value={nameEdit[h.id] ?? h.name}
-                                  onChange={(e)=> setNameEdit({ ...nameEdit, [h.id]: e.target.value })}
+                                  onChange={(e)=> {
+                                    const val = e.target.value;
+                                    if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                    setNameEdit({ ...nameEdit, [h.id]: val })
+                                  }}
                                 />
                               ) : (
                                 <div>{h.name}</div>
@@ -1492,7 +1496,11 @@ const OwnerDashboard = () => {
                                   className="w-full"
                                   placeholder="Location"
                                   value={locationEdit[h.id] ?? h.location}
-                                  onChange={(e)=> setLocationEdit({ ...locationEdit, [h.id]: e.target.value })}
+                                  onChange={(e)=> {
+                                    const val = e.target.value;
+                                    if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                    setLocationEdit({ ...locationEdit, [h.id]: val })
+                                  }}
                                 />
                               ) : (
                                 <div>{h.location}</div>
@@ -1505,7 +1513,12 @@ const OwnerDashboard = () => {
                                   type="number"
                                   placeholder="₹"
                                   value={priceEdit[h.id] ?? String(h.price)}
-                                  onChange={(e)=> setPriceEdit({ ...priceEdit, [h.id]: e.target.value })}
+                                  onChange={(e)=> {
+                                    const val = e.target.value;
+                                    if (val.length > 6) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                    if (Number(val) < 0) { toast({ title: "Price cannot be negative", variant: "destructive" }); return; }
+                                    setPriceEdit({ ...priceEdit, [h.id]: val })
+                                  }}
                                 />
                               ) : (
                                 <div>₹{h.price}</div>
@@ -1522,7 +1535,11 @@ const OwnerDashboard = () => {
                                   className="w-full"
                                   placeholder="amenities"
                                   value={amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')}
-                                  onChange={(e)=> setAmenitiesEdit({ ...amenitiesEdit, [h.id]: e.target.value })}
+                                  onChange={(e)=> {
+                                    const val = e.target.value;
+                                    if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                    setAmenitiesEdit({ ...amenitiesEdit, [h.id]: val })
+                                  }}
                                 />
                               )}
                             </td>
@@ -1532,7 +1549,11 @@ const OwnerDashboard = () => {
                                   className="w-full"
                                   placeholder="Description"
                                   value={descriptionEdit[h.id] ?? (h.description || '')}
-                                  onChange={(e)=> setDescriptionEdit({ ...descriptionEdit, [h.id]: e.target.value })}
+                                  onChange={(e)=> {
+                                    const val = e.target.value;
+                                    if (val.length > 150) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                    setDescriptionEdit({ ...descriptionEdit, [h.id]: val })
+                                  }}
                                 />
                               ) : (
                                 <div>{h.description || '-'}</div>
@@ -1561,15 +1582,53 @@ const OwnerDashboard = () => {
                               <div className="flex gap-2 flex-wrap">
                                 <Button size="sm" variant="outline" onClick={()=>{ const next = !editing[h.id]; setEditing({ ...editing, [h.id]: next }) }}>{editing[h.id] ? 'Stop Edit' : 'Edit'}</Button>
                                 <Button size="sm" onClick={async ()=>{
+                                  const name = String(nameEdit[h.id] ?? h.name);
+                                  const location = String(locationEdit[h.id] ?? h.location);
+                                  const priceVal = priceEdit[h.id] ?? String(h.price);
+                                  const desc = String(descriptionEdit[h.id] ?? (h.description || ''));
+                                  const amenStr = String(amenitiesEdit[h.id] ?? (h.amenities || []).join(', '));
+
+                                  // Validations
+                                  // Hotel Name
+                                  if (!name.trim()) { toast({ title: "please enter the hotelname", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s]+$/.test(name)) { toast({ title: "invaid hotel name", variant: "destructive" }); return; }
+                                  if (name.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+
+                                  // Location
+                                  if (!location.trim()) { toast({ title: "please enter the Location", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s]+$/.test(location)) { toast({ title: "invaid Location", variant: "destructive" }); return; }
+                                  if (location.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+
+                                  // Price
+                                  if (!String(priceVal).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; }
+                                  const priceNum = Number(priceVal);
+                                  if (isNaN(priceNum) || priceNum < 0) { toast({ title: "Price cannot be negative", variant: "destructive" }); return; }
+                                  if (String(priceVal).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+
+                                  // Amenities
+                                  if (!amenStr.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s,]+$/.test(amenStr)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; }
+                                  if (amenStr.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+
+                                  // Description
+                                  if (!desc.trim()) { toast({ title: "please enter the Description", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s]+$/.test(desc)) { toast({ title: "invaid Description", variant: "destructive" }); return; }
+                                  if (desc.length > 150) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+
+                                  // Image
+                                  if ((h.images || []).length === 0) {
+                                     toast({ title: "image uploaded it was must fix it once", variant: "destructive" });
+                                     return;
+                                  }
+
                                   const info = {
                                     id: h.id,
-                                    name: String(nameEdit[h.id] ?? h.name),
-                                    location: String(locationEdit[h.id] ?? h.location),
-                                    price: Number(priceEdit[h.id] ?? h.price) || 0,
-                                    description: String(descriptionEdit[h.id] ?? (h.description || '')),
+                                    name,
+                                    location,
+                                    price: priceNum,
+                                    description: desc,
                                   }
                                   updateInfo.mutate(info)
-                                  const amenStr = String(amenitiesEdit[h.id] ?? (h.amenities || []).join(', '))
                                   const arr = amenStr.split(',').map(s=>s.trim()).filter(Boolean)
                                   updateAmenities.mutate({ id: h.id, amenities: arr })
                                   setEditing({ ...editing, [h.id]: false })
@@ -1776,7 +1835,14 @@ const OwnerDashboard = () => {
                       type="number"
                       min="1"
                       value={roomForm.count}
-                      onChange={(e) => setRoomForm({ ...roomForm, count: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === "0" || val === "00") {
+                          toast({ title: "No. of rooms must be more than 0", variant: "destructive" })
+                          return
+                        }
+                        setRoomForm({ ...roomForm, count: val })
+                      }}
                     />
                   </div>
                   <div className="col-span-2">
@@ -1874,11 +1940,16 @@ const OwnerDashboard = () => {
                         file:bg-violet-50 file:text-violet-700
                         hover:file:bg-violet-100
                       "
-                      onChange={(e) =>
-                        setRoomPhotoFiles(
-                          Array.from(e.target.files || []).slice(0, 10),
-                        )
-                      }
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []).slice(0, 10);
+                        setRoomPhotoFiles(files);
+                        if (files.length > 0) {
+                          setUploadInfo({
+                            type: "photos",
+                            names: files.map((f) => f.name),
+                          });
+                        }
+                      }}
                     />
                     <div className="flex items-center gap-2 shrink-0">
                       <input
@@ -1955,10 +2026,6 @@ const OwnerDashboard = () => {
                           const payload: { hotelId:number; type:string; price:number; members:number; amenities:string[]; photos:string[]; availability:boolean; roomNumber?: string } = { ...payloadBase, roomNumber }
                           createRoom.mutate(payload)
                         }
-                        setUploadInfo({
-                          type: "photos",
-                          names: files.map((f) => f.name),
-                        })
                       }}
                       disabled={!roomForm.hotelId || !roomForm.type}
                     >
@@ -1990,10 +2057,36 @@ const OwnerDashboard = () => {
                           <td className="p-3">{hotelName(g.hotelId)}</td>
                           <td className="p-3">{g.type}</td>
                           <td className="p-3">
-                            <Input type="number" min="0" className="w-24" placeholder="₹" value={roomGroupEdit[g.key]?.price ?? String(g.price)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), price: String(Math.max(0, Number(e.target.value))) } })} disabled={!roomGroupEditing[g.key]} />
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-24"
+                              placeholder="₹"
+                              value={roomGroupEdit[g.key]?.price ?? String(g.price)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.length > 6) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                if (Number(val) < 0) { toast({ title: "Price cannot be negative", variant: "destructive" }); return; }
+                                setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), price: val } })
+                              }}
+                              disabled={!roomGroupEditing[g.key]}
+                            />
                           </td>
                           <td className="p-3">
-                            <Input type="number" min="0" className="w-20" placeholder="#" value={roomGroupEdit[g.key]?.members ?? String(g.members)} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), members: String(Math.max(0, Number(e.target.value))) } })} disabled={!roomGroupEditing[g.key]} />
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-20"
+                              placeholder="#"
+                              value={roomGroupEdit[g.key]?.members ?? String(g.members)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (Number(val) > 5) { toast({ title: "Maximum members is 5", variant: "destructive" }); return; }
+                                if (Number(val) < 0) { toast({ title: "Members cannot be negative", variant: "destructive" }); return; }
+                                setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), members: val } })
+                              }}
+                              disabled={!roomGroupEditing[g.key]}
+                            />
                           </td>
                           <td className="p-3">
                             {roomGroupEditing[g.key] ? (
@@ -2025,11 +2118,20 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-3">
                             <div className="flex gap-1 flex-wrap mb-2">{g.amenities?.map((a)=> (<span key={`${g.key}-${a}`} className="px-2 py-1 bg-secondary rounded text-xs">{a}</span>))}</div>
-                            <Input placeholder="amenities" value={roomGroupEdit[g.key]?.amenities ?? ""} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), amenities: e.target.value } })} disabled={!roomGroupEditing[g.key]} />
+                            <Input
+                              placeholder="amenities"
+                              value={roomGroupEdit[g.key]?.amenities ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), amenities: val } })
+                              }}
+                              disabled={!roomGroupEditing[g.key]}
+                            />
                           </td>
                           <td className="p-3">
                             <div className="flex gap-2 flex-wrap">{(g.photos || []).map((p)=> (<img key={`${g.key}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div>
-                            <div className="mt-2"><input type="file" multiple accept="image/*" onChange={(e)=> setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: Array.from(e.target.files||[]).slice(0,10) })} disabled={!roomGroupEditing[g.key]} /></div>
+                            <div className="mt-2"><input type="file" multiple accept="image/*" onChange={(e)=> { const files = Array.from(e.target.files||[]).slice(0,10); setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: files }); if(files.length > 0) { setUploadInfo({ type:'photos', names: files.map(f=>f.name) }); } }} disabled={!roomGroupEditing[g.key]} /></div>
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${g.availability ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{g.availability ? 'Available' : 'Unavailable'}</span><input type="checkbox" checked={roomGroupEdit[g.key]?.availability ?? g.availability} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availability: e.target.checked } })} disabled={!roomGroupEditing[g.key]} /></div>
@@ -2037,7 +2139,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             <div className="flex gap-2 justify-end">
                               <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel #${g.hotelId} • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
-                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } const files = roomPhotosByGroup[g.key] || []; if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } setRoomGroupEditing({ ...roomGroupEditing, [g.key]: false }) }}>Update</Button>
+                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const currentPrice = edits.price !== undefined ? edits.price : String(g.price); const currentMembers = edits.members !== undefined ? edits.members : String(g.members); const currentAmenities = edits.amenities !== undefined ? edits.amenities : (g.amenities || []).join(', '); const files = roomPhotosByGroup[g.key] || []; const currentPhotosCount = (g.photos || []).length + files.length; if (!String(currentPrice).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; } const priceNum = Number(currentPrice); if (isNaN(priceNum) || priceNum < 0) { toast({ title: "Price cannot be negative", variant: "destructive" }); return; } if (String(currentPrice).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (!String(currentMembers).trim()) { toast({ title: "Please enter members", variant: "destructive" }); return; } const membersNum = Number(currentMembers); if (isNaN(membersNum) || membersNum < 0) { toast({ title: "Members cannot be negative", variant: "destructive" }); return; } if (membersNum > 5) { toast({ title: "Maximum members is 5", variant: "destructive" }); return; } if (!currentAmenities.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; } if (!/^[a-zA-Z\s,]+$/.test(currentAmenities)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; } if (currentAmenities.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (currentPhotosCount === 0) { toast({ title: "image uploaded it was must fix it once", variant: "destructive" }); return; } const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } setUploadInfo({ type:'photos', names: files.map(f=>f.name) }) } setRoomGroupEditing(prev => ({ ...prev, [g.key]: false })) }}>Update</Button>
                               <Button size="sm" variant="outline" onClick={async ()=> { try { await qc.cancelQueries({ queryKey: ['owner','rooms', ownerId] }); const prev = qc.getQueryData<{ rooms: Room[] }>(['owner','rooms', ownerId]) || { rooms: [] }; const gone = new Set(g.ids); qc.setQueryData(['owner','rooms', ownerId], (data?: { rooms: Room[] }) => ({ rooms: (data?.rooms || []).filter(r => !gone.has(r.id)) })); await Promise.all(g.ids.map(id => apiDelete(`/api/owner/rooms/${id}`))); toast({ title: 'Rooms deleted', description: `${g.ids.length} item(s)` }); } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } finally { qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } }}>Delete</Button>
                             </div>
                           </td>
