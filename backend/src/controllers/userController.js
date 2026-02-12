@@ -32,15 +32,53 @@ async function bookings(req, res) {
 
   const items = await Booking.find({ userId }).lean()
   
-  // Populate roomType
+  // Populate roomType and handle extra hours fallback
   const roomIds = items.map(b => b.roomId).filter(Boolean)
   const rooms = await Room.find({ id: { $in: roomIds } }).lean()
   const roomMap = new Map(rooms.map(r => [r.id, r]))
+
+  const hotelIds = items.map(b => b.hotelId).filter(Boolean)
+  const hotels = await Hotel.find({ id: { $in: hotelIds } }).lean()
+  const hotelMap = new Map(hotels.map(h => [h.id, h]))
   
-  const populatedItems = items.map(b => ({
-    ...b,
-    roomType: roomMap.get(b.roomId)?.type || ''
-  }))
+  const populatedItems = items.map(b => {
+    const data = {
+      ...b,
+      roomType: roomMap.get(b.roomId)?.type || ''
+    }
+    // Fallback for missing extraHours/extraCharges
+    if ((!data.extraHours || data.extraHours === 0) && data.checkIn && data.checkOut) {
+      try {
+        const ci = new Date(data.checkIn)
+        const co = new Date(data.checkOut)
+        if (!isNaN(ci.getTime()) && !isNaN(co.getTime())) {
+          const diffMs = co.getTime() - ci.getTime()
+          const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+          const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24)
+          const extraHours = diffHours > 24 ? (diffHours - stayDays * 24) : 0
+          if (extraHours > 0) {
+            data.extraHours = extraHours
+            
+            // Estimate extraCharges
+            if (!data.extraCharges || data.extraCharges === 0) {
+              const hotel = hotelMap.get(data.hotelId)
+              if (hotel) {
+                let basePrice = Number(hotel.price || 0)
+                const room = roomMap.get(data.roomId)
+                if (room) basePrice = Number(room.price || 0)
+                
+                if (basePrice > 0) {
+                  const hourlyRate = basePrice / 24
+                  data.extraCharges = Math.round(hourlyRate * extraHours)
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }
+    return data
+  })
 
   res.json({ bookings: populatedItems })
 }

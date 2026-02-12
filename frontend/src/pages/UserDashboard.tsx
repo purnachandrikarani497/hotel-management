@@ -267,10 +267,12 @@ const UserDashboard = () => {
                     String(b.checkIn||''),
                     String(b.checkOut||''),
                     String(b.guests||''),
+                    String(b.extraHours ? b.extraHours + 'h' : '0h'),
+                    String(b.extraCharges ? '₹' + b.extraCharges : '₹0'),
                     String(b.total||''),
                     String(b.status||'')
                   ])
-                  const header = ['Booking','Hotel','CheckIn','CheckOut','Guests','Total','Status']
+                  const header = ['Booking','Hotel','CheckIn','CheckOut','Guests','Extra Time','Extra Charges','Total','Status']
                   const csv = [header].concat(rows).map(r => r.map(x => {
                     const s = String(x ?? '')
                     if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"'

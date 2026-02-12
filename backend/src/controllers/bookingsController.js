@@ -84,12 +84,14 @@ async function create(req, res) {
     cur.setDate(day.getDate() + i)
     computedTotal += applyPricing(cur, basePricePerDay)
   }
+  let extraCharges = 0
   if (extraHours > 0) {
     const lastDay = new Date(day)
     lastDay.setDate(day.getDate() + Math.max(stayDays - 1, 0))
     const adjustedDayPrice = applyPricing(lastDay, basePricePerDay)
     const hourlyRate = adjustedDayPrice / 24
-    computedTotal += Math.round(hourlyRate * extraHours)
+    extraCharges = Math.round(hourlyRate * extraHours)
+    computedTotal += extraCharges
   }
   let appliedCouponId = null
   let appliedCouponCode = ''
@@ -137,7 +139,7 @@ async function create(req, res) {
   const id = await nextIdFor('Booking')
   const ownerActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
   const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, extraHours, extraCharges, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
   if (appliedCouponId) {
     try { await Coupon.updateOne({ id: Number(appliedCouponId) }, { $inc: { used: 1 } }) } catch {}
   }
