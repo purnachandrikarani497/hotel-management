@@ -2,7 +2,7 @@ const { mongoose } = require('../config/db')
 
 const MessageSchema = new mongoose.Schema({
   id: { type: Number, index: true },
-  threadId: Number,
+  threadId: { type: Number, index: true },
   senderRole: { type: String, enum: ['user','owner','system'], default: 'system' },
   senderId: Number,
   content: String,

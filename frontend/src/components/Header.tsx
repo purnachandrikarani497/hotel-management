@@ -31,7 +31,7 @@ const Header = () => {
   } catch {
     authed = false
   }
-  const unread = useQuery({ queryKey: ["inbox","count", role, userId], queryFn: () => role==='owner' ? apiGet<{ count:number }>(`/api/messages/unread-count?ownerId=${userId}`) : apiGet<{ count:number }>(`/api/messages/unread-count?userId=${userId}`), enabled: authed && !!userId && !pathname.startsWith("/dashboard/admin"), refetchInterval: 2000 })
+  const unread = useQuery({ queryKey: ["inbox","count", role, userId], queryFn: () => role==='owner' ? apiGet<{ count:number }>(`/api/messages/unread-count?ownerId=${userId}`) : apiGet<{ count:number }>(`/api/messages/unread-count?userId=${userId}`), enabled: authed && !!userId && !pathname.startsWith("/dashboard/admin"), refetchInterval: 5000 })
 
   const navLinks = (() => {
     const base = [

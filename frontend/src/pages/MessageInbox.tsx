@@ -11,7 +11,19 @@ import { apiGet, apiPost } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
 
-type Thread = { id:number; bookingId:number; hotelId:number; userId:number; ownerId:number; createdAt?: string; lastMessage?: { content:string; senderRole:string; createdAt:string } | null; unreadForUser?: number; unreadForOwner?: number }
+type Thread = { 
+  id:number; 
+  bookingId:number; 
+  hotelId:number; 
+  userId:number; 
+  ownerId:number; 
+  createdAt?: string; 
+  lastMessage?: { content:string; senderRole:string; createdAt:string } | null; 
+  unreadForUser?: number; 
+  unreadForOwner?: number;
+  hotelName?: string;
+  hotelImage?: string;
+}
 type Message = { id:number; threadId:number; senderRole:'user'|'owner'|'system'; senderId:number|null; content:string; createdAt:string; readByUser?: boolean; readByOwner?: boolean }
 
 const MessageInbox = () => {
@@ -26,9 +38,9 @@ const MessageInbox = () => {
     queryKey: ["inbox","threads",role,userId],
     queryFn: () => role === 'owner' ? apiGet<{ threads: Thread[] }>(`/api/messages/threads?ownerId=${userId}`) : apiGet<{ threads: Thread[] }>(`/api/messages/threads?userId=${userId}`),
     enabled: !!userId,
-    refetchInterval: 1500,
+    refetchInterval: 3000,
     refetchOnWindowFocus: true,
-    staleTime: 1000,
+    staleTime: 2000,
   })
   const threads = React.useMemo(() => threadsQ.data?.threads ?? [], [threadsQ.data])
   const orderedThreads = React.useMemo(() => {
@@ -45,7 +57,7 @@ const MessageInbox = () => {
     if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
     createReview.reset()
   }, [threads, activeId])
-  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 1500, refetchOnWindowFocus: true })
+  const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 3000, refetchOnWindowFocus: true })
   const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
   const orderedMessages = React.useMemo(() => {
     const arr = [...messages]
@@ -67,8 +79,8 @@ const MessageInbox = () => {
   const [draft, setDraft] = React.useState("")
   const send = useMutation({ mutationFn: (p:{ id:number; content:string }) => apiPost(`/api/messages/thread/${p.id}/send`, { senderRole: role==='owner'?'owner':'user', senderId: userId, content: p.content }), onSuccess: (_res, vars) => { setDraft(""); qc.invalidateQueries({ queryKey: ["inbox","messages",vars.id] }) } })
 
-  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 3000 })
-  const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: { id:number; bookingId:number }[] }>(`/api/user/reviews?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 3000 })
+  const bookingsQ = useQuery({ queryKey: ["user","bookings",userId], queryFn: () => apiGet<{ bookings: { id:number; hotelId:number; status:string }[] }>(`/api/user/bookings?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 5000 })
+  const reviewsQ = useQuery({ queryKey: ["user","reviews",userId], queryFn: () => apiGet<{ reviews: { id:number; bookingId:number }[] }>(`/api/user/reviews?userId=${userId}`), enabled: role==='user' && !!userId, refetchInterval: 5000 })
   const threadBooking = React.useMemo(() => {
     const t = (threads||[]).find(x=>x.id===activeId)
     const bid = t?.bookingId
@@ -103,19 +115,6 @@ const MessageInbox = () => {
   const canReview = role==='user' && hasCheckoutMsg && !alreadyReviewed && !createReview.isSuccess
 
   const resolveImage = (src?: string) => { const s = String(src||''); if (!s) return 'https://placehold.co/64x64?text=Hotel'; const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || env?.VITE_API_BASE || ''; if (s.startsWith('/uploads')) return base ? `${base}${s}` : s; if (s.startsWith('uploads')) return base ? `${base}/${s}` : `/${s}`; if (s.startsWith('/src/assets')) { const origin = typeof window !== 'undefined' ? window.location.origin : ''; return origin ? `${origin}${s}` : 'https://placehold.co/64x64?text=Hotel' } return s }
-  const [hotelMap, setHotelMap] = React.useState<{ [id:number]: { id:number; name:string; image:string } }>({})
-  React.useEffect(() => {
-    const ids = Array.from(new Set(threads.map(t=>t.hotelId))).filter(Boolean)
-    const need = ids.filter(id => !hotelMap[id])
-    if (!need.length) return
-    Promise.all(need.map(id => apiGet<{ hotel: { id:number; name:string; image:string } }>(`/api/hotels/${id}`).catch(()=>({ hotel: { id, name: `Hotel ${id}`, image: '' } }))))
-      .then(list => {
-        const next = { ...hotelMap }
-        list.forEach(({ hotel }) => { next[hotel.id] = { id: hotel.id, name: hotel.name, image: hotel.image } })
-        setHotelMap(next)
-      })
-      .catch(()=>{})
-  }, [threads, hotelMap])
 
   const chatTitle = role==='owner' ? 'Owner Chat' : 'User Chat'
   return (
@@ -154,9 +153,9 @@ const MessageInbox = () => {
                   {(orderedThreads||[]).map(t => (
                     <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={() => { setActiveId(t.id); setTimeout(() => conversationRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }}>
                       <div className="flex items-center gap-3">
-                        <img src={resolveImage(hotelMap[t.hotelId]?.image)} alt={hotelMap[t.hotelId]?.name||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
+                        <img src={resolveImage(t.hotelImage)} alt={t.hotelName||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
                         <div className="flex-1">
-                          <div className="font-medium">{hotelMap[t.hotelId]?.name || `Hotel ${t.hotelId}`}</div>
+                          <div className="font-medium">{t.hotelName || `Hotel ${t.hotelId}`}</div>
                           <div className="text-xs text-muted-foreground">Booking {t.bookingId}</div>
                         </div>
                         {(() => { const c = role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0); return (c && activeId !== t.id) ? (<span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{c}</span>) : null })()}

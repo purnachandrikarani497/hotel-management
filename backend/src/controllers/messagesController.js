@@ -1,7 +1,7 @@
 const { connect } = require('../config/db')
 const ensureSeed = require('../seed')
 const { nextIdFor } = require('../utils/ids')
-const { MessageThread, Message, User } = require('../models')
+const { MessageThread, Message, User, Hotel } = require('../models')
 
 async function threads(req, res) {
   await connect(); await ensureSeed();
@@ -10,19 +10,92 @@ async function threads(req, res) {
   const filter = {}
   if (userId) filter.userId = userId
   if (ownerId) filter.ownerId = ownerId
-  const items = await MessageThread.find(filter).lean()
-  const enriched = []
-  for (const t of items) {
-    const last = await Message.find({ threadId: t.id }).sort({ createdAt: -1 }).limit(1).lean()
-    const unreadForUser = await Message.countDocuments({ threadId: t.id, readByUser: false })
-    const unreadForOwner = await Message.countDocuments({ threadId: t.id, readByOwner: false })
-    enriched.push({ ...t, lastMessage: last[0] || null, unreadForUser, unreadForOwner })
-  }
-  enriched.sort((a,b)=>{
+
+  // Use aggregation to fetch threads, last message, unread counts, and hotel info in one query
+  const pipeline = [
+    { $match: filter },
+    // Join with messages to get unread counts and last message
+    {
+      $lookup: {
+        from: 'messages',
+        localField: 'id',
+        foreignField: 'threadId',
+        as: 'allMessages'
+      }
+    },
+    // Join with hotels to get hotel info
+    {
+      $lookup: {
+        from: 'hotels',
+        localField: 'hotelId',
+        foreignField: 'id',
+        as: 'hotelInfo'
+      }
+    },
+    {
+      $project: {
+        id: 1,
+        bookingId: 1,
+        hotelId: 1,
+        userId: 1,
+        ownerId: 1,
+        createdAt: 1,
+        hotel: { $arrayElemAt: ['$hotelInfo', 0] },
+        unreadForUser: {
+          $size: {
+            $filter: {
+              input: '$allMessages',
+              as: 'm',
+              cond: { $eq: ['$$m.readByUser', false] }
+            }
+          }
+        },
+        unreadForOwner: {
+          $size: {
+            $filter: {
+              input: '$allMessages',
+              as: 'm',
+              cond: { $eq: ['$$m.readByOwner', false] }
+            }
+          }
+        },
+        lastMessage: {
+          $let: {
+            vars: {
+              sortedMessages: {
+                $sortArray: { input: '$allMessages', sortBy: { createdAt: -1 } }
+              }
+            },
+            in: { $arrayElemAt: ['$$sortedMessages', 0] }
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        id: 1,
+        bookingId: 1,
+        hotelId: 1,
+        userId: 1,
+        ownerId: 1,
+        createdAt: 1,
+        unreadForUser: 1,
+        unreadForOwner: 1,
+        lastMessage: 1,
+        hotelName: '$hotel.name',
+        hotelImage: '$hotel.image'
+      }
+    }
+  ]
+
+  const enriched = await MessageThread.aggregate(pipeline)
+
+  enriched.sort((a, b) => {
     const at = new Date(a?.lastMessage?.createdAt || a?.createdAt || 0).getTime()
     const bt = new Date(b?.lastMessage?.createdAt || b?.createdAt || 0).getTime()
     return bt - at
   })
+
   res.json({ threads: enriched })
 }
 
@@ -75,11 +148,29 @@ async function unreadCount(req, res) {
   const filter = {}
   if (userId) filter.userId = userId
   if (ownerId) filter.ownerId = ownerId
-  const items = await MessageThread.find(filter).lean()
-  const ids = items.map(t=>t.id)
-  let count = 0
-  if (userId) count = await Message.countDocuments({ threadId: { $in: ids }, readByUser: false })
-  else if (ownerId) count = await Message.countDocuments({ threadId: { $in: ids }, readByOwner: false })
+
+  // Use aggregation for faster unread count calculation
+  const pipeline = [
+    { $match: filter },
+    {
+      $lookup: {
+        from: 'messages',
+        localField: 'id',
+        foreignField: 'threadId',
+        as: 'msgs'
+      }
+    },
+    { $unwind: '$msgs' },
+    {
+      $match: userId 
+        ? { 'msgs.readByUser': false }
+        : { 'msgs.readByOwner': false }
+    },
+    { $count: 'total' }
+  ]
+
+  const result = await MessageThread.aggregate(pipeline)
+  const count = result.length > 0 ? result[0].total : 0
   res.json({ count })
 }
 
