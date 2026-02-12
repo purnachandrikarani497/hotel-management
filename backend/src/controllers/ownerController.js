@@ -58,15 +58,40 @@ async function saveImagesFromDataUrls(prefix, entityId, list) {
 
 async function stats(req, res) {
   await connect(); await ensureSeed();
-  const ownerId = Number(req.query.ownerId)
-  const hotels = await Hotel.find({ ownerId }).lean()
-  const hotelIds = hotels.map(h => h.id)
-  const bookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean()
-  const reviews = await Review.find({ hotelId: { $in: hotelIds } }).lean()
-  const totalBookings = bookings.length
-  const totalRevenue = bookings.filter(b => b.status === 'checked_out' || b.status === 'checked_in' || b.status === 'pending').reduce((acc, b) => acc + (b.total || 0), 0)
-  const avgRating = reviews.length ? (reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reviews.length).toFixed(1) : 0
-  res.json({ totalBookings, totalRevenue, avgRating, hotelsCount: hotels.length })
+  const ownerId = Number(req.query.ownerId);
+
+  // Check if owner is blocked
+  if (ownerId) {
+    const owner = await User.findOne({ id: ownerId }).lean();
+    if (owner && owner.blocked) {
+      return res.status(403).json({ error: 'Your account has been blocked. Please contact admin.', blocked: true });
+    }
+  }
+
+  const hotels = await Hotel.find({ ownerId }).lean();
+  const hotelIds = hotels.map(h => Number(h.id)).filter(Boolean);
+  const ownerBookings = await Booking.find({ hotelId: { $in: hotelIds } }).lean();
+   const totalBookings = ownerBookings.length;
+   const revenueStatuses = ['checked_out', 'checked_in', 'pending'];
+   const totalRevenue = ownerBookings
+     .filter(b => revenueStatuses.includes(String(b.status || '')))
+     .reduce((s, b) => s + (Number(b.total) || 0), 0);
+  const rooms = await Room.find({ hotelId: { $in: hotelIds } }).lean();
+  const totalRooms = rooms.length;
+  const pendingBookings = ownerBookings.filter(b => ['pending'].includes(String(b.status || ''))).length;
+  let hotelStatus = 'pending';
+  if (hotels && hotels.length) {
+    const statuses = new Set(hotels.map(h => String(h.status || 'pending')));
+    if (statuses.has('approved')) hotelStatus = 'approved';
+    else if (statuses.has('pending')) hotelStatus = 'pending';
+    else if (statuses.has('rejected')) hotelStatus = 'rejected';
+    else if (statuses.has('suspended')) hotelStatus = 'suspended';
+    else hotelStatus = String(hotels[0].status || 'pending');
+  } else {
+    const owner = await User.findOne({ id: ownerId }).lean();
+    hotelStatus = owner?.isApproved ? 'approved' : 'pending';
+  }
+  res.json({ totalRooms, totalBookings, totalRevenue, pendingBookings, hotelStatus });
 }
 
 async function hotels(req, res) {
