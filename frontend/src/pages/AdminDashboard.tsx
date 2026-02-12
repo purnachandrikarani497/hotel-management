@@ -45,21 +45,21 @@ const AdminDashboard = () => {
     || ((bookings.data?.bookings || []).length > 0)
 
   const blockUser = useMutation({ mutationFn: (p: { id:number; blocked:boolean }) => apiPost("/api/admin/users/"+p.id+"/block", { blocked: p.blocked }), onSuccess: () => qc.invalidateQueries({ queryKey: ["admin","users"] }) })
-  const deleteUser = useMutation({ mutationFn: (id:number) => apiDelete("/api/admin/users/"+id), onSuccess: (_res, id) => { toast({ title: "User deleted", description: `#${id}` }); qc.invalidateQueries({ queryKey: ["admin","users"] }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
-  const setHotelStatus = useMutation({ mutationFn: (p: { id:number; status:Hotel["status"] }) => apiPost("/api/admin/hotels/"+p.id+"/status", { status: p.status }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel status updated", description: `#${vars.id} → ${vars.status}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
-  const setHotelFeatured = useMutation({ mutationFn: (p: { id:number; featured:boolean }) => apiPost("/api/admin/hotels/"+p.id+"/feature", { featured: p.featured }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: vars.featured ? "Featured" : "Unfeatured", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+  const deleteUser = useMutation({ mutationFn: (id:number) => apiDelete("/api/admin/users/"+id), onSuccess: (_res, id) => { toast({ title: "User deleted", description: String(id) }); qc.invalidateQueries({ queryKey: ["admin","users"] }) }, onError: () => toast({ title: "Delete failed", variant: "destructive" }) })
+  const setHotelStatus = useMutation({ mutationFn: (p: { id:number; status:Hotel["status"] }) => apiPost("/api/admin/hotels/"+p.id+"/status", { status: p.status }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: "Hotel status updated", description: `${vars.id} → ${vars.status}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+  const setHotelFeatured = useMutation({ mutationFn: (p: { id:number; featured:boolean }) => apiPost("/api/admin/hotels/"+p.id+"/feature", { featured: p.featured }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","hotels"] }); toast({ title: vars.featured ? "Featured" : "Unfeatured", description: String(vars.id) }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   
   const adminCancelBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/admin/bookings/${id}/cancel`, {}),
-    onSuccess: (_res, vars) => { toast({ title: "Booking cancelled", description: `#${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+    onSuccess: (_res, vars) => { toast({ title: "Booking cancelled", description: String(vars) }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
   })
   const ownerCheckinBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}),
-    onSuccess: (_res, vars) => { toast({ title: "Checked in", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+    onSuccess: (_res, vars) => { toast({ title: "Checked in", description: `Booking ${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
   })
   const ownerCheckoutBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}),
-    onSuccess: (_res, vars) => { toast({ title: "Checked out", description: `Booking #${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
+    onSuccess: (_res, vars) => { toast({ title: "Checked out", description: `Booking ${vars}` }); qc.invalidateQueries({ queryKey: ["admin","bookings"] }) }
   })
 
   const [deletingHotelId, setDeletingHotelId] = React.useState<number|null>(null)
@@ -77,7 +77,7 @@ const AdminDashboard = () => {
       toast({ title: "Delete failed", variant: "destructive" })
     },
     onSuccess: (_res, vars) => {
-      toast({ title: "Hotel deleted", description: `#${vars}` })
+      toast({ title: "Hotel deleted", description: String(vars) })
     },
     onSettled: () => {
       setDeletingHotelId(null)
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
     }
   })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
-  const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: `#${vars.id}` }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
+  const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: String(vars.id) }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
   const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else if (vars.ourStory !== undefined && vars.ourMission === undefined) { toast({ title: "About Us updated successfully" }) } else if (vars.ourMission !== undefined && vars.ourStory === undefined) { toast({ title: "Mission updated successfully" }) } else if (vars.ourStory !== undefined && vars.ourMission !== undefined) { toast({ title: "About Us and Mission updated successfully" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
   const createOwner = useMutation({
     mutationFn: (p: { email:string; password:string; firstName:string; lastName:string; phone:string }) =>
@@ -478,7 +478,7 @@ const AdminDashboard = () => {
                       <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${h.status === 'approved' ? 'bg-primary/15 text-primary' : h.status === 'rejected' ? 'bg-destructive/15 text-destructive' : h.status === 'suspended' ? 'bg-accent/15 text-foreground' : 'bg-muted text-foreground'}`}>{h.status}</span></td>
                       <td className="p-3 flex gap-2 flex-wrap">
                         <Button size="sm" variant={h.status === 'suspended' ? 'outline' : 'destructive'} onClick={() => setHotelStatus.mutate({ id: h.id, status: h.status === 'suspended' ? 'approved' : 'suspended' })}>{h.status === 'suspended' ? 'Unblock' : 'Block'}</Button>
-                        <Button size="sm" variant="destructive" disabled={deletingHotelId===h.id || deleteHotelOwner.isPending} onClick={() => { if (window.confirm(`Delete hotel #${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>{deletingHotelId===h.id || deleteHotelOwner.isPending ? 'Deleting…' : 'Delete'}</Button>
+                        <Button size="sm" variant="destructive" disabled={deletingHotelId===h.id || deleteHotelOwner.isPending} onClick={() => { if (window.confirm(`Delete hotel ${h.id}? This will remove bookings and reviews.`)) deleteHotelOwner.mutate(h.id) }}>{deletingHotelId===h.id || deleteHotelOwner.isPending ? 'Deleting…' : 'Delete'}</Button>
                       </td>
                     </tr>
                   ))
@@ -620,7 +620,7 @@ const AdminDashboard = () => {
                     return filteredBookings.map((b, idx) => (
                     <tr key={b.id} className="border-t">
                       <td className="p-3">{idx+1}</td>
-                      <td className="p-3">{b.hotel?.name || hmap[b.hotelId]?.name || `#${b.hotelId}`}</td>
+                      <td className="p-3">{b.hotel?.name || hmap[b.hotelId]?.name || String(b.hotelId)}</td>
                       <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                       <td className="p-3">{b.guests}</td>
                       <td className="p-3">₹{b.total}</td>

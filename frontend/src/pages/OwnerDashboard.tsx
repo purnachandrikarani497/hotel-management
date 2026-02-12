@@ -571,7 +571,7 @@ const OwnerDashboard = () => {
       const serial = (hotelsQ.data?.hotels || []).length + 1
       setLastHotelRegId(serial)
       if (res?.id) addId("hotels", res.id)
-      toast({ title: "Hotel submitted", description: `#${serial}` })
+      toast({ title: "Hotel submitted" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
     },
   })
@@ -579,8 +579,8 @@ const OwnerDashboard = () => {
   const updateAmenities = useMutation({
     mutationFn: (p: { id: number; amenities: string[] }) =>
       apiPost(`/api/owner/hotels/${p.id}/amenities`, { amenities: p.amenities }),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Amenities updated", description: `Hotel #${vars.id}` })
+    onSuccess: (_res) => {
+      toast({ title: "Amenities updated", description: "Hotel" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
     },
   })
@@ -588,8 +588,8 @@ const OwnerDashboard = () => {
   const updateDescription = useMutation({
     mutationFn: (p: { id: number; description: string }) =>
       apiPost(`/api/owner/hotels/${p.id}/description`, { description: p.description }),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Description updated", description: `Hotel #${vars.id}` })
+    onSuccess: (_res) => {
+      toast({ title: "Description updated", description: "Hotel" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
     },
   })
@@ -601,7 +601,7 @@ const OwnerDashboard = () => {
       setImageUploaded((prev) => ({ ...prev, [vars.id]: true }))
       toast({
         title: "Images uploaded",
-        description: `Hotel #${vars.id} • ${vars.images.length} file(s)`,
+        description: `Hotel • ${vars.images.length} file(s)`,
       })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
       qc.invalidateQueries({ queryKey: ["hotels"] })
@@ -615,7 +615,7 @@ const OwnerDashboard = () => {
   const updateInfo = useMutation<{ status: string }, unknown, UpdateInfoVars>({
     mutationFn: (p: UpdateInfoVars) => apiPost(`/api/owner/hotels/${p.id}/info`, p),
     onSuccess: (_res, vars) => {
-      toast({ title: "Hotel updated", description: `#${vars.id}` })
+      toast({ title: "Hotel updated" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
       qc.invalidateQueries({ queryKey: ["hotel", String(vars.id)] })
       qc.invalidateQueries({ queryKey: ["hotel", Number(vars.id)] })
@@ -645,7 +645,7 @@ const OwnerDashboard = () => {
       return { prev }
     },
     onError: (_err,_id,ctx) => { if (ctx?.prev) qc.setQueryData(["owner","hotels", ownerId], ctx.prev); toast({ title: "Delete failed", variant: "destructive" }) },
-    onSuccess: (_res, vars) => { toast({ title: "Hotel deleted", description: `#${vars}` }) },
+    onSuccess: () => { toast({ title: "Hotel deleted" }) },
     onSettled: () => { setDeletingHotelId(null); qc.invalidateQueries({ queryKey: ["owner","hotels", ownerId] }) },
   })
 
@@ -680,7 +680,7 @@ const OwnerDashboard = () => {
       if (res?.id) {
         addId("rooms", res.id)
         setLastRoomId(res.id)
-        toast({ title: "Room added successfully", description: `#${res.id}` })
+        toast({ title: "Room added successfully" })
         qc.setQueryData(["owner", "rooms", ownerId], (prev: { rooms: Room[] } | undefined) => {
           const base = prev?.rooms || []
           const next: Room = {
@@ -726,7 +726,7 @@ const OwnerDashboard = () => {
       roomNumber?: string
     }) => apiPost(`/api/owner/rooms/${p.id}`, p),
     onSuccess: (_res, vars) => {
-      toast({ title: "Room updated successfully", description: `#${vars.id}` })
+      toast({ title: "Room updated successfully" })
       qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
     },
   })
@@ -737,7 +737,7 @@ const OwnerDashboard = () => {
     onSuccess: (_res, vars) => {
       toast({
         title: vars.blocked ? "Room blocked" : "Room unblocked",
-        description: `#${vars.id}`,
+        description: "Room",
       })
       qc.invalidateQueries({ queryKey: ["owner", "rooms", ownerId] })
     },
@@ -745,8 +745,8 @@ const OwnerDashboard = () => {
 
   const approveBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/approve`, {}),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Booking approved", description: `#${vars}` })
+    onSuccess: () => {
+      toast({ title: "Booking approved" })
       qc.invalidateQueries({ queryKey: ["owner", "bookings", ownerId] })
       qc.invalidateQueries({ queryKey: ["owner", "stats", ownerId] })
     },
@@ -761,7 +761,7 @@ const OwnerDashboard = () => {
       }
     },
     onSuccess: (_res, vars) => {
-      toast({ title: "Booking cancelled", description: `#${vars.id}` })
+      toast({ title: "Booking cancelled" })
       setOwnerCancelVisible((prev) => ({ ...prev, [vars.id]: false }))
       setOwnerCancelSel((prev) => { const next = { ...prev }; delete next[vars.id]; return next })
       setOwnerCancelOther((prev) => { const next = { ...prev }; delete next[vars.id]; return next })
@@ -802,8 +802,8 @@ const OwnerDashboard = () => {
 
   const checkinBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkin`, {}),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Checked in", description: `Booking #${vars}` })
+    onSuccess: () => {
+      toast({ title: "Checked in" })
       qc.invalidateQueries({ queryKey: ["owner", "bookings", ownerId] })
       qc.invalidateQueries({ queryKey: ["owner", "stats", ownerId] })
     },
@@ -811,8 +811,8 @@ const OwnerDashboard = () => {
 
   const checkoutBooking = useMutation({
     mutationFn: (id: number) => apiPost(`/api/owner/bookings/${id}/checkout`, {}),
-    onSuccess: (_res, vars) => {
-      toast({ title: "Checked out", description: `Booking #${vars}` })
+    onSuccess: () => {
+      toast({ title: "Checked out", description: "Booking" })
       qc.invalidateQueries({ queryKey: ["owner", "bookings", ownerId] })
       qc.invalidateQueries({ queryKey: ["owner", "stats", ownerId] })
     },
@@ -829,7 +829,7 @@ const OwnerDashboard = () => {
       specials?: { date: string; price: number; description?: string }[]
     }) => apiPost(`/api/owner/pricing/${p.hotelId}`, p),
     onSuccess: (_res, vars) => {
-      toast({ title: "Pricing updated", description: `Hotel #${vars.hotelId}` })
+      toast({ title: "Pricing updated", description: "Hotel" })
       qc.setQueryData(["owner", "hotels", ownerId], (old: { hotels: Hotel[] } | undefined) => {
         if (!old) return { hotels: [] }
         return {
@@ -859,7 +859,7 @@ const OwnerDashboard = () => {
   const deletePricing = useMutation({
     mutationFn: (hotelId: number) => apiDelete(`/api/owner/pricing/${hotelId}`),
     onSuccess: (_res, vars) => {
-      toast({ title: "Pricing deleted", description: `Hotel #${vars}` })
+      toast({ title: "Pricing deleted" })
       qc.setQueryData(["owner", "hotels", ownerId], (old: { hotels: Hotel[] } | undefined) => {
         if (!old) return { hotels: [] }
         return {
@@ -880,7 +880,7 @@ const OwnerDashboard = () => {
       apiPost(`/api/owner/reviews/${p.id}/respond`, { response: p.response }),
     onSuccess: (_res, vars) => {
       qc.invalidateQueries({ queryKey: ["owner", "reviews", ownerId] })
-      toast({ title: "Response sent", description: `Review #${vars.id}` })
+      toast({ title: "Response sent" })
       setReviewReply(prev => ({ ...prev, [vars.id]: "" }))
     },
     onError: () => toast({ title: "Response failed", variant: "destructive" }),
@@ -1289,16 +1289,14 @@ const OwnerDashboard = () => {
                     <div className="text-sm text-muted-foreground">
                       {hasHotel ? (
                         <span>
-                          Registration is one-time. Your Hotel ID
-                          {allHotels.length > 1 ? "s" : ""}:{" "}
-                          {allHotels.map((_, idx) => `#${idx + 1}`).join(", ")}.
+                          Registration is one-time.
                         </span>
                       ) : (
                         <span>No hotel registered yet.</span>
                       )}
                       {lastHotelRegId && (
                         <span className="ml-2 font-medium text-foreground">
-                          Last registered ID: #{lastHotelRegId}
+                          Last registered.
                         </span>
                       )}
                     </div>
@@ -2147,7 +2145,7 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-3">
                             <div className="flex gap-2 justify-end">
-                              <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel #${g.hotelId} • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
+                              <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
                               <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const currentPrice = edits.price !== undefined ? edits.price : String(g.price); const currentMembers = edits.members !== undefined ? edits.members : String(g.members); const currentAmenities = edits.amenities !== undefined ? edits.amenities : (g.amenities || []).join(', '); const files = roomPhotosByGroup[g.key] || []; const currentPhotosCount = (g.photos || []).length + files.length; if (!String(currentPrice).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; } const priceNum = Number(currentPrice); if (isNaN(priceNum) || priceNum < 0) { toast({ title: "Price cannot be negative", variant: "destructive" }); return; } if (String(currentPrice).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (!String(currentMembers).trim()) { toast({ title: "Please enter members", variant: "destructive" }); return; } const membersNum = Number(currentMembers); if (isNaN(membersNum) || membersNum < 0) { toast({ title: "Members cannot be negative", variant: "destructive" }); return; } if (membersNum > 5) { toast({ title: "Maximum members is 5", variant: "destructive" }); return; } if (!currentAmenities.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; } if (!/^[a-zA-Z\s,]+$/.test(currentAmenities)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; } if (currentAmenities.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (currentPhotosCount === 0) { toast({ title: "image uploaded it was must fix it once", variant: "destructive" }); return; } const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); if (edits.amenities !== undefined) payload.amenities = (edits.amenities||'').split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } } setRoomGroupEditing(prev => ({ ...prev, [g.key]: false })) }}>Update</Button>
                               <Button size="sm" variant="outline" onClick={async ()=> { try { await qc.cancelQueries({ queryKey: ['owner','rooms', ownerId] }); const prev = qc.getQueryData<{ rooms: Room[] }>(['owner','rooms', ownerId]) || { rooms: [] }; const gone = new Set(g.ids); qc.setQueryData(['owner','rooms', ownerId], (data?: { rooms: Room[] }) => ({ rooms: (data?.rooms || []).filter(r => !gone.has(r.id)) })); await Promise.all(g.ids.map(id => apiDelete(`/api/owner/rooms/${id}`))); toast({ title: 'Rooms deleted', description: `${g.ids.length} item(s)` }); } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } finally { qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } }}>Delete</Button>
                             </div>
@@ -2351,7 +2349,7 @@ const OwnerDashboard = () => {
                           return
                         }
                         const rows = bookingsTimeFiltered.map((b) => [
-                          `#${b.id}`,
+                          String(b.id),
                           String(b.hotelId || ""),
                           String(
                             b.user?.fullName ||
@@ -2465,9 +2463,9 @@ const OwnerDashboard = () => {
                               {b.user?.fullName ||
                                 `${b.user?.firstName || ""} ${
                                   b.user?.lastName || ""
-                                }`.trim() ||
-                                b.user?.email ||
-                                `User #${b.user?.id || ""}`}
+                              }`.trim() ||
+                              b.user?.email ||
+                              `User ${b.user?.id || ""}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {b.user?.email || "-"}
@@ -2791,8 +2789,8 @@ const OwnerDashboard = () => {
                               {g.user?.fullName ||
                                 `${g.user?.firstName || ""} ${
                                   g.user?.lastName || ""
-                                }`.trim() ||
-                                `User #${g.user?.id}`}
+                              }`.trim() ||
+                              `User ${g.user?.id}`}
                           </div>
                           </td>
                           <td className="p-3">
@@ -3577,7 +3575,7 @@ const OwnerDashboard = () => {
                                     title: next
                                       ? "Edit enabled"
                                       : "Edit disabled",
-                                    description: `Pricing • Hotel #${h.id}`,
+                                    description: `Pricing • Hotel ${h.id}`,
                                   })
                                 }}
                               >
@@ -3750,7 +3748,7 @@ const OwnerDashboard = () => {
                                       specials: specials.map(sp => ({ date: String(sp.date||''), price: String(Number(sp.price||0)), description: sp.description ? String(sp.description) : "" }))
                                     }
                                   }))
-                                  toast({ title: 'Edit enabled', description: `Pricing • Hotel #${h.id}` })
+                                  toast({ title: 'Edit enabled', description: `Pricing • Hotel ${h.id}` })
                                 }}>Edit</Button>
                                 <Button size="sm" variant="destructive" onClick={() => deletePricing.mutate(h.id)}>Delete</Button>
                               </td>
@@ -3811,9 +3809,9 @@ const OwnerDashboard = () => {
                         {r.user?.fullName ||
                           `${r.user?.firstName || ""} ${
                             r.user?.lastName || ""
-                          }`.trim() ||
-                          r.user?.email ||
-                          `Guest #${r.user?.id || ""}`}
+                        }`.trim() ||
+                        r.user?.email ||
+                        `Guest ${r.user?.id || ""}`}
                       </div>
                       <div className="text-sm text-gray-600 leading-relaxed mb-4 italic">
                         "{r.comment}"

@@ -69,9 +69,9 @@ const UserDashboard = () => {
       const prevStatus = prev[b.id]
       if (prevStatus && prevStatus !== cur) {
         if (cur === 'cancelled') {
-          toast({ title: `Booking #${b.id} cancelled`, description: `Your reservation for hotel ${b.hotelId} was cancelled.` })
+          toast({ title: "Booking cancelled", description: `Your reservation for hotel ${b.hotelId} was cancelled.` })
         } else if (cur === 'confirmed') {
-          toast({ title: `Booking #${b.id} approved`, description: `Your reservation for hotel ${b.hotelId} was approved.` })
+          toast({ title: "Booking approved", description: `Your reservation for hotel ${b.hotelId} was approved.` })
         }
       }
     })
@@ -143,7 +143,7 @@ const UserDashboard = () => {
     },
     onSuccess: (_res, vars) => {
       qc.invalidateQueries({ queryKey: ["user","bookings",userId] })
-      toast({ title: "Booking cancelled", description: `#${vars.id}` })
+      toast({ title: "Booking cancelled", description: "Booking" })
       setUserCancelSel(prev => { const next = { ...prev }; delete next[vars.id]; return next })
       setUserCancelOther(prev => { const next = { ...prev }; delete next[vars.id]; return next })
     },
@@ -262,7 +262,7 @@ const UserDashboard = () => {
                     return;
                   }
                   const rows = visible.map(b => [
-                    `#${b.id}`,
+                    "Booking",
                     String(b.hotelId||''),
                     String(b.checkIn||''),
                     String(b.checkOut||''),
@@ -333,7 +333,7 @@ const UserDashboard = () => {
                         </td>
                         <td className="p-3">
                           <div className="font-medium">{b.roomType || '-'}</div>
-                          <div className="text-xs text-muted-foreground">{b.roomNumber ? `No: ${b.roomNumber}` : (b.roomId ? `#${b.roomId}` : '')}</div>
+                          <div className="text-xs text-muted-foreground">{b.roomNumber ? `No: ${b.roomNumber}` : (b.roomId ? String(b.roomId) : '')}</div>
                         </td>
                         <td className="p-3">{b.checkIn} → {b.checkOut}</td>
                         <td className="p-3">{b.guests}</td>

@@ -89,7 +89,7 @@ const MessageInbox = () => {
     const hotelId = Number((t?.hotelId ?? threadBooking?.hotelId) || 0)
     const ownerId = Number(t?.ownerId||0)
     setFeedback("")
-    toast({ title: "Review submitted", description: `Thank you for rating hotel #${hotelId}` })
+    toast({ title: "Review submitted" })
     qc.invalidateQueries({ queryKey: ["hotel","reviews", hotelId] })
     qc.invalidateQueries({ queryKey: ["user","reviews", userId] })
     if (ownerId) qc.invalidateQueries({ queryKey: ["owner","reviews", ownerId] })
@@ -157,7 +157,7 @@ const MessageInbox = () => {
                         <img src={resolveImage(hotelMap[t.hotelId]?.image)} alt={hotelMap[t.hotelId]?.name||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
                         <div className="flex-1">
                           <div className="font-medium">{hotelMap[t.hotelId]?.name || `Hotel ${t.hotelId}`}</div>
-                          <div className="text-xs text-muted-foreground">Booking #{t.bookingId}</div>
+                          <div className="text-xs text-muted-foreground">Booking {t.bookingId}</div>
                         </div>
                         {(() => { const c = role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0); return (c && activeId !== t.id) ? (<span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{c}</span>) : null })()}
                       </div>

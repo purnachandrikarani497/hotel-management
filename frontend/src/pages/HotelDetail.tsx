@@ -306,7 +306,7 @@ const HotelDetail = () => {
     }) => apiPost<ReserveResp, typeof body>("/api/bookings", body),
 
     onSuccess: (res) => {
-      toast({ title: "Booking created", description: `Booking #${res.id}` });
+      toast({ title: "Booking created", description: `Booking ${res.id}` });
       qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
       qc.invalidateQueries({ queryKey: ["hotel", "coupons", id, checkIn] });
     },
@@ -328,7 +328,7 @@ const HotelDetail = () => {
     }),
     onSuccess: (_res, vars) => {
       setPaid(true);
-      toast({ title: "Payment confirmed", description: `Booking #${vars}` });
+      toast({ title: "Payment confirmed", description: `Booking ${vars}` });
       qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
       if (hotel?.ownerId) {
         qc.invalidateQueries({ queryKey: ["owner", "bookings", hotel.ownerId] });
@@ -357,8 +357,8 @@ const HotelDetail = () => {
         ctx.fillStyle = "#000000"; ctx.font = "bold 24px Arial";
         ctx.fillText("Booking Receipt", 24, 40);
         ctx.font = "16px Arial";
-        ctx.fillText(`Booking #${reserve.data.id}`, 24, 80);
-        ctx.fillText(`Hotel: ${hotel?.name || ''} (#${id})`, 24, 110);
+        ctx.fillText(`Booking ${reserve.data.id}`, 24, 80);
+        ctx.fillText(`Hotel: ${hotel?.name || ''} (${id})`, 24, 110);
         ctx.fillText(`Room: Assigned after payment`, 24, 140);
         ctx.fillText(`Check-in: ${checkIn} ${checkInTime}`, 24, 170);
         ctx.fillText(`Check-out: ${checkOut} ${checkOutTime}`, 24, 200);
@@ -536,7 +536,7 @@ const HotelDetail = () => {
                                   {r.user?.fullName ||
                                     `${r.user?.firstName || ""} ${r.user?.lastName || ""}`.trim() ||
                                     r.user?.email ||
-                                    `Guest #${r.userId}`}
+                                    `Guest ${r.userId}`}
                                 </p>
                                 <p className="text-sm text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</p>
                               </div>
@@ -903,7 +903,7 @@ const HotelDetail = () => {
                   {receiptUrl && (
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => { const a = document.createElement('a'); a.href = receiptUrl; a.download = `receipt-${reserve.data?.id}.png`; a.click(); }}>Download Image</Button>
-                      <Button variant="secondary" onClick={() => { const w = window.open('', '_blank'); if (!w) return; const html = `<!doctype html><html><head><title>Receipt #${reserve.data?.id}</title><style>body{font-family:Arial,sans-serif;padding:24px;} .img{max-width:720px;border:1px solid #ddd;border-radius:8px}</style></head><body><h2>Booking Receipt</h2><img class="img" src="${receiptUrl}"/><script>window.onload=()=>window.print();</script></body></html>`; w.document.write(html); w.document.close(); }}>Download PDF</Button>
+                      <Button variant="secondary" onClick={() => { const w = window.open('', '_blank'); if (!w) return; const html = `<!doctype html><html><head><title>Receipt ${reserve.data?.id}</title><style>body{font-family:Arial,sans-serif;padding:24px;} .img{max-width:720px;border:1px solid #ddd;border-radius:8px}</style></head><body><h2>Booking Receipt</h2><img class="img" src="${receiptUrl}"/><script>window.onload=()=>window.print();</script></body></html>`; w.document.write(html); w.document.close(); }}>Download PDF</Button>
                     </div>
                   )}
                   <DialogFooter>
