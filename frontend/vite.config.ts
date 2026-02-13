@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const api = env.VITE_API_URL || "http://localhost:3011";
   return {
+    base: "/",
     server: {
       host: "0.0.0.0",
       port: 8080,
