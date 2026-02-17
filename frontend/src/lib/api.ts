@@ -1,16 +1,13 @@
 // apiClient.ts
 
 const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {};
-const explicitBaseRaw = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
+const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
 const isBrowser = typeof window !== 'undefined' && !!window.location;
-const originBase = isBrowser && window.location.origin ? window.location.origin : '';
 const host = isBrowser && window.location.hostname ? window.location.hostname : '';
 const isLocalHost = !host || /^localhost$|^127\.0\.0\.1$|\[::1\]$/i.test(host);
-const isExplicitLocal = /^https?:\/\/localhost(?::\d+)?(\/|$)/i.test(explicitBaseRaw);
 const devDefault = 'http://localhost:3011';
-const base = isLocalHost
-  ? (explicitBaseRaw || devDefault)
-  : (isExplicitLocal ? (originBase || '') : (explicitBaseRaw || originBase || ''));
+const prodDefault = 'https://hotel-booking-backend.onrender.com';
+const base = explicitBase || (isLocalHost ? devDefault : prodDefault);
 try { console.info('[API] base:', base || '(same-origin)') } catch (_e) { void 0 }
 
 export async function apiGet<T>(path: string): Promise<T> {
