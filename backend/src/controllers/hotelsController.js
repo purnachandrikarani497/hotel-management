@@ -277,7 +277,22 @@ async function featured(req, res) {
 
   } catch (e) {
     console.error('[hotelsController.featured] error:', e);
-    res.status(503).json({ error: 'Database unavailable' });
+    try {
+      const path = require('path');
+      const fs = require('fs');
+      const dbPath = path.resolve(__dirname, '../../data/db.json');
+      if (fs.existsSync(dbPath)) {
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        const hotelsRaw = db.hotels || [];
+        const hotels = hotelsRaw.map(h => ({
+          ...h,
+          image: 'https://placehold.co/800x600?text=Hotel'
+        }));
+        const sorted = hotels.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+        return res.json({ hotels: sorted.slice(0, 4) });
+      }
+    } catch (_) {}
+    res.json({ hotels: [] });
   }
 }
 
@@ -319,6 +334,17 @@ async function about(req, res) {
 
   } catch (e) {
     console.error('[hotelsController.about] error:', e);
+    try {
+      const path = require('path');
+      const fs = require('fs');
+      const dbPath = path.resolve(__dirname, '../../data/db.json');
+      if (fs.existsSync(dbPath)) {
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        const stats = Array.isArray(db.stats) ? db.stats : [];
+        const contact = db.contact || { name: '', email: '', phone1: '', phone2: '' };
+        return res.json({ stats, ourStory: '', ourMission: '', contact });
+      }
+    } catch (_) {}
     res.status(503).json({ error: 'Database unavailable' });
   }
 }
