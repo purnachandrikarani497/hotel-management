@@ -3,7 +3,9 @@
 const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {};
 const mode = String(metaEnv?.MODE || '');
 const isProd = mode === 'production';
-const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
+const explicitBaseRaw = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
+const shouldIgnoreExplicitInProd = isProd && /^https?:\/\/localhost(?::\d+)?\/?$/i.test(explicitBaseRaw);
+const explicitBase = shouldIgnoreExplicitInProd ? '' : explicitBaseRaw;
 const originBase = (typeof window !== 'undefined' && window?.location?.origin) ? window.location.origin : '';
 const devDefault = 'http://localhost:3011';
 const base = explicitBase || (isProd ? originBase : devDefault);
