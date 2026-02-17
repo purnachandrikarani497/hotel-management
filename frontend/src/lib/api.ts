@@ -1,6 +1,6 @@
 // apiClient.ts
 
-const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any)?.env) || {};
+const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {};
 const mode = String(metaEnv?.MODE || '');
 const isProd = mode === 'production';
 const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();

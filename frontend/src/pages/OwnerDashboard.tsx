@@ -1391,7 +1391,7 @@ const OwnerDashboard = () => {
                            toast({ title: "Maximum limit exceeded", variant: "destructive" })
                            return
                         }
-                        if (!/^[a-zA-Z0-9\s,\-]*$/.test(val)) {
+                        if (!/^[a-zA-Z0-9\s,-]*$/.test(val)) {
                            toast({ title: "Invalid amenities", variant: "destructive" })
                            return
                         }

@@ -53,10 +53,6 @@ const MessageInbox = () => {
     return arr
   }, [threads])
   const [activeId, setActiveId] = React.useState<number>(threads[0]?.id || 0)
-  React.useEffect(() => {
-    if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
-    createReview.reset()
-  }, [threads, activeId])
   const messagesQ = useQuery({ queryKey: ["inbox","messages",activeId], queryFn: () => apiGet<{ messages: Message[] }>(`/api/messages/thread/${activeId}/messages`), enabled: !!activeId, refetchInterval: 3000, refetchOnWindowFocus: true })
   const messages = React.useMemo(() => messagesQ.data?.messages ?? [], [messagesQ.data])
   const orderedMessages = React.useMemo(() => {
@@ -106,6 +102,11 @@ const MessageInbox = () => {
     qc.invalidateQueries({ queryKey: ["user","reviews", userId] })
     if (ownerId) qc.invalidateQueries({ queryKey: ["owner","reviews", ownerId] })
   }, onError: () => { toast({ title: "Review submission failed", variant: "destructive" }) } })
+
+  React.useEffect(() => {
+    if (threads.length && !threads.find(t=>t.id===activeId)) setActiveId(threads[0].id)
+    createReview.reset()
+  }, [threads, activeId, createReview])
 
   const alreadyReviewed = React.useMemo(() => {
     const bid = threadBooking?.id
