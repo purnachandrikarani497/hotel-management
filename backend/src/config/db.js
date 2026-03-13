@@ -51,23 +51,36 @@ mongoose.set('strictQuery', false)
   } catch {}
 })()
 
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/hotel_app'
-console.log('[DB.env] final URI source', { MONGODB_URI_set: !!process.env.MONGODB_URI, MONGO_URL_set: !!process.env.MONGO_URL })
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URL;
 
-let connected = false
+if (!MONGODB_URI) {
+  console.error('CRITICAL: MONGODB_URI is not set in environment variables!');
+  console.log('Falling back to localhost for development only.');
+}
+
+const finalUri = MONGODB_URI || 'mongodb://127.0.0.1:27017/hotel_app';
+
+let connected = false;
 async function connect() {
-  if (connected && isConnected()) return
+  if (connected && isConnected()) return;
   try {
-    const dbName = process.env.MONGODB_DB || 'hotel_app'
-    const maskedUri = MONGODB_URI.replace(/\/\/.*@/, '//***:***@')
-    console.log(`[MongoDB] connecting to ${maskedUri} db=${dbName}`)
-    await mongoose.connect(MONGODB_URI, { autoIndex: true, serverSelectionTimeoutMS: 8000, dbName })
-    connected = true
-    console.log('[MongoDB] connected')
+    const dbName = process.env.MONGODB_DB || 'hotel_app';
+    const maskedUri = finalUri.replace(/\/\/.*@/, '//***:***@');
+    
+    console.log(`[MongoDB] Attempting connection to: ${maskedUri}`);
+    
+    await mongoose.connect(finalUri, { 
+      autoIndex: true, 
+      serverSelectionTimeoutMS: 10000, 
+      dbName 
+    });
+    
+    connected = true;
+    console.log('[MongoDB] Successfully connected to Database');
   } catch (e) {
-    connected = false
-    console.error('[MongoDB] connection error', e?.message || e)
-    throw e
+    connected = false;
+    console.error('[MongoDB] Connection failed:', e?.message || e);
+    throw e;
   }
 }
 

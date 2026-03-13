@@ -1,12 +1,13 @@
 // apiClient.ts
 
-const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any)?.env) || {};
-const mode = String(metaEnv?.MODE || '');
-const isProd = mode === 'production';
+const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {};
 const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || metaEnv?.FRONTEND_BASE_URL || '').trim();
-const originBase = (typeof window !== 'undefined' && window?.location?.origin) ? window.location.origin : '';
+const isBrowser = typeof window !== 'undefined' && !!window.location;
+const host = isBrowser && window.location.hostname ? window.location.hostname : '';
+const isLocalHost = !host || /^localhost$|^127\.0\.0\.1$|\[::1\]$/i.test(host);
 const devDefault = 'http://localhost:3011';
-const base = explicitBase || (isProd ? originBase : devDefault);
+const prodDefault = 'https://hotel-booking-backend.onrender.com';
+const base = explicitBase || (isLocalHost ? devDefault : prodDefault);
 try { console.info('[API] base:', base || '(same-origin)') } catch (_e) { void 0 }
 
 export async function apiGet<T>(path: string): Promise<T> {
