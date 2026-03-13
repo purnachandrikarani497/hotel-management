@@ -146,7 +146,8 @@ const UserDetails = () => {
                     value={form.firstName||""} 
                     onChange={e=>{
                       const val = e.target.value;
-                      if (val.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return; }
+                      if (!/^[a-zA-Z\s]*$/.test(val)) { toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                      if (val.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return; }
                       setForm({ ...(form as User), firstName: val })
                     }} 
                   />
@@ -158,7 +159,8 @@ const UserDetails = () => {
                     value={form.lastName||""} 
                     onChange={e=>{
                         const val = e.target.value;
-                        if (val.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return; }
+                        if (!/^[a-zA-Z\s]*$/.test(val)) { toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                        if (val.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return; }
                         setForm({ ...(form as User), lastName: val })
                     }} 
                   />

@@ -48,20 +48,20 @@ const Register = () => {
   const validate = (): boolean => {
     // First Name
     if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters allowed", variant: "destructive" }); return false }
-    if (firstName.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z\s]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters and spaces allowed", variant: "destructive" }); return false }
+    if (firstName.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return false }
 
     // Last Name
     if (!lastName.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters allowed", variant: "destructive" }); return false }
-    if (lastName.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z\s]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters and spaces allowed", variant: "destructive" }); return false }
+    if (lastName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return false }
 
     // Email
     if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return false }
     if (!email.includes('@')) { toast({ title: "Invalid email", description: "Email must contain '@'", variant: "destructive" }); return false }
     // Basic email regex
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email", variant: "destructive" }); return false }
-    if (email.length > 20) { toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" }); return false }
+    if (email.length > 50) { toast({ title: "Maximum limit exceeded", description: "Email max 50 characters", variant: "destructive" }); return false }
 
     // Phone
     if (!phone) { toast({ title: "Please enter the Phone Number", variant: "destructive" }); return false }
@@ -75,8 +75,13 @@ const Register = () => {
         else { toast({ title: "Invalid Password", description: "Password min 6 to max 12 characters", variant: "destructive" }); }
         return false 
     }
-    // Allow both char & numbers and also special char. "dont allow only empty spaces". 
-    // Assuming this means it must contain valid characters.
+    // Alphanumeric + Special Characters requirement
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasLetter || !hasNumber) {
+        toast({ title: "Invalid Password", description: "Must be a combination of alphanumeric characters", variant: "destructive" });
+        return false;
+    }
     if (!/^[\w\W]+$/.test(password) || !password.trim()) { toast({ title: "Invalid Password", variant: "destructive" }); return false }
 
     // Confirm Password
@@ -186,12 +191,12 @@ const Register = () => {
                       value={firstName} 
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (!/^[a-zA-Z]*$/.test(val)) {
-                          toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" });
+                        if (!/^[a-zA-Z\s]*$/.test(val)) {
+                          toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" });
                           return;
                         }
-                        if (val.length > 20) {
-                          toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" });
+                        if (val.length > 50) {
+                          toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" });
                           return;
                         }
                         setFirstName(val);
@@ -205,12 +210,12 @@ const Register = () => {
                     value={lastName} 
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (!/^[a-zA-Z]*$/.test(val)) {
-                        toast({ title: "Invalid input", description: "Only characters allowed", variant: "destructive" });
+                      if (!/^[a-zA-Z\s]*$/.test(val)) {
+                        toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" });
                         return;
                       }
-                      if (val.length > 20) {
-                        toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" });
+                      if (val.length > 50) {
+                        toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" });
                         return;
                       }
                       setLastName(val);
@@ -227,8 +232,8 @@ const Register = () => {
                   value={email} 
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (val.length > 20) {
-                      toast({ title: "Maximum limit exceeded", description: "Email max 20 characters", variant: "destructive" });
+                    if (val.length > 50) {
+                      toast({ title: "Maximum limit exceeded", description: "Email max 50 characters", variant: "destructive" });
                       return;
                     }
                     setEmail(val);

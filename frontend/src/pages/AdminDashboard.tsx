@@ -322,13 +322,27 @@ const AdminDashboard = () => {
 
                 // Password
                 if (!password) { toast({ title: "Please enter the Password", variant: "destructive" }); return; }
-                if (password.length < 6) { toast({ title: "invaid Password", description: "Min 6 characters", variant: "destructive" }); return; }
+                if (password.length < 6 || password.length > 12) { 
+                    if (password.length > 12) { toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" }); }
+                    else { toast({ title: "Invalid Password", description: "Password min 6 to max 12 characters", variant: "destructive" }); }
+                    return; 
+                }
+                const hasLetter = /[a-zA-Z]/.test(password);
+                const hasNumber = /[0-9]/.test(password);
+                if (!hasLetter || !hasNumber) {
+                    toast({ title: "Invalid Password", description: "Must be a combination of alphanumeric characters", variant: "destructive" });
+                    return;
+                }
                 
                 // First Name
                 if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return; }
+                if (!/^[a-zA-Z\s]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                if (firstName.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return; }
                 
                 // Last Name
                 if (!lastName.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return; }
+                if (!/^[a-zA-Z\s]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                if (lastName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return; }
 
                 // Phone
                 if (!phone.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return; }

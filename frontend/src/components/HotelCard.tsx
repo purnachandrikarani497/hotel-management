@@ -39,8 +39,8 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
   };
 
   return (
-    <div className="group rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-      <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
+    <div className="group h-full flex flex-col rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
+      <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden shrink-0">
         <img
           src={resolveImage(image)}
           alt={name}
@@ -49,7 +49,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
         />
       </div>
       
-      <div className="p-6">
+      <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-xl font-bold text-foreground group-hover:text-purple-700 transition-colors">
             {name}
@@ -89,7 +89,7 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
           </div>
         )}
         
-        <div className="flex items-end justify-between">
+        <div className="mt-auto pt-4 flex items-end justify-between">
           <div>
             <span className="text-2xl font-bold text-primary">₹{price}</span>
             <span className="text-muted-foreground"> / day</span>
