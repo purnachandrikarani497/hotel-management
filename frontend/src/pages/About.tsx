@@ -29,7 +29,7 @@ const About = () => {
           <div className="container">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
               {isLoading && <div className="col-span-full text-center">Loading...</div>}
-              {isError && <div className="col-span-full text-center">Failed to load</div>}
+              {isError && <div className="col-span-full text-center text-red-600">Failed to load</div>}
               {!isLoading && !isError && stats.map((stat) => {
                 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
                   Hotels: Hotel,

@@ -354,7 +354,7 @@ const Register = () => {
                   }} 
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block whitespace-nowrap">ID Type *</label>
                   <select className="w-full border rounded h-10 px-3 bg-background" value={idType} onChange={(e)=>setIdType(e.target.value)}>
@@ -393,7 +393,8 @@ const Register = () => {
                   />
                   <div className="text-xs text-muted-foreground mt-1">Format: {idHints[idType]}</div>
                 </div>
-                <div>
+              </div>
+              <div>
                   <label className="text-sm font-medium mb-2 block whitespace-nowrap">Document Upload *</label>
                   <label 
                     htmlFor="id-doc-upload" 
@@ -412,7 +413,6 @@ const Register = () => {
                     {idDocImage ? "File selected" : "No file chosen"}
                   </div>
                 </div>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Issue Date</label>
