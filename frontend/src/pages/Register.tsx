@@ -41,7 +41,7 @@ const Register = () => {
     "Passport": "Letter + 7 digits",
     "Driving Licence": "8-20 alphanumeric",
     "Voter ID": "3 letters + 7 digits",
-    "PAN card (usually not accepted as primary ID)": "5 letters, 4 digits, 1 letter (ABCDE1234F)",
+    "PAN card (usually not accepted as primary ID)": "10 alphanumeric",
   }
   const phoneRe = /^[6-9]\d{9}$/
   
