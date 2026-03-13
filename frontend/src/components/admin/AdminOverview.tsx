@@ -55,12 +55,12 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
             <h1 className="text-3xl md:text-4xl font-bold">Admin Dashboard</h1>
           </div>
           <p className="opacity-90">Super Admin controls for the platform</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Hotels</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalHotels ?? 0}</div></CardContent></Card>
             <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{stats?.totalBookings ?? 0}</div></CardContent></Card>
             <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-green-50 to-emerald-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings Today</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsToday}</div></CardContent></Card>
             <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-yellow-50 to-orange-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Bookings This Month</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{bookingsThisMonth}</div></CardContent></Card>
-            <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Total Revenue</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">₹{stats?.totalRevenue ?? 0}</div></CardContent></Card>
+            <Card className="rounded-2xl p-0 shadow-2xl bg-white border-2 border-purple-200"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-purple-700">Total Revenue</CardTitle></CardHeader><CardContent><div className="text-3xl font-black bg-gradient-to-r from-purple-700 to-pink-700 bg-clip-text text-transparent" title={`₹${stats?.totalRevenue?.toLocaleString() ?? "0"}`}>₹{stats?.totalRevenue?.toLocaleString() ?? "0"}</div></CardContent></Card>
             <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-blue-50 to-cyan-100 border-0"><CardHeader className="pb-2"><CardTitle className="text-sm">Cities</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold">{citiesCount}</div></CardContent></Card>
           </div>
         </div>
@@ -78,10 +78,10 @@ const AdminOverview: React.FC<Props> = ({ stats, bookings }) => {
                 className="h-60"
                 config={{ bookings: { label: "Bookings", color: "hsl(var(--primary))" } }}
               >
-                <BarChart data={daysData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <BarChart data={daysData} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} interval={0} fontSize={10} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={24} fontSize={10} />
                   <ChartTooltip content={<ChartTooltipContent nameKey="bookings" />} />
                   <Bar dataKey="bookings" fill="var(--color-bookings)" radius={[4,4,0,0]} />
                 </BarChart>

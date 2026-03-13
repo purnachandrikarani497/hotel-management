@@ -226,70 +226,58 @@ const AdminDashboard = () => {
           <CardHeader><CardTitle>User Management</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <Input 
-                type="email" 
-                placeholder="Owner Email" 
-                value={ownerForm.email} 
+              <Input
+                type="email"
+                placeholder="Owner Email"
+                value={ownerForm.email}
                 onChange={e => {
                   const val = e.target.value;
                   if (val.length > 50) {
                     toast({ title: "Maximum limit exceeded", description: "Email max 50 characters", variant: "destructive" });
                     return;
                   }
-                  if (val.length > 0 && !/^[a-zA-Z0-9@._-]*$/.test(val)) {
-                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, -", variant: "destructive" });
-                    return;
-                  }
-                  setOwnerForm({ ...ownerForm, email: val })
-                }} 
+                  setOwnerForm({ ...ownerForm, email: val });
+                }}
               />
               <div className="relative">
-                <Input 
-                  placeholder="Password" 
-                  type={showOwnerPassword ? "text" : "password"} 
-                  value={ownerForm.password} 
+                <Input
+                  placeholder="Password"
+                  type={showOwnerPassword ? "text" : "password"}
+                  value={ownerForm.password}
                   onChange={e => {
                     const val = e.target.value;
                     if (val.length > 12) {
                       toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
                       return;
                     }
-                    setOwnerForm({ ...ownerForm, password: val })
-                  }} 
+                    setOwnerForm({ ...ownerForm, password: val });
+                  }}
                 />
-                <button type="button" className="absolute right-3 top-2.5 text-muted-foreground" onClick={()=>setShowOwnerPassword(!showOwnerPassword)}>{showOwnerPassword? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button>
+                <button type="button" className="absolute right-3 top-2.5 text-muted-foreground" onClick={() => setShowOwnerPassword(!showOwnerPassword)}>{showOwnerPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
               </div>
-              <Input 
-                placeholder="First Name" 
-                value={ownerForm.firstName} 
+              <Input
+                placeholder="First Name"
+                value={ownerForm.firstName}
                 onChange={e => {
                   const val = e.target.value;
-                  if (!/^[a-zA-Z]*$/.test(val)) {
-                     toast({ title: "invaid first name", description: "Only characters allowed", variant: "destructive" });
-                     return;
-                  }
-                  if (val.length > 20) {
-                    toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" });
+                  if (val.length > 50) {
+                    toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" });
                     return;
                   }
-                  setOwnerForm({ ...ownerForm, firstName: val })
-                }} 
+                  setOwnerForm({ ...ownerForm, firstName: val });
+                }}
               />
-              <Input 
-                placeholder="Last Name" 
-                value={ownerForm.lastName} 
+              <Input
+                placeholder="Last Name"
+                value={ownerForm.lastName}
                 onChange={e => {
                   const val = e.target.value;
-                  if (!/^[a-zA-Z]*$/.test(val)) {
-                     toast({ title: "invaid last name", description: "Only characters allowed", variant: "destructive" });
-                     return;
-                  }
-                  if (val.length > 20) {
-                    toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" });
+                  if (val.length > 50) {
+                    toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" });
                     return;
                   }
-                  setOwnerForm({ ...ownerForm, lastName: val })
-                }} 
+                  setOwnerForm({ ...ownerForm, lastName: val });
+                }}
               />
               <Input
                 placeholder="Phone"
@@ -301,61 +289,52 @@ const AdminDashboard = () => {
                     toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
                     return;
                   }
-                  // Apply 6-9 constraint for first digit
-                  if (val.length > 0 && !/^[6-9]/.test(val)) {
-                     // Optionally show toast for invalid start? User just said "allow only... start with 6 to 9"
-                     // We will silently ignore the input if it doesn't start with 6-9
-                     return;
-                  }
-                  setOwnerForm({ ...ownerForm, phone: val })
+                  setOwnerForm({ ...ownerForm, phone: val });
                 }}
               />
-              <Button onClick={() => { 
+              <Button onClick={() => {
                 // Validation on Submit
                 const { email, password, firstName, lastName, phone } = ownerForm;
 
                 // Email
                 if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return; }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email format", variant: "destructive" }); return; }
                 if (email.length > 50) { toast({ title: "Email too long", description: "Max 50 characters", variant: "destructive" }); return; }
-                if (!email.includes('@')) { toast({ title: "missing @", description: "Email must contain '@'", variant: "destructive" }); return; }
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "invaid email", variant: "destructive" }); return; }
 
                 // Password
                 if (!password) { toast({ title: "Please enter the Password", variant: "destructive" }); return; }
-                if (password.length < 6 || password.length > 12) { 
-                    if (password.length > 12) { toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" }); }
-                    else { toast({ title: "Invalid Password", description: "Password min 6 to max 12 characters", variant: "destructive" }); }
-                    return; 
+                if (password.length < 6 || password.length > 12) {
+                  toast({ title: "Invalid Password", description: "Password must be between 6 and 12 characters", variant: "destructive" });
+                  return;
                 }
-                const hasLetter = /[a-zA-Z]/.test(password);
-                const hasNumber = /[0-9]/.test(password);
-                if (!hasLetter || !hasNumber) {
-                    toast({ title: "Invalid Password", description: "Must be a combination of alphanumeric characters", variant: "destructive" });
-                    return;
+                if (!/^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+                  toast({ title: "Invalid Password", description: "Must be a combination of alphanumeric characters", variant: "destructive" });
+                  return;
                 }
-                
+
                 // First Name
                 if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return; }
                 if (!/^[a-zA-Z\s]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
                 if (firstName.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return; }
-                
+
                 // Last Name
-                if (!lastName.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return; }
+                if (!lastName.trim()) { toast({ title: "Please enter the last name", variant: "destructive" }); return; }
                 if (!/^[a-zA-Z\s]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
                 if (lastName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return; }
 
                 // Phone
                 if (!phone.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return; }
-                if (phone.length < 10) { toast({ title: "invaid Phone number", description: "Must be 10 digits", variant: "destructive" }); return; }
+                if (!/^[6-9]\d{9}$/.test(phone)) { toast({ title: "Invalid Phone number", description: "Must be 10 digits and start with a digit from 6 to 9", variant: "destructive" }); return; }
 
-                createOwner.mutate(ownerForm) 
+                createOwner.mutate(ownerForm);
               }} disabled={createOwner.isPending}>{createOwner.isPending ? "Adding..." : "Add Hotel Owner"}</Button>
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-sm text-muted-foreground">Role</span>
-              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e=>setFilterRole(e.target.value as 'user'|'owner')}>
+              <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={filterRole} onChange={e => setFilterRole(e.target.value as 'user' | 'owner' | 'admin')}>
                 <option value="user">Users</option>
                 <option value="owner">Hotel Owners</option>
+                <option value="admin">Admin</option>
               </select>
               <select className="px-3 py-2 rounded border bg-background text-sm w-full sm:w-auto" value={usersPeriod} onChange={e=>setUsersPeriod(e.target.value as typeof usersPeriod)}>
                 <option value="all">All</option>
