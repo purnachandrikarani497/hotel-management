@@ -10,6 +10,7 @@ const About = React.lazy(() => import("./pages/About"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const Help = React.lazy(() => import("./pages/Help"));
 const Cancellation = React.lazy(() => import("./pages/Cancellation"));
+const Terms = React.lazy(() => import("./pages/Terms"));
 const SignIn = React.lazy(() => import("./pages/SignIn"));
 const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/help" element={<Help />} />
           <Route path="/cancellation" element={<Cancellation />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />

@@ -72,6 +72,7 @@ const Footer = () => {
             </h4>
             <ul className="space-y-3">
               <li><Link to={isOwnerDashboard ? "/dashboard/owner/about" : "/about"} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
+              <li><Link to="/terms" className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">📜 Terms & Conditions</Link></li>
             </ul>
           </div>
 
