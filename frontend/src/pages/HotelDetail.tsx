@@ -890,7 +890,7 @@ const HotelDetail = () => {
                         if (bid) confirm.mutate(bid);
                       }}
                     >
-                      Pay Now
+                      {paymentMethod === 'cod' ? 'Pay by Cash' : 'Pay Now'}
                     </Button>
                   </DialogFooter>
                 </div>

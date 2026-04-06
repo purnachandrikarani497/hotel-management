@@ -640,18 +640,18 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Full Name" value={contactName} onChange={e=>{ const v=e.target.value; if(v.length>20){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(!/^[a-zA-Z\s]*$/.test(v)){toast({title:"Invalid full name",variant:"destructive"});return} setContactName(v) }} disabled={!contactEditing} />
+                <Input placeholder="Full Name" value={contactName} onChange={e=>{ const v=e.target.value; if(v.length > 50){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(!/^[a-zA-Z\s]*$/.test(v)){toast({title:"Invalid full name",variant:"destructive"});return} setContactName(v) }} disabled={!contactEditing} />
                 <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
                   const v=e.target.value; 
                   if(v.length>50){toast({title:"Maximum limit exceeded",description:"Email max 50 characters",variant:"destructive"});return} 
-                  if (v.length > 0 && !/^[a-zA-Z0-9@._-]*$/.test(v)) {
-                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, -", variant: "destructive" });
+                  if (v.length > 0 && !/^[a-zA-Z0-9@._%+-]*$/.test(v)) {
+                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, %, +, -", variant: "destructive" });
                     return;
                   }
                   setContactEmail(v) 
                 }} disabled={!contactEditing} />
-                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone1(v) }} disabled={!contactEditing} />
-                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){return} setContactPhone2(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){toast({title:"Invalid phone number",description:"Must start with 6, 7, 8, or 9",variant:"destructive"});return} setContactPhone1(v) }} disabled={!contactEditing} />
+                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){toast({title:"Invalid phone number",description:"Must start with 6, 7, 8, or 9",variant:"destructive"});return} setContactPhone2(v) }} disabled={!contactEditing} />
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>

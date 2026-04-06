@@ -344,7 +344,7 @@ const OwnerDashboard = () => {
     })
     const ordered = Object.values(map).map(g => ({
       ...g,
-      roomNumbers: (g.roomNumbers || []).slice().sort((a,b)=>{
+      roomNumbers: Array.from(new Set((g.roomNumbers || []).map(s => String(s).trim()).filter(Boolean))).sort((a,b)=>{
         const na = /^\d+$/.test(String(a)) ? Number(a) : Number.MAX_SAFE_INTEGER
         const nb = /^\d+$/.test(String(b)) ? Number(b) : Number.MAX_SAFE_INTEGER
         if (na !== nb) return na - nb
@@ -1855,7 +1855,7 @@ const OwnerDashboard = () => {
                   <div className="col-span-2">
                     <label className="text-sm font-medium mb-2 block">Room Numbers (comma-separated)</label>
                     <Input
-                      placeholder="e.g., 501, 502, 503"
+                      placeholder="Room numbers"
                       value={roomForm.roomNumbers}
                       onChange={(e) => {
                         const val = e.target.value
@@ -1940,6 +1940,7 @@ const OwnerDashboard = () => {
                       type="file"
                       multiple
                       accept="image/*"
+                      required
                       className="block w-full text-sm text-slate-500
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-full file:border-0
@@ -1976,6 +1977,10 @@ const OwnerDashboard = () => {
                     <Button
                       onClick={async () => {
                         const files = roomPhotoFiles.slice(0, 10)
+                        if (files.length === 0) {
+                          toast({ title: "Please choose at least one image", variant: "destructive" })
+                          return
+                        }
                         const toDataUrl = (f: File) =>
                           new Promise<string>((resolve, reject) => {
                             const r = new FileReader()
@@ -2105,7 +2110,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             {roomGroupEditing[g.key] ? (
                               <Input
-                                placeholder="e.g., 501, 502, 503"
+                                placeholder="Room numbers"
                                 value={roomGroupEdit[g.key]?.roomNumbers ?? (g.roomNumbers || []).join(", ")}
                                 onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), roomNumbers: e.target.value } })}
                               />

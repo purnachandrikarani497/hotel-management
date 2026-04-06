@@ -7,24 +7,11 @@ const Footer = () => {
   const isAdminDashboard = location.pathname.startsWith("/dashboard/admin");
   return (
     <footer className="bg-gradient-to-br from-cyan-50 via-purple-100 via-pink-50 to-blue-50 border-t border-purple-200 text-gray-800 relative overflow-hidden animate-gradient-y">
-      {/* Animated Background Effects */}
-      <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-transparent via-purple-200/20 via-pink-200/20 to-cyan-200/20 animate-pulse opacity-70"></div>
-      <div className="hidden sm:block absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-float shadow-2xl"></div>
-      <div className="hidden sm:block absolute -bottom-10 -right-10 w-40 h-40 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl animate-float-delayed shadow-2xl"></div>
-      <div className="hidden sm:block absolute top-20 right-20 w-32 h-32 bg-gradient-to-r from-yellow-200/10 to-orange-200/10 rounded-full blur-2xl animate-float opacity-60"></div>
-      <div className="hidden sm:block absolute bottom-32 left-16 w-24 h-24 bg-gradient-to-r from-pink-300/15 to-purple-300/15 rounded-full blur-xl animate-float-delayed opacity-50"></div>
-
-      {/* Sparkle Effects */}
-      <div className="hidden sm:block absolute top-16 left-16 w-2 h-2 bg-yellow-400 rounded-full animate-ping opacity-80"></div>
-      <div className="hidden sm:block absolute top-32 right-32 w-1 h-1 bg-pink-400 rounded-full animate-ping opacity-60 animation-delay-1000"></div>
-      <div className="hidden sm:block absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping opacity-70 animation-delay-2000"></div>
-      <div className="hidden sm:block absolute bottom-40 right-1/4 w-1 h-1 bg-purple-400 rounded-full animate-ping opacity-50 animation-delay-3000"></div>
-
-      {/* Geometric Patterns */}
-      <div className="hidden sm:block absolute top-0 left-0 w-full h-full opacity-5">
-        <div className="absolute top-10 left-10 w-20 h-20 border-2 border-purple-300 rotate-45 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-16 h-16 border-2 border-pink-300 rotate-12 animate-pulse animation-delay-1000"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 border-2 border-cyan-300 rounded-full animate-pulse animation-delay-2000"></div>
+      {/* Watermark */}
+      <div className="absolute inset-0 flex items-center justify-center z-0">
+        <span className="text-[12rem] font-black text-purple-200/30 select-none">
+          Sana Stayz
+        </span>
       </div>
       <div className="container py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -71,7 +58,7 @@ const Footer = () => {
               <div className="absolute -bottom-1 left-0 w-12 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
             </h4>
             <ul className="space-y-3">
-              <li><Link to="/about" className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
+              <li><Link to={isAdminDashboard ? "/dashboard/admin/settings" : "/about"} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
               <li><Link to="/terms" className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">📜 Terms & Conditions</Link></li>
             </ul>
           </div>
