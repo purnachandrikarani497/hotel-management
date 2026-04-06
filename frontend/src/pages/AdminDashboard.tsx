@@ -393,7 +393,7 @@ const AdminDashboard = () => {
                   return;
                 }
 
-                const rows = data.map(u=>({ id:u.id, email:u.email, role:u.role, blocked:u.blocked, createdAt:u.createdAt }))
+                const rows = data.map((u, idx)=>({ 'S.No':idx+1, 'Email':u.email, 'Role':u.role, 'Blocked':u.blocked, 'Created At':u.createdAt }))
                 downloadCsv(`users-${usersPeriod}`, rows)
               }}>Download</Button>
               <Button variant="destructive" className="shrink-0" onClick={()=>{ 
@@ -472,7 +472,7 @@ const AdminDashboard = () => {
                   toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
                   return;
                 }
-                const rows = data.map(h=>({ id:h.id, name:h.name, location:h.location, status:h.status, featured:h.featured, createdAt:h.createdAt }))
+                const rows = data.map((h, idx)=>({ 'S.No':idx+1, 'Name':h.name, 'Location':h.location, 'Status':h.status, 'Featured':h.featured, 'Created At':h.createdAt }))
                 downloadCsv(`hotels-${hotelsPeriod}`, rows)
               }}>Download</Button>
               <Button variant="destructive" className="shrink-0" onClick={async ()=>{ 
@@ -601,7 +601,7 @@ const AdminDashboard = () => {
                   toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
                   return;
                 }
-                const rows = data.map(b=>({ id:b.id, hotelId:b.hotelId, hotelName:b.hotel?.name, checkIn:b.checkIn, checkOut:b.checkOut, guests:b.guests, total:b.total, status:b.status, refundIssued:b.refundIssued, createdAt:b.createdAt }))
+                const rows = data.map((b, idx)=>({ 'S.No':idx+1, 'Hotel':b.hotel?.name, 'Check In':b.checkIn, 'Check Out':b.checkOut, 'Guests':b.guests, 'Total':b.total, 'Status':b.status, 'Refund Issued':b.refundIssued, 'Created At':b.createdAt }))
                 downloadCsv(`bookings-${bookingsPeriod}`, rows)
               }}>Download</Button>
               <Button variant="destructive" className="shrink-0" onClick={()=>{ 
