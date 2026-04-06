@@ -232,8 +232,8 @@ const AdminDashboard = () => {
                 value={ownerForm.email}
                 onChange={e => {
                   const val = e.target.value;
-                  if (val.length > 50) {
-                    toast({ title: "Maximum limit exceeded", description: "Email max 50 characters", variant: "destructive" });
+                  if (val.length > 60) {
+                    toast({ title: "Maximum limit exceeded", description: "Email max 60 characters", variant: "destructive" });
                     return;
                   }
                   setOwnerForm({ ...ownerForm, email: val });
@@ -246,6 +246,10 @@ const AdminDashboard = () => {
                   value={ownerForm.password}
                   onChange={e => {
                     const val = e.target.value;
+                    if (/\s/.test(val)) {
+                      toast({ title: "Invalid Password", description: "Spaces are not allowed in password", variant: "destructive" });
+                      return;
+                    }
                     if (val.length > 12) {
                       toast({ title: "Maximum limit exceeded", description: "Password max 12 characters", variant: "destructive" });
                       return;
@@ -264,6 +268,10 @@ const AdminDashboard = () => {
                     toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" });
                     return;
                   }
+                  if (val !== '' && !/^[a-zA-Z][a-zA-Z\s]*$/.test(val)) {
+                    toast({ title: "Invalid first name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" });
+                    return;
+                  }
                   setOwnerForm({ ...ownerForm, firstName: val });
                 }}
               />
@@ -274,6 +282,10 @@ const AdminDashboard = () => {
                   const val = e.target.value;
                   if (val.length > 50) {
                     toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" });
+                    return;
+                  }
+                  if (val !== '' && !/^[a-zA-Z][a-zA-Z\s]*$/.test(val)) {
+                    toast({ title: "Invalid last name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" });
                     return;
                   }
                   setOwnerForm({ ...ownerForm, lastName: val });
@@ -298,28 +310,50 @@ const AdminDashboard = () => {
 
                 // Email
                 if (!email.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return; }
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email format", variant: "destructive" }); return; }
-                if (email.length > 50) { toast({ title: "Email too long", description: "Max 50 characters", variant: "destructive" }); return; }
+                if (email.length > 60) { toast({ title: "Email too long", description: "Max 60 characters", variant: "destructive" }); return; }
+                if (!email.includes('@')) { toast({ title: "Invalid email", description: "@ is missing in email address", variant: "destructive" }); return; }
+                if (email.indexOf('@') === 0) { toast({ title: "Invalid email", description: "Email should have characters before @", variant: "destructive" }); return; }
+                if (email.split('@').length > 2) { toast({ title: "Invalid email", description: "Email should contain only one @", variant: "destructive" }); return; }
+                {
+                  const parts = email.split('@');
+                  const domain = parts[1] || '';
+                  if (!domain) { toast({ title: "Invalid email", description: "Domain is missing after @", variant: "destructive" }); return; }
+                  if (!domain.includes('.')) { toast({ title: "Invalid email", description: "Domain extension is missing (e.g. .com)", variant: "destructive" }); return; }
+                  if (domain.startsWith('.')) { toast({ title: "Invalid email", description: "Domain cannot start with a dot", variant: "destructive" }); return; }
+                  if (domain.endsWith('.')) { toast({ title: "Invalid email", description: "Domain cannot end with a dot", variant: "destructive" }); return; }
+                  const ext = domain.split('.').pop() || '';
+                  if (ext.length < 2) { toast({ title: "Invalid email", description: "Domain extension is too short (e.g. .com)", variant: "destructive" }); return; }
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" }); return; }
 
                 // Password
                 if (!password) { toast({ title: "Please enter the Password", variant: "destructive" }); return; }
+                if (/\s/.test(password)) { toast({ title: "Invalid Password", description: "Spaces are not allowed in password", variant: "destructive" }); return; }
                 if (password.length < 6 || password.length > 12) {
                   toast({ title: "Invalid Password", description: "Password must be between 6 and 12 characters", variant: "destructive" });
                   return;
                 }
-                if (!/^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
-                  toast({ title: "Invalid Password", description: "Must be a combination of alphanumeric characters", variant: "destructive" });
+                if (!/(?=.*[a-zA-Z])/.test(password)) {
+                  toast({ title: "Invalid Password", description: "Password must contain at least one letter", variant: "destructive" });
+                  return;
+                }
+                if (!/(?=.*[0-9])/.test(password)) {
+                  toast({ title: "Invalid Password", description: "Password must contain at least one number", variant: "destructive" });
+                  return;
+                }
+                if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/.test(password)) {
+                  toast({ title: "Invalid Password", description: "Password must contain at least one special character", variant: "destructive" });
                   return;
                 }
 
                 // First Name
                 if (!firstName.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return; }
-                if (!/^[a-zA-Z\s]+$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(firstName)) { toast({ title: "Invalid first name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" }); return; }
                 if (firstName.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return; }
 
                 // Last Name
                 if (!lastName.trim()) { toast({ title: "Please enter the last name", variant: "destructive" }); return; }
-                if (!/^[a-zA-Z\s]+$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
+                if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(lastName)) { toast({ title: "Invalid last name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" }); return; }
                 if (lastName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return; }
 
                 // Phone
