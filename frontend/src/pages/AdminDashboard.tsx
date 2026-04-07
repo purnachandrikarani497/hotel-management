@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   })
   const createCoupon = useMutation({ mutationFn: (p: { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }) => apiPost<{ id:number }, { code:string; discount:number; expiry:string; usageLimit:number; enabled:boolean }>("/api/admin/coupons", p), onSuccess: (res, vars) => { if (res?.id) addId("coupons", res.id); qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: "Coupon created", description: vars.code }) }, onError: () => toast({ title: "Create failed", variant: "destructive" }) })
   const setCouponStatus = useMutation({ mutationFn: (p: { id:number; enabled:boolean }) => apiPost("/api/admin/coupons/"+p.id+"/status", { enabled: p.enabled }), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","coupons"] }); toast({ title: vars.enabled ? "Enabled" : "Disabled", description: String(vars.id) }) }, onError: () => toast({ title: "Update failed", variant: "destructive" }) })
-  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else if (vars.ourStory !== undefined && vars.ourMission === undefined) { toast({ title: "About Us updated successfully" }) } else if (vars.ourMission !== undefined && vars.ourStory === undefined) { toast({ title: "Mission updated successfully" }) } else if (vars.ourStory !== undefined && vars.ourMission !== undefined) { toast({ title: "About Us and Mission updated successfully" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
+  const updateSettings = useMutation({ mutationFn: (p: Partial<Settings>) => apiPost("/api/admin/settings", p), onSuccess: (_res, vars) => { qc.invalidateQueries({ queryKey: ["admin","settings"] }); qc.invalidateQueries({ queryKey: ["about"] }); if(vars.contactName!==undefined || vars.contactEmail!==undefined || vars.contactPhone1!==undefined || vars.contactPhone2!==undefined) { toast({ title: "Contact updated" }) } else if (vars.ourStory !== undefined && vars.ourMission === undefined) { toast({ title: "Our story updated successfully" }) } else if (vars.ourMission !== undefined && vars.ourStory === undefined) { toast({ title: "Our mission updated successfully" }) } else if (vars.ourStory !== undefined && vars.ourMission !== undefined) { toast({ title: "About Us and Mission updated successfully" }) } else { toast({ title: "Settings updated" }) } }, onError: () => toast({ title: "Save failed", variant: "destructive" }) })
   const createOwner = useMutation({
     mutationFn: (p: { email:string; password:string; firstName:string; lastName:string; phone:string }) =>
       apiPost<{ id:number }, { email:string; password:string; firstName:string; lastName:string; phone:string }>("/api/admin/owners", p),
@@ -116,7 +116,7 @@ const AdminDashboard = () => {
   const [missionEditing, setMissionEditing] = React.useState(false)
   
   const [ownerForm, setOwnerForm] = React.useState({ email:"", password:"", firstName:"", lastName:"", phone:"" })
-  const [filterRole, setFilterRole] = React.useState<'user'|'owner'>('user')
+  const [filterRole, setFilterRole] = React.useState<'user'|'owner'|'admin'>('user')
   const [contactName, setContactName] = React.useState("")
   const [contactPhone1, setContactPhone1] = React.useState("")
   const [contactPhone2, setContactPhone2] = React.useState("")
@@ -526,52 +526,58 @@ const AdminDashboard = () => {
                 <div className="text-sm font-medium mb-2">Our Story</div>
                 <Textarea rows={6} placeholder="Enter our story" value={storyInput} onChange={e => {
                   const val = e.target.value;
-                  if (val.length > 120) {
-                    toast({ title: "Maximum limit exceeded", description: "Max 120 characters", variant: "destructive" });
+                  if (val.length > 500) {
+                    toast({ title: "Maximum limit exceeded", description: "Max 500 characters", variant: "destructive" });
                     return;
                   }
                   setStoryInput(val);
                 }} readOnly={!storyEditing} />
+                <div className="text-xs text-muted-foreground mt-1">{storyInput.length}/500</div>
                 <div className="mt-2 flex gap-2">
-                  <Button variant="outline" onClick={()=> setStoryEditing(!storyEditing)}>{storyEditing ? 'Stop Edit' : 'Edit'}</Button>
+                  {storyEditing ? (
+                    <Button variant="outline" onClick={() => setStoryEditing(false)}>Stop Edit</Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => setStoryEditing(true)}>Edit</Button>
+                  )}
                   <Button onClick={() => {
-                    if (!storyInput.trim()) {
-                      toast({ title: "Please enter story field", variant: "destructive" });
-                      return;
-                    }
+                    if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
                     updateSettings.mutate({ ourStory: storyInput })
+                    setStoryEditing(false)
                   }} disabled={updateSettings.isPending || !storyEditing}>Update</Button>
                   <Button variant="secondary" onClick={() => {
-                     if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
-                     if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
-                     updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })
-                  }} disabled={updateSettings.isPending}>Save</Button>
+                    if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
+                    updateSettings.mutate({ ourStory: storyInput })
+                    setStoryEditing(false)
+                  }} disabled={updateSettings.isPending || !storyEditing}>Save</Button>
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium mb-2">Our Mission</div>
                 <Textarea rows={4} placeholder="Enter our mission" value={missionInput} onChange={e => {
                   const val = e.target.value;
-                  if (val.length > 120) {
-                    toast({ title: "Maximum limit exceeded", description: "Max 120 characters", variant: "destructive" });
+                  if (val.length > 500) {
+                    toast({ title: "Maximum limit exceeded", description: "Max 500 characters", variant: "destructive" });
                     return;
                   }
                   setMissionInput(val);
                 }} readOnly={!missionEditing} />
+                <div className="text-xs text-muted-foreground mt-1">{missionInput.length}/500</div>
                 <div className="mt-2 flex gap-2">
-                  <Button variant="outline" onClick={()=> setMissionEditing(!missionEditing)}>{missionEditing ? 'Stop Edit' : 'Edit'}</Button>
+                  {missionEditing ? (
+                    <Button variant="outline" onClick={() => setMissionEditing(false)}>Stop Edit</Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => setMissionEditing(true)}>Edit</Button>
+                  )}
                   <Button onClick={() => {
-                    if (!missionInput.trim()) {
-                      toast({ title: "Please enter mission field", variant: "destructive" });
-                      return;
-                    }
+                    if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
                     updateSettings.mutate({ ourMission: missionInput })
+                    setMissionEditing(false)
                   }} disabled={updateSettings.isPending || !missionEditing}>Update</Button>
                   <Button variant="secondary" onClick={() => {
-                     if (!storyInput.trim()) { toast({ title: "Please enter story field", variant: "destructive" }); return; }
-                     if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
-                     updateSettings.mutate({ ourStory: storyInput, ourMission: missionInput })
-                  }} disabled={updateSettings.isPending}>Save</Button>
+                    if (!missionInput.trim()) { toast({ title: "Please enter mission field", variant: "destructive" }); return; }
+                    updateSettings.mutate({ ourMission: missionInput })
+                    setMissionEditing(false)
+                  }} disabled={updateSettings.isPending || !missionEditing}>Save</Button>
                 </div>
               </div>
               
@@ -674,32 +680,51 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Full Name" value={contactName} onChange={e=>{ const v=e.target.value; if(v.length > 50){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(!/^[a-zA-Z\s]*$/.test(v)){toast({title:"Invalid full name",variant:"destructive"});return} setContactName(v) }} disabled={!contactEditing} />
-                <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
-                  const v=e.target.value; 
-                  if(v.length>50){toast({title:"Maximum limit exceeded",description:"Email max 50 characters",variant:"destructive"});return} 
-                  if (v.length > 0 && !/^[a-zA-Z0-9@._%+-]*$/.test(v)) {
-                    toast({ title: "Invalid character", description: "Email can only contain letters, numbers, @, ., _, %, +, -", variant: "destructive" });
-                    return;
-                  }
-                  setContactEmail(v) 
+                <Input placeholder="Full Name" value={contactName} onChange={e=>{ 
+                  const v=e.target.value;
+                  if (v.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return; }
+                  if (v.length > 0 && !/^[a-zA-Z][a-zA-Z\s]*$/.test(v)) { toast({ title: "Invalid full name", description: "Only letters allowed, must start with a letter", variant: "destructive" }); return; }
+                  setContactName(v);
                 }} disabled={!contactEditing} />
-                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){toast({title:"Invalid phone number",description:"Must start with 6, 7, 8, or 9",variant:"destructive"});return} setContactPhone1(v) }} disabled={!contactEditing} />
-                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ const v=e.target.value.replace(/\D/g,''); if(v.length>10){toast({title:"Maximum limit exceeded",variant:"destructive"});return} if(v.length>0&&/^[0-5]/.test(v)){toast({title:"Invalid phone number",description:"Must start with 6, 7, 8, or 9",variant:"destructive"});return} setContactPhone2(v) }} disabled={!contactEditing} />
+                <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
+                  const v=e.target.value;
+                  if (v.length > 60) { toast({ title: "Maximum limit exceeded", description: "Email max 60 characters", variant: "destructive" }); return; }
+                  if (v.length > 0 && !/^[a-zA-Z0-9@._%+\-]*$/.test(v)) { toast({ title: "Invalid character in email", description: "Only letters, numbers and @._%+- allowed", variant: "destructive" }); return; }
+                  setContactEmail(v);
+                }} disabled={!contactEditing} />
+                <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ 
+                  const v=e.target.value.replace(/\D/g,'');
+                  if (v.length > 10) { toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" }); return; }
+                  if (v.length > 0 && /^[0-5]/.test(v)) { toast({ title: "Invalid phone number", description: "Must start with 6, 7, 8, or 9", variant: "destructive" }); return; }
+                  setContactPhone1(v);
+                }} disabled={!contactEditing} />
+                <Input placeholder="Phone 2" value={contactPhone2} inputMode="numeric" onChange={e=>{ 
+                  const v=e.target.value.replace(/\D/g,'');
+                  if (v.length > 10) { toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" }); return; }
+                  if (v.length > 0 && /^[0-5]/.test(v)) { toast({ title: "Invalid phone number", description: "Must start with 6, 7, 8, or 9", variant: "destructive" }); return; }
+                  setContactPhone2(v);
+                }} disabled={!contactEditing} />
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
                 <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { 
                   if (!contactEditing) return; 
                   if (!contactName?.trim()) { toast({ title: "Please enter the full name", variant: "destructive" }); return }
+                  if (/^\s+$/.test(contactName)) { toast({ title: "Invalid full name", description: "Cannot be only spaces", variant: "destructive" }); return }
+                  if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(contactName)) { toast({ title: "Invalid full name", description: "Only letters allowed, must start with a letter", variant: "destructive" }); return }
+                  if (contactName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return }
                   if (!contactEmail?.trim()) { toast({ title: "Please enter the Email", variant: "destructive" }); return }
-                  if (contactEmail.length > 50) { toast({ title: "Email too long", description: "Max 50 characters", variant: "destructive" }); return }
-                  if (!contactEmail.includes('@')) { toast({ title: "Missing @", variant: "destructive" }); return }
-                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { toast({ title: "Invalid email", variant: "destructive" }); return }
-                  if (!contactPhone1?.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return }
-                  if (contactPhone1.length < 10) { toast({ title: "Invalid Phone number", variant: "destructive" }); return }
-                  if (!contactPhone2?.trim()) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return }
-                  if (contactPhone2.length < 10) { toast({ title: "Invalid Phone number", variant: "destructive" }); return }
+                  if (/^\s+$/.test(contactEmail)) { toast({ title: "Invalid email", description: "Cannot be only spaces", variant: "destructive" }); return }
+                  if (contactEmail.length > 60) { toast({ title: "Maximum limit exceeded", description: "Email max 60 characters", variant: "destructive" }); return }
+                  if (!contactEmail.includes('@')) { toast({ title: "Invalid email", description: "@ is missing in email address", variant: "destructive" }); return }
+                  if (contactEmail.indexOf('@') === 0) { toast({ title: "Invalid email", description: "Email should have characters before @", variant: "destructive" }); return }
+                  if (contactEmail.split('@').length > 2) { toast({ title: "Invalid email", description: "Email should contain only one @", variant: "destructive" }); return }
+                  { const parts = contactEmail.split('@'); const domain = parts[1] || ''; if (!domain) { toast({ title: "Invalid email", description: "Domain is missing after @", variant: "destructive" }); return } if (!domain.includes('.')) { toast({ title: "Invalid email", description: "Domain extension is missing (e.g. .com)", variant: "destructive" }); return } if (domain.startsWith('.')) { toast({ title: "Invalid email", description: "Domain cannot start with a dot", variant: "destructive" }); return } if (domain.endsWith('.')) { toast({ title: "Invalid email", description: "Domain cannot end with a dot", variant: "destructive" }); return } const ext = domain.split('.').pop() || ''; if (ext.length < 2) { toast({ title: "Invalid email", description: "Domain extension too short (e.g. .com)", variant: "destructive" }); return } }
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { toast({ title: "Invalid email", description: "Please enter a valid email address", variant: "destructive" }); return }
+                  if (!contactPhone1?.trim()) { toast({ title: "Please enter Phone 1", variant: "destructive" }); return }
+                  if (!/^[6-9]\d{9}$/.test(contactPhone1)) { toast({ title: "Invalid Phone 1", description: "Must be 10 digits and start with 6–9", variant: "destructive" }); return }
+                  if (!contactPhone2?.trim()) { toast({ title: "Please enter Phone 2", variant: "destructive" }); return }
+                  if (!/^[6-9]\d{9}$/.test(contactPhone2)) { toast({ title: "Invalid Phone 2", description: "Must be 10 digits and start with 6–9", variant: "destructive" }); return }
                   updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) 
                 }} disabled={!contactEditing || updateSettings.isPending}>Save</Button>
                 <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
