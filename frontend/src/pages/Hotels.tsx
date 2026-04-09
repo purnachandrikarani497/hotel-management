@@ -177,10 +177,10 @@ const Hotels = () => {
         return haveCapacity
       })
     }
-    if (sortBy === 'Price: Low to High') list = [...list].sort((a,b)=>a.price-b.price)
-    else if (sortBy === 'Price: High to Low') list = [...list].sort((a,b)=>b.price-a.price)
-    else if (sortBy === 'Rating') list = [...list].sort((a,b)=>b.rating-a.rating)
-    else if (sortBy === 'Popularity') list = [...list].sort((a,b)=>b.reviews-a.reviews)
+    if (sortBy === 'Price: Low to High') list = [...list].sort((a,b)=>Number(a.price||0)-Number(b.price||0))
+    else if (sortBy === 'Price: High to Low') list = [...list].sort((a,b)=>Number(b.price||0)-Number(a.price||0))
+    else if (sortBy === 'Rating') list = [...list].sort((a,b)=>Number(b.rating||0)-Number(a.rating||0))
+    else if (sortBy === 'Popularity') list = [...list].sort((a,b)=>Number(b.reviews||0)-Number(a.reviews||0))
     return list
   }, [data?.hotels, qLower, price, minRating, selectedTypes, selectedAmenities, sortBy, checkIn, totalGuests, roomsNeeded, availabilityQ.data])
 

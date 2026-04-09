@@ -1,4 +1,5 @@
-import { Star, MapPin, Wifi, Coffee, Car } from "lucide-react";
+import { useState } from "react";
+import { Star, MapPin, Wifi, Coffee, Car, Hotel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -16,9 +17,10 @@ interface HotelCardProps {
 }
 
 const HotelCard = ({ id, name, location, price, image, amenities = [], rating, reviews, availableTypes = [] }: HotelCardProps) => {
+  const [imgError, setImgError] = useState(false);
   const resolveImage = (src?: string) => {
     const s = String(src||'')
-    if (!s) return 'https://placehold.co/800x600?text=Hotel'
+    if (!s) return ''
     const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>
     const base = env?.VITE_API_URL || env?.VITE_API_BASE || ''
     if (s.startsWith('/uploads')) return base ? `${base}${s}` : s
@@ -41,12 +43,19 @@ const HotelCard = ({ id, name, location, price, image, amenities = [], rating, r
   return (
     <div className="group h-full flex flex-col rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
       <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden shrink-0">
-        <img
-          src={resolveImage(image)}
-          alt={name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          onError={(e)=>{ e.currentTarget.src='https://placehold.co/800x600?text=Hotel' }}
-        />
+        {imgError || !resolveImage(image) ? (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100 px-4">
+            <Hotel className="h-14 w-14 text-purple-300 mb-2 shrink-0" />
+            <span className="text-sm font-semibold text-purple-500 text-center w-full break-words leading-snug">{name}</span>
+          </div>
+        ) : (
+          <img
+            src={resolveImage(image)}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            onError={() => setImgError(true)}
+          />
+        )}
       </div>
       
       <div className="p-6 flex-1 flex flex-col">

@@ -127,7 +127,18 @@ const Hero = () => {
                   <Calendar
                     mode="single"
                     selected={checkIn}
-                    onSelect={setCheckIn}
+                    onSelect={(date) => {
+                      setCheckIn(date);
+                      // If existing check-out is no longer valid, clear it and warn
+                      if (date && checkOut && checkOut <= date) {
+                        setCheckOut(undefined);
+                        toast({
+                          variant: "destructive",
+                          title: "Check-out Cleared",
+                          description: "Check-out date must be after check-in. Please select a new check-out date.",
+                        });
+                      }
+                    }}
                     initialFocus
                     disabled={(date) => {
                       const today = new Date();
@@ -161,19 +172,26 @@ const Hero = () => {
                   <Calendar
                     mode="single"
                     selected={checkOut}
-                    onSelect={setCheckOut}
+                    onSelect={(date) => {
+                      if (date && checkIn && date <= checkIn) {
+                        toast({
+                          variant: "destructive",
+                          title: "Invalid Date",
+                          description: "Check-out date must be after check-in date",
+                        });
+                        return;
+                      }
+                      setCheckOut(date);
+                    }}
                     showOutsideDays={false}
                     initialFocus
                     disabled={(date) => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-                      const minDate = checkIn ? new Date(checkIn) : today;
                       if (checkIn) {
-                        // Check-out must be after check-in
+                        // Check-out must be strictly after check-in
                         return date <= checkIn;
                       }
-                      // If no check-in, check-out must be at least tomorrow? 
-                      // User said "today date disable" for checkout.
                       return date <= today;
                     }}
                     className="pointer-events-auto"

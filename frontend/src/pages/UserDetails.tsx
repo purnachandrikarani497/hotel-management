@@ -28,6 +28,9 @@ const UserDetails = () => {
   const [form, setForm] = React.useState<User | null>(null)
   React.useEffect(() => { if (u) setForm(u) }, [u])
 
+  const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const setErr = (field: string, msg: string) => setErrors(prev => ({ ...prev, [field]: msg }))
+  const clearErr = (field: string) => setErrors(prev => { const n = { ...prev }; delete n[field]; return n })
   const [docPreview, setDocPreview] = React.useState<string>("")
   const resolve = (u?: string) => { if (!u) return ""; const s = String(u); const env = (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> })?.env) || {} as Record<string, string>; const base = env?.VITE_API_URL || env?.VITE_API_BASE || ''; if (s.startsWith("/uploads")) return base ? `${base}${s}` : s; if (s.startsWith("uploads")) return base ? `${base}/${s}` : `/${s}`; return s }
   
@@ -47,55 +50,59 @@ const UserDetails = () => {
     if (!form) return false
     
     // First Name
-    if (!form.firstName?.trim()) { toast({ title: "Please enter the first name", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z]+$/.test(form.firstName)) { toast({ title: "Invalid first name", description: "Only characters allowed", variant: "destructive" }); return false }
-    if (form.firstName.length > 20) { toast({ title: "Maximum limit exceeded", description: "First name max 20 characters", variant: "destructive" }); return false }
+    if (!form.firstName?.trim()) { toast({ title: "First name cannot be blank", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(form.firstName.trim())) { toast({ title: "Invalid first name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" }); return false }
+    if (form.firstName.length > 50) { toast({ title: "First name max 50 characters", variant: "destructive" }); return false }
 
     // Last Name
-    if (!form.lastName?.trim()) { toast({ title: "Please enter the lastname", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z]+$/.test(form.lastName)) { toast({ title: "Invalid last name", description: "Only characters allowed", variant: "destructive" }); return false }
-    if (form.lastName.length > 20) { toast({ title: "Maximum limit exceeded", description: "Last name max 20 characters", variant: "destructive" }); return false }
+    if (!form.lastName?.trim()) { toast({ title: "Last name cannot be blank", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(form.lastName.trim())) { toast({ title: "Invalid last name", description: "Only letters and spaces allowed, must start with a letter", variant: "destructive" }); return false }
+    if (form.lastName.length > 50) { toast({ title: "Last name max 50 characters", variant: "destructive" }); return false }
+
+    // Email
+    if (!form.email?.trim()) { toast({ title: "Email cannot be blank", variant: "destructive" }); return false }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { toast({ title: "Invalid email format", variant: "destructive" }); return false }
+    if (form.email.length > 60) { toast({ title: "Email max 60 characters", variant: "destructive" }); return false }
 
     // Phone
-    if (!form.phone) { toast({ title: "Please enter the Phone number", variant: "destructive" }); return false }
-    if (!/^[6-9]\d{9}$/.test(form.phone)) { toast({ title: "Invalid phone", description: "Starts 6-9, exactly 10 digits", variant: "destructive" }); return false }
+    if (!form.phone) { toast({ title: "Phone number cannot be blank", variant: "destructive" }); return false }
+    if (!/^\d{10}$/.test(form.phone)) { toast({ title: "Invalid phone number", description: "Must be exactly 10 digits", variant: "destructive" }); return false }
 
     // Full Name
-    if (!form.fullName?.trim()) { toast({ title: "Please enter the Full name", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z\s]+$/.test(form.fullName)) { toast({ title: "Invalid Full name", description: "Only characters allowed", variant: "destructive" }); return false }
-    if (form.fullName.length > 50) { toast({ title: "Maximum limit exceeded", description: "Full name max 50 characters", variant: "destructive" }); return false }
+    if (!form.fullName?.trim()) { toast({ title: "Full name cannot be blank", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z][a-zA-Z\s]*$/.test(form.fullName.trim())) { toast({ title: "Invalid full name", description: "Only letters and spaces allowed", variant: "destructive" }); return false }
+    if (form.fullName.length > 50) { toast({ title: "Full name max 50 characters", variant: "destructive" }); return false }
 
     // DOB
-    if (!form.dob) { toast({ title: "Fill all mandatory fields", variant: "destructive" }); return false }
+    if (!form.dob) { toast({ title: "Date of birth cannot be blank", variant: "destructive" }); return false }
     if (new Date(form.dob) > new Date()) { toast({ title: "Invalid Date of Birth", description: "Future dates not allowed", variant: "destructive" }); return false }
 
     // Address
-    if (!form.address?.trim()) { toast({ title: "Please enter the Address", variant: "destructive" }); return false }
-    if (!/^[a-zA-Z0-9\s,.-]+$/.test(form.address)) { toast({ title: "Invalid Address", description: "Only characters & numbers allowed", variant: "destructive" }); return false }
-    if (form.address.length > 100) { toast({ title: "Maximum limit exceeded", description: "Address max 100 characters", variant: "destructive" }); return false }
+    if (!form.address?.trim()) { toast({ title: "Address cannot be blank", variant: "destructive" }); return false }
+    if (!/^[a-zA-Z0-9\s,.-]+$/.test(form.address)) { toast({ title: "Invalid address format", variant: "destructive" }); return false }
+    if (form.address.length > 100) { toast({ title: "Address max 100 characters", variant: "destructive" }); return false }
 
     // ID Type & Number
-    if (!form.idType) { toast({ title: "Please enter the ID Type", variant: "destructive" }); return false }
-    if (!form.idNumber?.trim()) { toast({ title: "Missing ID Number", variant: "destructive" }); return false }
+    if (!form.idType) { toast({ title: "Please select an ID type", variant: "destructive" }); return false }
+    if (!form.idNumber?.trim()) { toast({ title: "ID number cannot be blank", variant: "destructive" }); return false }
 
     const idType = form.idType
     const idNumber = form.idNumber
     if (idType === "Aadhaar Card") {
-        if (!/^\d{12}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Aadhaar must be 12 digits number", variant: "destructive" }); return false }
+      if (!/^\d{12}$/.test(idNumber)) { toast({ title: "Invalid Aadhaar number", description: "Must be exactly 12 digits", variant: "destructive" }); return false }
     } else if (idType === "Passport") {
-        if (!/^[A-Za-z]\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Passport: 1st alphabet & 7 numbers", variant: "destructive" }); return false }
-        if (idNumber.length > 8) { toast({ title: "Maximum limit exceeded", description: "Passport max 8 characters", variant: "destructive" }); return false }
+      if (!/^[A-Za-z]\d{7}$/.test(idNumber)) { toast({ title: "Invalid Passport number", description: "Format: 1 letter followed by 7 digits", variant: "destructive" }); return false }
     } else if (idType === "Driving Licence") {
-        if (!/^[A-Za-z0-9]+$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Driving Licence must be alphanumeric", variant: "destructive" }); return false }
-        if (idNumber.length > 20) { toast({ title: "Maximum limit exceeded", description: "Driving Licence max 20 characters", variant: "destructive" }); return false }
+      if (!/^[A-Za-z0-9]{8,20}$/.test(idNumber)) { toast({ title: "Invalid Driving Licence", description: "8-20 alphanumeric characters", variant: "destructive" }); return false }
     } else if (idType === "Voter ID") {
-        if (!/^[A-Za-z]{3}\d{7}$/.test(idNumber)) { toast({ title: "Invalid ID Type", description: "Voter ID: 3 letters & 7 numbers", variant: "destructive" }); return false }
-        if (idNumber.length > 10) { toast({ title: "Maximum limit exceeded", description: "Voter ID max 10 characters", variant: "destructive" }); return false }
+      if (!/^[A-Za-z]{3}\d{7}$/.test(idNumber)) { toast({ title: "Invalid Voter ID", description: "Format: 3 letters followed by 7 digits", variant: "destructive" }); return false }
+    } else if (idType.includes("PAN")) {
+      if (!/^[A-Z]{5}\d{4}[A-Z]$/.test(idNumber)) { toast({ title: "Invalid PAN number", description: "Format: ABCDE1234F", variant: "destructive" }); return false }
     }
 
     // Dates
     if (form.idIssueDate && form.idExpiryDate) {
-        if (new Date(form.idIssueDate) >= new Date(form.idExpiryDate)) { toast({ title: "issue Date was must be early than the Expiry Date", variant: "destructive" }); return false }
+      if (new Date(form.idIssueDate) >= new Date(form.idExpiryDate)) { toast({ title: "Issue date must be before expiry date", variant: "destructive" }); return false }
     }
 
     return true
@@ -146,11 +153,13 @@ const UserDetails = () => {
                     value={form.firstName||""} 
                     onChange={e=>{
                       const val = e.target.value;
-                      if (!/^[a-zA-Z\s]*$/.test(val)) { toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
-                      if (val.length > 50) { toast({ title: "Maximum limit exceeded", description: "First name max 50 characters", variant: "destructive" }); return; }
+                      if (val.length > 50) { setErr("firstName", "Max 50 characters allowed"); return; }
+                      if (val && !/^[a-zA-Z][a-zA-Z\s]*$/.test(val)) { setErr("firstName", "Only letters and spaces allowed, must start with a letter"); return; }
+                      clearErr("firstName");
                       setForm({ ...(form as User), firstName: val })
                     }} 
                   />
+                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
                   <Label className="mb-2 block">Last Name</Label>
@@ -158,12 +167,14 @@ const UserDetails = () => {
                     placeholder="Last Name" 
                     value={form.lastName||""} 
                     onChange={e=>{
-                        const val = e.target.value;
-                        if (!/^[a-zA-Z\s]*$/.test(val)) { toast({ title: "Invalid input", description: "Only characters and spaces allowed", variant: "destructive" }); return; }
-                        if (val.length > 50) { toast({ title: "Maximum limit exceeded", description: "Last name max 50 characters", variant: "destructive" }); return; }
-                        setForm({ ...(form as User), lastName: val })
+                      const val = e.target.value;
+                      if (val.length > 50) { setErr("lastName", "Max 50 characters allowed"); return; }
+                      if (val && !/^[a-zA-Z][a-zA-Z\s]*$/.test(val)) { setErr("lastName", "Only letters and spaces allowed, must start with a letter"); return; }
+                      clearErr("lastName");
+                      setForm({ ...(form as User), lastName: val })
                     }} 
                   />
+                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
                 </div>
               </div>
 
@@ -175,14 +186,17 @@ const UserDetails = () => {
                 <div>
                   <Label className="mb-2 block">Phone Number</Label>
                   <Input 
-                    placeholder="Phone" 
+                    placeholder="Phone (10 digits)" 
                     value={form.phone||""} 
                     onChange={e=>{ 
-                        const v=(e.target.value||'').replace(/\D/g,''); 
-                        if (v.length > 10) { toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" }); return; }
-                        setForm({ ...(form as User), phone: v }) 
+                      const v = (e.target.value||'').replace(/\D/g,'');
+                      if (v.length > 10) { setErr("phone", "Max 10 digits allowed"); return; }
+                      if (v.length === 10 && !/^\d{10}$/.test(v)) { setErr("phone", "Must be exactly 10 digits"); return; }
+                      clearErr("phone");
+                      setForm({ ...(form as User), phone: v }) 
                     }} 
                   />
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
@@ -243,17 +257,27 @@ const UserDetails = () => {
                       const type = form.idType || "";
                       if (type === "Aadhaar Card") {
                         v = v.replace(/\D/g, "").slice(0, 12);
+                        if (v.length > 12) { setErr("idNumber", "Aadhaar max 12 digits"); return; }
+                        if (v && !/^\d+$/.test(v)) { setErr("idNumber", "Aadhaar must contain digits only"); return; }
                       } else if (type === "Passport") {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                        if (v.length > 8) { setErr("idNumber", "Passport max 8 characters"); return; }
                       } else if (type.includes("PAN")) {
                         v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
-                      } else {
-                        v = v.toUpperCase();
+                        if (v.length > 10) { setErr("idNumber", "PAN max 10 characters"); return; }
+                      } else if (type === "Voter ID") {
+                        v = v.toUpperCase().slice(0, 10);
+                        if (v.length > 10) { setErr("idNumber", "Voter ID max 10 characters"); return; }
+                      } else if (type === "Driving Licence") {
+                        v = v.toUpperCase().slice(0, 20);
+                        if (v.length > 20) { setErr("idNumber", "Driving Licence max 20 characters"); return; }
                       }
+                      clearErr("idNumber");
                       setForm({ ...(form as User), idNumber: v }) 
                     }} 
                   />
                   <div className="text-xs text-muted-foreground mt-1">Format: {idHints[form.idType||""] || ""}</div>
+                  {errors.idNumber && <p className="text-red-500 text-xs mt-1">{errors.idNumber}</p>}
                 </div>
                 <div>
                   <Label className="mb-2 block">Document Upload</Label>
@@ -268,8 +292,19 @@ const UserDetails = () => {
                     type="file" 
                     accept="image/*" 
                     className="hidden"
-                    onChange={e=>{ const f=e.target.files?.[0]; if(!f) return; if(!f.type.startsWith('image/')){ toast({ title:'Invalid file type', variant:'destructive' }); return } const max=2*1024*1024; if(f.size>max){ toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return } const r=new FileReader(); r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ toast({ title:'Invalid file content', variant:'destructive' }); return } setDocPreview(s); toast({ title: 'Updated' }) }; r.readAsDataURL(f) }} 
+                    onChange={e=>{ 
+                      const f=e.target.files?.[0]; 
+                      if(!f) { setErr("doc", "Please choose a file"); return; }
+                      if(!f.type.startsWith('image/')){ setErr("doc", "Invalid file type. Only images allowed"); toast({ title:'Invalid file type', variant:'destructive' }); return; }
+                      const max=2*1024*1024; 
+                      if(f.size>max){ setErr("doc", "File too large. Max 2MB allowed"); toast({ title:'File too large', description:'Max 2MB', variant:'destructive' }); return; }
+                      clearErr("doc");
+                      const r=new FileReader(); 
+                      r.onload=()=>{ const s=String(r.result||""); if(!s.startsWith('data:image/')){ setErr("doc", "Invalid file content"); toast({ title:'Invalid file content', variant:'destructive' }); return; } setDocPreview(s); toast({ title: 'Document uploaded' }) }; 
+                      r.readAsDataURL(f) 
+                    }} 
                   />
+                  {errors.doc && <p className="text-red-500 text-xs mt-1">{errors.doc}</p>}
                   <div className="mt-2">
                     {form.idDocUrl && !docPreview && <img src={resolve(form.idDocUrl)} alt="ID" className="h-24 border rounded" onError={(ev)=>{ ev.currentTarget.style.display='none' }} />}
                     {docPreview && <img src={docPreview} alt="Preview" className="h-24 border rounded" />}
