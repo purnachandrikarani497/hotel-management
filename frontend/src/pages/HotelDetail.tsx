@@ -276,7 +276,9 @@ const HotelDetail = () => {
   const stayDays = diffHours > 0 && diffHours <= 24 ? 1 : Math.floor(diffHours / 24);
   const extraHours = diffHours > 24 ? diffHours - stayDays * 24 : 0;
   const baseAmount = stayDays * appliedRate
-  const extraAmount = Math.round((appliedRate / 24) * extraHours)
+  const extraHourRate = Number(dynPricing.extraHourRate || 0)
+  const effectiveHourRate = extraHourRate > 0 ? extraHourRate : Math.round(appliedRate / 24)
+  const extraAmount = Math.round(effectiveHourRate * extraHours)
   const subtotal = baseAmount + extraAmount
 
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);

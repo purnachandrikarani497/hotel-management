@@ -61,6 +61,16 @@ async function list(req, res) {
       group[hid] = g;
     }
 
+    let bookingCounts = {};
+    if (hotelIds.length) {
+      const bookings = await Booking.find({ hotelId: { $in: hotelIds } }).select('hotelId').lean();
+      for (const b of bookings) {
+        const hid = Number(b.hotelId || 0);
+        if (!hid) continue;
+        bookingCounts[hid] = (bookingCounts[hid] || 0) + 1;
+      }
+    }
+
     const hotels = items.map(h => {
       const primary = h.image || (Array.isArray(h.images) && h.images.length > 0 ? h.images[0] : '');
       const resolved = toPublicUrl(primary);
@@ -72,6 +82,7 @@ async function list(req, res) {
         ...h,
         rating: count > 0 ? rounded : undefined,
         reviews: count,
+        bookingCount: bookingCounts[h.id] || 0,
         image: resolved || 'https://placehold.co/800x600?text=Hotel'
       };
     });

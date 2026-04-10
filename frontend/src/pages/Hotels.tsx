@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 const Hotels = () => {
-  type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[]; description?: string }
+  type Hotel = { id: number; name: string; location: string; rating: number; reviews: number; price: number; image: string; amenities?: string[]; description?: string; bookingCount?: number }
   const [searchParams] = useSearchParams()
   const [q, setQ] = useState("")
   const [searchError, setSearchError] = useState("")
@@ -180,7 +180,7 @@ const Hotels = () => {
     if (sortBy === 'Price: Low to High') list = [...list].sort((a,b)=>Number(a.price||0)-Number(b.price||0))
     else if (sortBy === 'Price: High to Low') list = [...list].sort((a,b)=>Number(b.price||0)-Number(a.price||0))
     else if (sortBy === 'Rating') list = [...list].sort((a,b)=>Number(b.rating||0)-Number(a.rating||0))
-    else if (sortBy === 'Popularity') list = [...list].sort((a,b)=>Number(b.reviews||0)-Number(a.reviews||0))
+    else if (sortBy === 'Popularity') list = [...list].sort((a,b)=>Number(b.bookingCount||0)-Number(a.bookingCount||0))
     return list
   }, [data?.hotels, qLower, price, minRating, selectedTypes, selectedAmenities, sortBy, checkIn, totalGuests, roomsNeeded, availabilityQ.data])
 
