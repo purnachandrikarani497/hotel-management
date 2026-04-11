@@ -6,6 +6,7 @@ import Footer from "@/components/Footer"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Building2, Calendar as CalendarIcon, LogIn, LogOut, Trash2 } from "lucide-react"
@@ -932,6 +933,7 @@ const OwnerDashboard = () => {
   })
 
   const [roomPhotoFiles, setRoomPhotoFiles] = React.useState<File[]>([])
+  const [fileErrorOpen, setFileErrorOpen] = React.useState(false)
   const [uploadInfo, setUploadInfo] = React.useState<{
     type: "images" | "documents" | "photos" | null
     names: string[]
@@ -1849,11 +1851,14 @@ const OwnerDashboard = () => {
                   <div>
                     <label className="text-sm font-medium mb-2 block">No. of Rooms</label>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min="1"
                       value={roomForm.count}
                       onChange={(e) => {
                         const val = e.target.value
+                        if (!/^\d*$/.test(val)) return
+                        if (val.length > 4) return
                         if (val === "0" || val === "00") {
                           toast({ title: "No. of rooms must be more than 0", variant: "destructive" })
                           return
@@ -1869,6 +1874,7 @@ const OwnerDashboard = () => {
                       value={roomForm.roomNumbers}
                       onChange={(e) => {
                         const val = e.target.value
+                        if (val.length > 300) return
                         if (/^[0-9,\s]*$/.test(val)) {
                           setRoomForm({ ...roomForm, roomNumbers: val })
                         }
@@ -1949,7 +1955,7 @@ const OwnerDashboard = () => {
                     <input
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp,image/svg+xml,application/pdf"
                       required
                       className="block w-full text-sm text-slate-500
                         file:mr-4 file:py-2 file:px-4
@@ -1988,7 +1994,7 @@ const OwnerDashboard = () => {
                       onClick={async () => {
                         const files = roomPhotoFiles.slice(0, 10)
                         if (files.length === 0) {
-                          toast({ title: "Please choose at least one image", variant: "destructive" })
+                          setFileErrorOpen(true)
                           return
                         }
                         const toDataUrl = (f: File) =>
@@ -3903,6 +3909,19 @@ const OwnerDashboard = () => {
         </div>
       </main>
       <Footer />
+      <AlertDialog open={fileErrorOpen} onOpenChange={setFileErrorOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>File Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please choose at least one file before adding a room. Accepted formats: PNG, JPG, GIF, WEBP, BMP, SVG, PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setFileErrorOpen(false)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
