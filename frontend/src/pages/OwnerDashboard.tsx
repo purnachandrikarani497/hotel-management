@@ -2821,40 +2821,35 @@ const OwnerDashboard = () => {
                           toast({ title: "No data to download", variant: "destructive" })
                           return
                         }
-                        const rows = guestsTimeFiltered.map((g) => [
-                          String(g.user?.id || ""),
-                          String(
-                            g.user?.fullName ||
-                              `${g.user?.firstName || ""} ${
-                                g.user?.lastName || ""
-                              }`.trim(),
-                          ),
-                          String(g.user?.email || ""),
-                          String(g.user?.phone || ""),
-                          String(g.user?.idType || ""),
-                          String(g.user?.idNumber || ""),
-                          String(g.user?.address || ""),
-                          String((() => { const id = Number(g.lastBooking?.id || 0); const fromApi = g.lastBooking?.guests; const count = typeof fromApi === 'number' ? fromApi : (bookings.find(b=> Number(b.id||0)===id)?.guests as unknown as number | undefined); return count ?? ''; })()),
-                          String(g.lastBooking?.id || ""),
-                          String(g.lastBooking?.hotelId || ""),
-                          String(g.lastBooking?.checkIn || ""),
-                          String(g.lastBooking?.checkOut || ""),
-                          String(g.lastBooking?.status || ""),
-                        ])
+                        const rows = guestsTimeFiltered.map((g, idx) => {
+                          const guestName = g.user?.fullName || `${g.user?.firstName || ""} ${g.user?.lastName || ""}`.trim() || `User ${g.user?.id}`
+                          const contact = [g.user?.email || "", g.user?.phone || ""].filter(Boolean).join(" / ")
+                          const idInfo = [g.user?.idType || "", g.user?.idNumber || ""].filter(Boolean).join(" ")
+                          const dob = g.user?.dob || "-"
+                          const docUrl = g.user?.idDocUrl || "No document"
+                          const address = g.user?.address || "-"
+                          const guestCount = (() => { const id = Number(g.lastBooking?.id || 0); const fromApi = g.lastBooking?.guests; const count = typeof fromApi === 'number' ? fromApi : (bookings.find(b => Number(b.id || 0) === id)?.guests as unknown as number | undefined); return count ?? "-" })()
+                          const lastBooking = g.lastBooking ? (hotelName(g.lastBooking.hotelId) || `Hotel ${g.lastBooking.hotelId}`) : "No booking"
+                          return [
+                            String(idx + 1),
+                            guestName,
+                            contact,
+                            `${idInfo} DOB: ${dob}`,
+                            docUrl,
+                            address,
+                            String(guestCount),
+                            lastBooking,
+                          ]
+                        })
                         const header = [
-                          "UserId",
-                          "Name",
-                          "Email",
-                          "Phone",
-                          "ID Type",
-                          "ID Number",
+                          "S.No",
+                          "Guest",
+                          "Contact",
+                          "ID",
+                          "Document",
                           "Address",
                           "Guests",
-                          "LastBookingId",
-                          "HotelId",
-                          "CheckIn",
-                          "CheckOut",
-                          "Status",
+                          "Last Booking",
                         ]
                         const csv = [header]
                           .concat(rows)
