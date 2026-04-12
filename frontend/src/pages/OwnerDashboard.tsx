@@ -2589,7 +2589,7 @@ const OwnerDashboard = () => {
                     <thead className="bg-muted/50">
                       <tr className="text-left">
                         <th className="p-2">S.No</th>
-                        <th className="p-2">Booking</th>
+                        <th className="p-2">Booking No.</th>
                         <th className="p-2">Hotel</th>
                         <th className="p-2">User</th>
                         <th className="p-2">Room</th>
