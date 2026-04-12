@@ -581,7 +581,6 @@ const OwnerDashboard = () => {
     mutationFn: (p: { id: number; amenities: string[] }) =>
       apiPost(`/api/owner/hotels/${p.id}/amenities`, { amenities: p.amenities }),
     onSuccess: (_res) => {
-      toast({ title: "Amenities updated", description: "Hotel" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
     },
   })
@@ -616,7 +615,6 @@ const OwnerDashboard = () => {
   const updateInfo = useMutation<{ status: string }, unknown, UpdateInfoVars>({
     mutationFn: (p: UpdateInfoVars) => apiPost(`/api/owner/hotels/${p.id}/info`, p),
     onSuccess: (_res, vars) => {
-      toast({ title: "Hotel updated" })
       qc.invalidateQueries({ queryKey: ["owner", "hotels", ownerId] })
       qc.invalidateQueries({ queryKey: ["hotel", String(vars.id)] })
       qc.invalidateQueries({ queryKey: ["hotel", Number(vars.id)] })
@@ -1662,49 +1660,42 @@ const OwnerDashboard = () => {
                                   const amenStr = String(amenitiesEdit[h.id] ?? (h.amenities || []).join(', '));
 
                                   // Validations
-                                  // Hotel Name
                                   if (!name.trim()) { toast({ title: "please enter the hotelname", variant: "destructive" }); return; }
                                   if (!/^[a-zA-Z\s]+$/.test(name)) { toast({ title: "invaid hotel name", variant: "destructive" }); return; }
                                   if (name.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
-
-                                  // Location
                                   if (!location.trim()) { toast({ title: "please enter the Location", variant: "destructive" }); return; }
                                   if (!/^[a-zA-Z\s]+$/.test(location)) { toast({ title: "invaid Location", variant: "destructive" }); return; }
                                   if (location.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
-
-                                  // Price
                                   if (!String(priceVal).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; }
                                   const priceNum = Number(priceVal);
                                   if (isNaN(priceNum) || priceNum <= 0) { toast({ title: "Price must be greater than 0", variant: "destructive" }); return; }
                                   if (String(priceVal).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
-
-                                  // Amenities
                                   if (!amenStr.trim()) { toast({ title: "Please enter the amenities", variant: "destructive" }); return; }
                                   if (!/^[a-zA-Z\s,]+$/.test(amenStr)) { toast({ title: "Invalid amenities", variant: "destructive" }); return; }
                                   if (amenStr.length > 200) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return; }
-
-                                  // Description
                                   if (!desc.trim()) { toast({ title: "Please enter the description", variant: "destructive" }); return; }
                                   if (!/^[a-zA-Z\s]+$/.test(desc)) { toast({ title: "Invalid description", variant: "destructive" }); return; }
                                   if (desc.length > 150) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return; }
+                                  if ((h.images || []).length === 0) { toast({ title: "Please upload at least one hotel image", variant: "destructive" }); return; }
 
-                                  // Image
-                                  if ((h.images || []).length === 0) {
-                                     toast({ title: "Please upload at least one hotel image", variant: "destructive" });
-                                     return;
-                                  }
+                                  // Detect which fields changed
+                                  const changedFields: string[] = []
+                                  if (name !== h.name) changedFields.push("Name")
+                                  if (location !== h.location) changedFields.push("Location")
+                                  if (priceNum !== h.price) changedFields.push("Price")
+                                  if (desc !== (h.description || '')) changedFields.push("Description")
+                                  const origAmen = (h.amenities || []).join(', ')
+                                  if (amenStr !== origAmen) changedFields.push("Amenities")
 
-                                  const info = {
-                                    id: h.id,
-                                    name,
-                                    location,
-                                    price: priceNum,
-                                    description: desc,
-                                  }
-                                  updateInfo.mutate(info)
+                                  updateInfo.mutate({ id: h.id, name, location, price: priceNum, description: desc })
                                   const arr = amenStr.split(',').map(s=>s.trim()).filter(Boolean)
                                   updateAmenities.mutate({ id: h.id, amenities: arr })
                                   setEditing({ ...editing, [h.id]: false })
+
+                                  toast({
+                                    title: "Hotel updated",
+                                    description: changedFields.length > 0 ? `Updated: ${changedFields.join(", ")}` : "No changes detected",
+                                  })
                                 }}>Update</Button>
                                 <Button size="sm" variant="outline" disabled={deletingHotelId===h.id || deleteHotel.isPending} onClick={()=> deleteHotel.mutate(h.id)}>{deletingHotelId===h.id || deleteHotel.isPending ? 'Deleting…' : 'Delete'}</Button>
                               </div>
@@ -2283,7 +2274,20 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-3">
                             <div className="flex gap-2 flex-wrap">{(g.photos || []).map((p)=> (<img key={`${g.key}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div>
-                            <div className="mt-2"><input type="file" multiple accept="image/*" onChange={(e)=> { const files = Array.from(e.target.files||[]).slice(0,10); setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: files }); if(files.length > 0) { setUploadInfo({ type:'photos', names: files.map(f=>f.name) }); } }} disabled={!roomGroupEditing[g.key]} /></div>
+                            <div className="mt-2 flex flex-col gap-1">
+                              <input type="file" multiple accept="image/*" onChange={(e)=> { const files = Array.from(e.target.files||[]).slice(0,10); setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: files }); if(files.length > 0) { setUploadInfo({ type:'photos', names: files.map(f=>f.name) }); } }} disabled={!roomGroupEditing[g.key]} />
+                              {roomGroupEditing[g.key] && (
+                                <Button size="sm" variant="outline" onClick={async () => {
+                                  const files = roomPhotosByGroup[g.key] || [];
+                                  if (!files.length) { toast({ title: "Please choose a file first", variant: "destructive" }); return; }
+                                  const toDataUrl = (f: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result||'')); r.onerror = rej; r.readAsDataURL(f); });
+                                  const dataUrls = await Promise.all(files.map(toDataUrl));
+                                  for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }); }
+                                  setRoomPhotosByGroup(prev => { const next = { ...prev }; delete next[g.key]; return next; });
+                                  toast({ title: "Photos saved" });
+                                }}>Save Photo</Button>
+                              )}
+                            </div>
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${g.availability ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{g.availability ? 'Available' : 'Unavailable'}</span><input type="checkbox" checked={roomGroupEdit[g.key]?.availability ?? g.availability} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availability: e.target.checked } })} disabled={!roomGroupEditing[g.key]} /></div>
@@ -3076,7 +3080,11 @@ const OwnerDashboard = () => {
                         <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone1 ?? ''} onChange={(e)=> { 
                           const v = (e.target.value||'').replace(/\D/g,'');
                           if (v.length > 10) {
-                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            toast({ title: "Contact 1: Maximum 10 digits allowed", variant: "destructive" });
+                            return;
+                          }
+                          if (v.length === 1 && !/^[6-9]/.test(v)) {
+                            toast({ title: "Contact 1: Must start with 6, 7, 8 or 9", variant: "destructive" });
                             return;
                           }
                           setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone1: v } }) 
@@ -3084,7 +3092,11 @@ const OwnerDashboard = () => {
                         <td className="p-3"><Input placeholder="phone" inputMode="numeric" maxLength={10} value={contactForm[h.id]?.phone2 ?? ''} onChange={(e)=> { 
                           const v = (e.target.value||'').replace(/\D/g,'');
                           if (v.length > 10) {
-                            toast({ title: "Maximum limit exceeded", variant: "destructive" });
+                            toast({ title: "Contact 2: Maximum 10 digits allowed", variant: "destructive" });
+                            return;
+                          }
+                          if (v.length === 1 && !/^[6-9]/.test(v)) {
+                            toast({ title: "Contact 2: Must start with 6, 7, 8 or 9", variant: "destructive" });
                             return;
                           }
                           setContactForm({ ...contactForm, [h.id]: { ...(contactForm[h.id]||{}), phone2: v } }) 
@@ -3112,10 +3124,12 @@ const OwnerDashboard = () => {
                           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast({ title: "Invalid email format", description: "Enter a valid email address", variant: "destructive" }); return; }
                           if (email.length > 50) { toast({ title: "Maximum limit exceeded", description: "Email cannot exceed 50 characters", variant: "destructive" }); return; }
                           
-                          if (!phone1) { toast({ title: "Please enter the contract", variant: "destructive" }); return; }
-                          if (phone1.length < 10) { toast({ title: "Invalid contract", description: "Must be 10 digits", variant: "destructive" }); return; }
+                          if (!phone1) { toast({ title: "Please enter Contact 1", variant: "destructive" }); return; }
+                          if (!/^[6-9]/.test(phone1)) { toast({ title: "Contact 1: Must start with 6, 7, 8 or 9", variant: "destructive" }); return; }
+                          if (phone1.length !== 10) { toast({ title: "Contact 1: Must be exactly 10 digits", variant: "destructive" }); return; }
                           
-                          if (phone2 && phone2.length < 10) { toast({ title: "Invalid contract 2", description: "Must be 10 digits", variant: "destructive" }); return; }
+                          if (phone2 && !/^[6-9]/.test(phone2)) { toast({ title: "Contact 2: Must start with 6, 7, 8 or 9", variant: "destructive" }); return; }
+                          if (phone2 && phone2.length !== 10) { toast({ title: "Contact 2: Must be exactly 10 digits", variant: "destructive" }); return; }
 
                           if (!ownerName) { toast({ title: "Please enter the Owner Name", variant: "destructive" }); return; }
                           if (ownerName.length < 3) { toast({ title: "Invalid Owner Name", variant: "destructive" }); return; }
