@@ -2563,15 +2563,18 @@ const OwnerDashboard = () => {
                           <td className="p-2">{hotelName(b.hotelId) || b.hotelId}</td>
                           <td className="p-2">
                             <div className="font-medium">
-                              {b.user?.fullName ||
-                                `${b.user?.firstName || ""} ${
-                                  b.user?.lastName || ""
-                              }`.trim() ||
-                              b.user?.email ||
-                              `User ${b.user?.id || ""}`}
+                              {(() => {
+                                const u = b.user
+                                if (!u) return `User ${b.user?.id || ''}`
+                                const name = u.fullName?.trim() || `${u.firstName || ''} ${u.lastName || ''}`.trim()
+                                if (name) return name
+                                // fallback: use part before @ in email
+                                const emailName = u.email ? u.email.split('@')[0] : ''
+                                return emailName || `User ${u.id || ''}`
+                              })()}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {b.user?.email || "-"}
+                              {b.user?.email || '-'}
                             </div>
                           </td>
                           <td className="p-2">{b.roomNumber ? b.roomNumber : (b.roomId ?? "-")}</td>

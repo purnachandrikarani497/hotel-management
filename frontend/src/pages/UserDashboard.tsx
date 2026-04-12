@@ -261,19 +261,21 @@ const UserDashboard = () => {
                     toast({ title: "No data found", description: "Nothing to download", variant: "destructive" });
                     return;
                   }
-                  const rows = visible.map(b => [
-                    "Booking",
-                    String(b.hotelId||''),
-                    String(b.checkIn||''),
-                    String(b.checkOut||''),
+                  const rows = visible.map((b, idx) => [
+                    String(idx + 1),
+                    String(b.id||''),
+                    String(hotelInfo(b.hotelId)?.name || `Hotel ${b.hotelId}`),
+                    String(b.roomType || '-'),
+                    `${b.checkIn||''} to ${b.checkOut||''}`,
                     String(b.guests||''),
                     String(b.extraHours ? b.extraHours + 'h' : '0h'),
-                    String(b.extraCharges ? '₹' + b.extraCharges : '₹0'),
-                    String(b.total||''),
+                    String(b.extraCharges ? 'Rs.' + b.extraCharges : 'Rs.0'),
+                    String(b.cancellationFee ? 'Rs.' + b.cancellationFee : 'Rs.0'),
+                    String(b.total ? 'Rs.' + b.total : 'Rs.0'),
                     String(b.status||'')
                   ])
-                  const header = ['Booking','Hotel','CheckIn','CheckOut','Guests','Extra Time','Extra Charges','Total','Status']
-                  const csv = [header].concat(rows).map(r => r.map(x => {
+                  const header = ['S.No','Booking ID','Hotel','Room Type','Dates','Guests','Extra Time','Extra Charges','Cancellation Fee','Total','Status']
+                  const csv = '\uFEFF' + [header].concat(rows).map(r => r.map(x => {
                     const s = String(x ?? '')
                     if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"'
                     return s
@@ -309,7 +311,7 @@ const UserDashboard = () => {
           <CardContent>
             <div className="rounded-2xl bg-white/80 border-0 shadow-md overflow-x-auto backdrop-blur-sm">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3 whitespace-nowrap">S.No</th><th className="p-3 whitespace-nowrap">Booking</th><th className="p-3 whitespace-nowrap">Hotel</th><th className="p-3 whitespace-nowrap">Room Type</th><th className="p-3 whitespace-nowrap">Dates</th><th className="p-3 whitespace-nowrap">Guests</th><th className="p-3 whitespace-nowrap">Extra Time</th><th className="p-3 whitespace-nowrap">Extra Charges</th><th className="p-3 whitespace-nowrap">Cancellation Fee</th><th className="p-3 whitespace-nowrap">Total</th><th className="p-3 whitespace-nowrap">Status</th><th className="p-3 min-w-[140px] whitespace-nowrap">Actions</th></tr></thead>
+                <thead className="bg-muted/50"><tr className="text-left"><th className="p-3 whitespace-nowrap">S.No</th><th className="p-3 whitespace-nowrap">Booking Number</th><th className="p-3 whitespace-nowrap">Hotel</th><th className="p-3 whitespace-nowrap">Room Type</th><th className="p-3 whitespace-nowrap">Dates</th><th className="p-3 whitespace-nowrap">Guests</th><th className="p-3 whitespace-nowrap">Extra Time</th><th className="p-3 whitespace-nowrap">Extra Charges</th><th className="p-3 whitespace-nowrap">Cancellation Fee</th><th className="p-3 whitespace-nowrap">Total</th><th className="p-3 whitespace-nowrap">Status</th><th className="p-3 min-w-[140px] whitespace-nowrap">Actions</th></tr></thead>
                 <tbody className="[&_tr:hover]:bg-muted/30">
                   {(() => {
                     const ordered = [...bookingsTimeFiltered].sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime())
