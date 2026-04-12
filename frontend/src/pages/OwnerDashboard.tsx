@@ -1571,16 +1571,49 @@ const OwnerDashboard = () => {
                                 ))}
                               </div>
                               {editing[h.id] && (
-                                <Input
-                                  className="w-full"
-                                  placeholder="amenities"
-                                  value={amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')}
-                                  onChange={(e)=> {
-                                    const val = e.target.value;
-                                    if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
-                                    setAmenitiesEdit({ ...amenitiesEdit, [h.id]: val })
-                                  }}
-                                />
+                                <div className="space-y-2">
+                                  <div className="flex gap-2">
+                                    <select
+                                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                      value=""
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        if (!val) return
+                                        const current = (amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')).split(',').map(s => s.trim()).filter(Boolean)
+                                        if (!current.includes(val)) {
+                                          const next = [...current, val].join(', ')
+                                          if (next.length > 200) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return }
+                                          setAmenitiesEdit({ ...amenitiesEdit, [h.id]: next })
+                                        }
+                                        e.currentTarget.value = ""
+                                      }}
+                                    >
+                                      <option value="">Select Amenity...</option>
+                                      {BASIC_AMENITIES.map(a => <option key={a} value={a}>{a}</option>)}
+                                    </select>
+                                  </div>
+                                  <Input
+                                    className="w-full"
+                                    placeholder="Or type amenities (comma-separated)"
+                                    value={amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')}
+                                    onChange={(e)=> {
+                                      const val = e.target.value;
+                                      if (val.length > 200) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return; }
+                                      setAmenitiesEdit({ ...amenitiesEdit, [h.id]: val })
+                                    }}
+                                  />
+                                  <div className="flex flex-wrap gap-1">
+                                    {(amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')).split(',').map(s => s.trim()).filter(Boolean).map(a => (
+                                      <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">
+                                        {a}
+                                        <button type="button" className="hover:text-red-600" onClick={() => {
+                                          const next = (amenitiesEdit[h.id] ?? (h.amenities||[]).join(', ')).split(',').map(s => s.trim()).filter(x => x !== a)
+                                          setAmenitiesEdit({ ...amenitiesEdit, [h.id]: next.join(', ') })
+                                        }}>×</button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </td>
                             <td className="p-3">
@@ -1646,18 +1679,18 @@ const OwnerDashboard = () => {
                                   if (String(priceVal).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
 
                                   // Amenities
-                                  if (!amenStr.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; }
-                                  if (!/^[a-zA-Z\s,]+$/.test(amenStr)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; }
-                                  if (amenStr.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                  if (!amenStr.trim()) { toast({ title: "Please enter the amenities", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s,]+$/.test(amenStr)) { toast({ title: "Invalid amenities", variant: "destructive" }); return; }
+                                  if (amenStr.length > 200) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return; }
 
                                   // Description
-                                  if (!desc.trim()) { toast({ title: "please enter the Description", variant: "destructive" }); return; }
-                                  if (!/^[a-zA-Z\s]+$/.test(desc)) { toast({ title: "invaid Description", variant: "destructive" }); return; }
-                                  if (desc.length > 150) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
+                                  if (!desc.trim()) { toast({ title: "Please enter the description", variant: "destructive" }); return; }
+                                  if (!/^[a-zA-Z\s]+$/.test(desc)) { toast({ title: "Invalid description", variant: "destructive" }); return; }
+                                  if (desc.length > 150) { toast({ title: "Maximum limit exceeded", variant: "destructive" }); return; }
 
                                   // Image
                                   if ((h.images || []).length === 0) {
-                                     toast({ title: "image uploaded it was must fix it once", variant: "destructive" });
+                                     toast({ title: "Please upload at least one hotel image", variant: "destructive" });
                                      return;
                                   }
 
@@ -1904,9 +1937,11 @@ const OwnerDashboard = () => {
                       onChange={(e) => {
                         const val = e.target.value
                         if (val.length > 300) return
-                        if (/^[0-9,\s]*$/.test(val)) {
-                          setRoomForm({ ...roomForm, roomNumbers: val })
-                        }
+                        if (!/^[0-9,\s]*$/.test(val)) return
+                        // each individual number max 10 digits
+                        const parts = val.split(',').map(s => s.trim()).filter(Boolean)
+                        if (parts.some(p => p.length > 10)) return
+                        setRoomForm({ ...roomForm, roomNumbers: val })
                       }}
                     />
                   </div>
@@ -2189,7 +2224,14 @@ const OwnerDashboard = () => {
                               <Input
                                 placeholder="Room numbers"
                                 value={roomGroupEdit[g.key]?.roomNumbers ?? (g.roomNumbers || []).join(", ")}
-                                onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), roomNumbers: e.target.value } })}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  if (val.length > 300) return
+                                  if (!/^[0-9,\s]*$/.test(val)) return
+                                  const parts = val.split(',').map(s => s.trim()).filter(Boolean)
+                                  if (parts.some(p => p.length > 10)) return
+                                  setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), roomNumbers: val } })
+                                }}
                               />
                             ) : (
                               <>
