@@ -139,7 +139,7 @@ async function create(req, res) {
   const id = await nextIdFor('Booking')
   const ownerActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
   const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, extraHours, extraCharges, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomType: String(roomType || ''), roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, extraHours, extraCharges, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
   if (appliedCouponId) {
     try { await Coupon.updateOne({ id: Number(appliedCouponId) }, { $inc: { used: 1 } }) } catch {}
   }
@@ -217,6 +217,7 @@ async function confirm(req, res) {
   if (!(co instanceof Date) || isNaN(co.getTime())) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
   if (ci >= co) co = new Date(ci.getTime() + 24 * 60 * 60 * 1000)
   const filter = { hotelId: Number(b.hotelId), availability: true, blocked: { $ne: true } }
+  if (b.roomType) filter.type = { $regex: new RegExp(`^${String(b.roomType).trim()}$`, 'i') }
   let rooms = await Room.find(filter).lean()
   rooms = (rooms || []).slice().sort((a, b) => {
     const ra = String(a.roomNumber || '').trim()
@@ -228,13 +229,14 @@ async function confirm(req, res) {
   })
   let chosenRoomId = null
   for (const r of rooms) {
-    const existing = await Booking.find({ roomId: r.id, status: { $in: ['confirmed','checked_in'] } }).lean()
-    const overlaps = existing.some(x => {
+    // Check confirmed/checked_in bookings that already have this specific roomId
+    const existingByRoomId = await Booking.find({ roomId: r.id, status: { $in: ['confirmed','checked_in'] } }).lean()
+    const overlapsByRoomId = existingByRoomId.some(x => {
       const bCi = new Date(x.checkIn)
       const bCo = new Date(x.checkOut)
       return ci < bCo && co > bCi
     })
-    if (!overlaps) { chosenRoomId = r.id; break }
+    if (!overlapsByRoomId) { chosenRoomId = r.id; break }
   }
   if (!chosenRoomId) return res.status(409).json({ error: 'No rooms available to confirm' })
   const chosenRoomDoc = await Room.findOne({ id: Number(chosenRoomId) }).lean()
