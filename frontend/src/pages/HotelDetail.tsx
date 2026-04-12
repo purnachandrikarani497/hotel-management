@@ -469,12 +469,20 @@ const HotelDetail = () => {
                     <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-2xl border-0">
                       {availableRooms.map((r, idx) => {
                         const p0 = resolveImage(r.photos?.[0]);
+                        const isSelected = roomType === r.type;
+                        const isUnavailable = Number(r?.available || 0) === 0;
                         return (
                           <div
                             key={r.id}
-                            className={`grid grid-cols-12 gap-4 items-center p-4 ${idx > 0 ? "border-t" : ""} bg-white/70`}
-                            onClick={() => setRoomType(r.type)}
-                            style={{ cursor: "pointer" }}
+                            className={`grid grid-cols-12 gap-4 items-center p-4 ${idx > 0 ? "border-t" : ""} ${
+                              isUnavailable
+                                ? "bg-red-50/80 opacity-80"
+                                : isSelected
+                                ? "bg-purple-50 ring-2 ring-inset ring-purple-400"
+                                : "bg-white/70"
+                            }`}
+                            onClick={() => !isUnavailable && setRoomType(r.type)}
+                            style={{ cursor: isUnavailable ? "not-allowed" : "pointer" }}
                           >
                             <div className="col-span-2">
                               <div className="h-20 w-full rounded-lg overflow-hidden border">
@@ -499,14 +507,16 @@ const HotelDetail = () => {
                                 ))}
                               </div>
                               <div className="flex gap-2 mt-2 items-center">
-                                {Number(r?.available || 0) > 0 ? (
+                                {!isUnavailable ? (
                                   <span className="px-2 py-1 rounded text-xs bg-primary/15 text-primary">
                                     {`${Number(r?.available || 0)}/${Number(r?.total || 0)} left`}
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-1 rounded text-xs bg-muted text-foreground">Unavailable on {checkIn}</span>
+                                  <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-600 font-medium border border-red-300">
+                                    Unavailable on {checkIn}
+                                  </span>
                                 )}
-                                {typeof r?.used === 'number' && Number(r?.available || 0) > 0 ? (
+                                {typeof r?.used === 'number' && !isUnavailable ? (
                                   <span className="px-2 py-1 rounded text-xs bg-muted text-foreground">Booked {Number(r?.used || 0)}</span>
                                 ) : null}
                                 {r.blocked && <span className="px-2 py-1 rounded text-xs bg-accent/20">Blocked</span>}
@@ -514,8 +524,13 @@ const HotelDetail = () => {
                             </div>
                             <div className="col-span-4 text-right">
                               <div className="font-bold mb-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">₹{r.price}</div>
-                              <Button variant={roomType === r.type ? "default" : "outline"} size="sm" onClick={() => setRoomType(r.type)}>
-                                {roomType === r.type ? "Selected" : "Show price"}
+                              <Button
+                                variant={isSelected ? "default" : isUnavailable ? "destructive" : "outline"}
+                                size="sm"
+                                disabled={isUnavailable}
+                                onClick={(e) => { e.stopPropagation(); if (!isUnavailable) setRoomType(r.type); }}
+                              >
+                                {isSelected ? "Selected" : isUnavailable ? "Unavailable" : "Show price"}
                               </Button>
                             </div>
                           </div>
@@ -703,7 +718,7 @@ const HotelDetail = () => {
                             <option key={n} value={n}>{n} {n===1? 'Guest':'Guests'}</option>
                           ))}
                         </select>
-                        <div className="text-xs text-muted-foreground mt-1">Max {maxGuests} guests for {selectedRoom?.type || 'room'}.</div>
+                        <div className="text-xs font-medium text-amber-600 mt-1">Max {maxGuests} guests for {selectedRoom?.type || 'room'}.</div>
                       </div>
                     </div>
 
@@ -753,8 +768,8 @@ const HotelDetail = () => {
 
                       <div className="space-y-2 pt-4 border-t">
                         <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">₹{price} × {stayDays} days</span>
-                        <span className="font-medium">₹{baseAmount}</span>
+                        <span className="text-purple-600 font-medium">₹{price} × {stayDays} days</span>
+                        <span className="font-semibold text-purple-600">₹{baseAmount}</span>
                         </div>
                         {extraHours > 0 && (
                           <div className="flex justify-between text-sm">
@@ -838,15 +853,19 @@ const HotelDetail = () => {
                       <Input 
                         id="upi-id" 
                         placeholder="name@bank" 
-                        maxLength={30}
+                        maxLength={50}
                         value={upiId} 
                         onChange={(e) => {
                           const val = e.target.value.replace(/\s/g, '')
+                          if (val.length > 50) return
                           setUpiId(val)
                         }} 
                       />
-                      {upiId && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId) && (
-                        <p className="text-xs text-red-500">Invalid UPI ID format</p>
+                      {upiId.length >= 50 && (
+                        <p className="text-xs text-red-500">UPI ID cannot exceed 50 characters</p>
+                      )}
+                      {upiId && upiId.length < 50 && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId) && (
+                        <p className="text-xs text-red-500">Invalid UPI ID format (e.g. name@bank)</p>
                       )}
                     </div>
                   )}
