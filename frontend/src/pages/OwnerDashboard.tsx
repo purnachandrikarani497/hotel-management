@@ -901,6 +901,7 @@ const OwnerDashboard = () => {
     description: "",
   })
 
+  const [hotelImageFiles, setHotelImageFiles] = React.useState<File[]>([])
   const [amenitiesEdit, setAmenitiesEdit] = React.useState<{ [id: number]: string }>({})
   const [descriptionEdit, setDescriptionEdit] = React.useState<{ [id: number]: string }>({})
   const [nameEdit, setNameEdit] = React.useState<{ [id: number]: string }>({})
@@ -1421,6 +1422,19 @@ const OwnerDashboard = () => {
                     disabled={(hotelsQ.data?.hotels || []).length > 0}
                   />
               </div>
+              <div className="mt-3">
+                <label className="text-sm font-medium mb-1 block">Upload Images <span className="text-red-500">*</span></label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={(e) => setHotelImageFiles(Array.from(e.target.files || []).slice(0, 10))}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {hotelImageFiles.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">{hotelImageFiles.length} file(s) selected</p>
+                )}
+              </div>
               <Button
                 onClick={() => {
                   if (!hotelForm.name.trim()) {
@@ -1447,6 +1461,10 @@ const OwnerDashboard = () => {
                      toast({ title: "Please enter the description", variant: "destructive" })
                      return
                   }
+                  if (hotelImageFiles.length === 0) {
+                     toast({ title: "Please upload at least one image", variant: "destructive" })
+                     return
+                  }
                   submitHotel.mutate({
                     name: hotelForm.name,
                     location: hotelForm.location,
@@ -1456,6 +1474,17 @@ const OwnerDashboard = () => {
                       .map((s) => s.trim())
                       .filter(Boolean),
                     description: hotelForm.description,
+                  }, {
+                    onSuccess: async (res) => {
+                      if (res?.id && hotelImageFiles.length > 0) {
+                        const toDataUrl = (f: File) => new Promise<string>((resolve, reject) => {
+                          const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.onerror = reject; r.readAsDataURL(f)
+                        })
+                        const dataUrls = await Promise.all(hotelImageFiles.map(toDataUrl))
+                        updateImages.mutate({ id: res.id, images: dataUrls })
+                        setHotelImageFiles([])
+                      }
+                    }
                   })
                 }}
                 disabled={
@@ -1886,13 +1915,22 @@ const OwnerDashboard = () => {
                       Amenities
                     </label>
                     <div className="flex gap-2">
-                      <Input
-                        value={roomForm.amenities}
-                        onChange={(e) =>
-                          setRoomForm({ ...roomForm, amenities: e.target.value })
-                        }
-                        placeholder="WiFi, Pool..."
-                      />
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value=""
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return;
+                          const current = roomForm.amenities ? roomForm.amenities.split(',').map(s => s.trim()).filter(Boolean) : [];
+                          if (!current.includes(val)) {
+                            setRoomForm({ ...roomForm, amenities: [...current, val].join(', ') });
+                          }
+                          e.target.value = "";
+                        }}
+                      >
+                        <option value="">Select Amenity...</option>
+                        {BASIC_AMENITIES.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline">Select</Button>
@@ -1950,6 +1988,19 @@ const OwnerDashboard = () => {
                         </PopoverContent>
                       </Popover>
                     </div>
+                    {roomForm.amenities && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {roomForm.amenities.split(',').map(s => s.trim()).filter(Boolean).map(a => (
+                          <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">
+                            {a}
+                            <button type="button" className="hover:text-red-600" onClick={() => {
+                              const next = roomForm.amenities.split(',').map(s => s.trim()).filter(x => x !== a);
+                              setRoomForm({ ...roomForm, amenities: next.join(', ') });
+                            }}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="col-span-4 flex items-center gap-3 pt-6">
                     <input
@@ -2157,15 +2208,35 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             <div className="flex gap-1 flex-wrap mb-2">{g.amenities?.map((a)=> (<span key={`${g.key}-${a}`} className="px-2 py-1 bg-secondary rounded text-xs">{a}</span>))}</div>
                             {roomGroupEditing[g.key] && (
-                              <Input
-                                placeholder="amenities"
-                                value={roomGroupEdit[g.key]?.amenities ?? (g.amenities || []).join(', ')}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; }
-                                  setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), amenities: val } })
-                                }}
-                              />
+                              <div>
+                                <select
+                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mb-1"
+                                  value=""
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (!val) return;
+                                    const current = (roomGroupEdit[g.key]?.amenities ?? (g.amenities || []).join(', ')).split(',').map(s => s.trim()).filter(Boolean);
+                                    if (!current.includes(val)) {
+                                      setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), amenities: [...current, val].join(', ') } });
+                                    }
+                                    e.target.value = "";
+                                  }}
+                                >
+                                  <option value="">Select Amenity...</option>
+                                  {BASIC_AMENITIES.map(a => <option key={a} value={a}>{a}</option>)}
+                                </select>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {(roomGroupEdit[g.key]?.amenities ?? (g.amenities || []).join(', ')).split(',').map(s => s.trim()).filter(Boolean).map(a => (
+                                    <span key={a} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">
+                                      {a}
+                                      <button type="button" className="hover:text-red-600" onClick={() => {
+                                        const next = (roomGroupEdit[g.key]?.amenities ?? (g.amenities || []).join(', ')).split(',').map(s => s.trim()).filter(x => x !== a);
+                                        setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key] || {}), amenities: next.join(', ') } });
+                                      }}>×</button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </td>
                           <td className="p-3">

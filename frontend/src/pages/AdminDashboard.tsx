@@ -121,6 +121,7 @@ const AdminDashboard = () => {
   const [contactPhone1, setContactPhone1] = React.useState("")
   const [contactPhone2, setContactPhone2] = React.useState("")
   const [contactEmail, setContactEmail] = React.useState("")
+  const [contactEmailError, setContactEmailError] = React.useState("")
   const [contactEditing, setContactEditing] = React.useState(false)
   const [showOwnerPassword, setShowOwnerPassword] = React.useState(false)
   React.useEffect(() => {
@@ -227,7 +228,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <Input
-                type="email"
+                type="text"
                 placeholder="Owner Email"
                 value={ownerForm.email}
                 onChange={e => {
@@ -235,6 +236,12 @@ const AdminDashboard = () => {
                   if (val.length > 60) {
                     toast({ title: "Maximum limit exceeded", description: "Email max 60 characters", variant: "destructive" });
                     return;
+                  }
+                  // Show inline format error only when user has typed something meaningful (has @)
+                  if (val.length > 0 && val.includes('@') && val.length > 5) {
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      toast({ title: "Invalid email format", description: "Please enter a valid email (e.g. name@example.com)", variant: "destructive" });
+                    }
                   }
                   setOwnerForm({ ...ownerForm, email: val });
                 }}
@@ -296,12 +303,16 @@ const AdminDashboard = () => {
                 value={ownerForm.phone}
                 inputMode="numeric"
                 onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  if (val.length > 10) {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  if (raw.length > 10) {
                     toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
                     return;
                   }
-                  setOwnerForm({ ...ownerForm, phone: val });
+                  if (raw.length === 1 && !/^[6-9]$/.test(raw)) {
+                    toast({ title: "Invalid Phone number", description: "Phone number must start with a digit from 6 to 9", variant: "destructive" });
+                    return;
+                  }
+                  setOwnerForm({ ...ownerForm, phone: raw });
                 }}
               />
               <Button onClick={() => {
@@ -339,10 +350,6 @@ const AdminDashboard = () => {
                 }
                 if (!/(?=.*[0-9])/.test(password)) {
                   toast({ title: "Invalid Password", description: "Password must contain at least one number", variant: "destructive" });
-                  return;
-                }
-                if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/.test(password)) {
-                  toast({ title: "Invalid Password", description: "Password must contain at least one special character", variant: "destructive" });
                   return;
                 }
 
@@ -441,9 +448,11 @@ const AdminDashboard = () => {
                       <td className="p-3">{u.email}</td>
                       <td className="p-3"><span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary text-xs">{u.role}</span></td>
                       <td className="p-3"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${u.blocked ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'}`}>{u.blocked ? 'Blocked' : 'Active'}</span></td>
-                      <td className="p-3 flex gap-2 flex-wrap">
-                        <Button variant={u.blocked ? 'outline' : 'destructive'} size="sm" onClick={() => blockUser.mutate({ id: u.id, blocked: !u.blocked })}>{u.blocked ? 'Unblock' : 'Block'}</Button>
-                        <Button variant="destructive" size="sm" onClick={() => { deleteUser.mutate(u.id) }}>Delete</Button>
+                      <td className="p-3">
+                        <div className="flex gap-2 flex-wrap">
+                          <Button variant={u.blocked ? 'outline' : 'destructive'} size="sm" onClick={() => blockUser.mutate({ id: u.id, blocked: !u.blocked })}>{u.blocked ? 'Unblock' : 'Block'}</Button>
+                          <Button variant="destructive" size="sm" onClick={() => { deleteUser.mutate(u.id) }}>Delete</Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -687,12 +696,18 @@ const AdminDashboard = () => {
                   if (v.length > 0 && !/^[a-zA-Z][a-zA-Z\s]*$/.test(v)) { toast({ title: "Invalid full name", description: "Only letters allowed, must start with a letter", variant: "destructive" }); return; }
                   setContactName(v);
                 }} disabled={!contactEditing} />
-                <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
-                  const v=e.target.value;
-                  if (v.length > 60) { toast({ title: "Maximum limit exceeded", description: "Email max 60 characters", variant: "destructive" }); return; }
-                  if (v.length > 0 && !/^[a-zA-Z0-9@._%+\-]*$/.test(v)) { toast({ title: "Invalid character in email", description: "Only letters, numbers and @._%+- allowed", variant: "destructive" }); return; }
-                  setContactEmail(v);
-                }} disabled={!contactEditing} />
+                <div className="flex flex-col gap-1">
+                  <Input placeholder="Email" value={contactEmail} onChange={e=>{ 
+                    const v=e.target.value;
+                    if (v.length > 60) { setContactEmailError("Email max 60 characters"); return; }
+                    setContactEmail(v);
+                    if (!v.trim()) { setContactEmailError("Email is required"); return; }
+                    if (!/^[a-zA-Z0-9@._%+\-]*$/.test(v)) { setContactEmailError("Only letters, numbers and @._%+- allowed"); return; }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setContactEmailError("Please enter a valid email address"); return; }
+                    setContactEmailError("");
+                  }} disabled={!contactEditing} className={contactEmailError ? "border-red-500 focus-visible:ring-red-500" : ""} />
+                  {contactEmailError && <p className="text-xs text-red-500 px-1">{contactEmailError}</p>}
+                </div>
                 <Input placeholder="Phone 1" value={contactPhone1} inputMode="numeric" onChange={e=>{ 
                   const v=e.target.value.replace(/\D/g,'');
                   if (v.length > 10) { toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" }); return; }
@@ -707,7 +722,7 @@ const AdminDashboard = () => {
                 }} disabled={!contactEditing} />
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setContactEditing(!contactEditing)}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
+                <Button variant="outline" onClick={() => { setContactEditing(!contactEditing); setContactEmailError(""); }}>{contactEditing ? 'Stop Edit' : 'Edit'}</Button>
                 <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md" onClick={() => { 
                   if (!contactEditing) return; 
                   if (!contactName?.trim()) { toast({ title: "Please enter the full name", variant: "destructive" }); return }
@@ -728,7 +743,7 @@ const AdminDashboard = () => {
                   if (!/^[6-9]\d{9}$/.test(contactPhone2)) { toast({ title: "Invalid Phone 2", description: "Must be 10 digits and start with 6–9", variant: "destructive" }); return }
                   updateSettings.mutate({ contactName, contactEmail, contactPhone1, contactPhone2 }) 
                 }} disabled={!contactEditing || updateSettings.isPending}>Save</Button>
-                <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
+                <Button variant="destructive" onClick={() => { setContactName(''); setContactPhone1(''); setContactPhone2(''); setContactEmail(''); setContactEmailError(''); updateSettings.mutate({ contactName: '', contactEmail: '', contactPhone1: '', contactPhone2: '' }) }}>Delete</Button>
               </div>
             </CardContent>
           </Card>

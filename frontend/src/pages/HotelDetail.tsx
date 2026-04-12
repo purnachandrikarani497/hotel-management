@@ -311,6 +311,7 @@ const HotelDetail = () => {
       toast({ title: "Booking created", description: `Booking ${res.id}` });
       qc.invalidateQueries({ queryKey: ["hotel", "rooms", id, checkIn] });
       qc.invalidateQueries({ queryKey: ["hotel", "coupons", id, checkIn] });
+      setOpen(true);
     },
     onError: (err: Error) => {
       toast({ title: "Reservation failed", description: err.message, variant: "destructive" });
@@ -687,11 +688,14 @@ const HotelDetail = () => {
                         <label className="text-sm font-medium mb-2 block">Check-out</label>
                         <input
                           type="date"
-                          className="w-full px-4 py-2 rounded-lg border bg-background"
+                          className={`w-full px-4 py-2 rounded-lg border bg-background ${checkOut && checkIn && checkOut < checkIn ? 'border-red-500' : ''}`}
                           value={checkOut}
                           min={checkIn || todayIso}
                           onChange={(e) => setCheckOut(e.target.value)}
                         />
+                        {checkOut && checkIn && checkOut < checkIn && (
+                          <div className="text-xs text-destructive mt-1">Check-out date must be later than check-in date</div>
+                        )}
                         <input
                           type="time"
                           className="w-full mt-2 px-4 py-2 rounded-lg border bg-background"
@@ -732,6 +736,18 @@ const HotelDetail = () => {
                           navigate('/signin')
                           return
                         }
+                        if (!checkIn && !checkOut) {
+                          toast({ title: "Please enter check-in & check-out dates", variant: "destructive" })
+                          return
+                        }
+                        if (!checkIn) {
+                          toast({ title: "Please enter check-in date", variant: "destructive" })
+                          return
+                        }
+                        if (!checkOut) {
+                          toast({ title: "Please enter check-out date", variant: "destructive" })
+                          return
+                        }
                         const nowHM = hmIST(new Date());
                         const toMin = (s: string) => {
                           const [h, m] = s.split(":").map(Number);
@@ -746,7 +762,6 @@ const HotelDetail = () => {
                         setPaid(false);
                         setPaymentMethod("");
                         setUpiId("");
-                        setOpen(true);
                         reserve.mutate({
                           userId: auth?.user?.id || 0,
                           hotelId: Number(id),
@@ -762,7 +777,7 @@ const HotelDetail = () => {
                       {reserve.isPending ? "Reserving…" : "Reserve Now"}
                     </Button>
                     {Number(selectedRoom?.available || 0) === 0 && (
-                      <div className="text-sm text-muted-foreground mb-4">Selected room type is unavailable for the chosen date.</div>
+                      <div className="text-sm text-red-500 mb-4">Selected room type is unavailable for the chosen date.</div>
                     )}
                     {reserve.isError && <div className="text-red-600 text-sm">Reservation failed</div>}
 
