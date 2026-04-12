@@ -227,7 +227,7 @@ const Register = () => {
               <div>
                 <label className="text-sm font-medium mb-2 block">Email *</label>
                 <Input 
-                  type="email" 
+                  type="text" 
                   placeholder="your@email.com" 
                   value={email} 
                   onChange={(e) => {
@@ -237,7 +237,13 @@ const Register = () => {
                       return;
                     }
                     setEmail(val);
-                  }} 
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      toast({ title: "Invalid email", description: "Enter a valid email format (e.g. user@example.com)", variant: "destructive" });
+                    }
+                  }}
                 />
               </div>
 
@@ -249,16 +255,30 @@ const Register = () => {
                   value={phone} 
                   onChange={(e) => {
                     const raw = e.target.value;
-                    if (/[^0-9]/.test(raw)) {
+                    // Strip non-digits silently to allow backspace/delete
+                    const val = raw.replace(/\D/g, "");
+                    // If user typed a non-digit character (not just deleting)
+                    if (raw.length > phone.length && /[^0-9]/.test(raw.slice(-1))) {
                       toast({ title: "Invalid input", description: "Only numbers allowed", variant: "destructive" });
+                      return;
                     }
-                    const val = raw.replace(/\D/g,"");
                     if (val.length > 10) {
                       toast({ title: "Maximum limit exceeded", description: "Phone number max 10 digits", variant: "destructive" });
                       return;
                     }
+                    // Only check first digit when user is typing the first character
+                    if (val.length === 1 && raw.length > phone.length && !/^[6-9]/.test(val)) {
+                      toast({ title: "Invalid phone number", description: "Phone number must start with 6, 7, 8, or 9", variant: "destructive" });
+                      return;
+                    }
                     setPhone(val);
-                  }} 
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && val.length < 10) {
+                      toast({ title: "Invalid phone number", description: "Phone number must be exactly 10 digits", variant: "destructive" });
+                    }
+                  }}
                 />
               </div>
 
