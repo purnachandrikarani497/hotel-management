@@ -932,7 +932,9 @@ const OwnerDashboard = () => {
   })
 
   const [roomPhotoFiles, setRoomPhotoFiles] = React.useState<File[]>([])
+  const roomPhotoInputRef = React.useRef<HTMLInputElement>(null)
   const [fileErrorOpen, setFileErrorOpen] = React.useState(false)
+  const [roomMismatchError, setRoomMismatchError] = React.useState<{ open: boolean; countVal: number; numsLength: number }>({ open: false, countVal: 0, numsLength: 0 })
   const [uploadInfo, setUploadInfo] = React.useState<{
     type: "images" | "documents" | "photos" | null
     names: string[]
@@ -996,6 +998,10 @@ const OwnerDashboard = () => {
     const s = new Set(roomTypes.map((x) => x.trim()).filter(Boolean))
     s.add(t.trim())
     setRoomTypesPersist(Array.from(s))
+  }
+
+  const removeRoomType = (t: string) => {
+    setRoomTypesPersist(roomTypes.filter(x => x.trim() !== t.trim()))
   }
 
   const [reviewReply, setReviewReply] = React.useState<{ [id: number]: string }>({})
@@ -1808,7 +1814,7 @@ const OwnerDashboard = () => {
                 <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">Manage Rooms</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <RoomTypeManager types={roomTypes} onAddType={addRoomType} />
+                <RoomTypeManager types={roomTypes} onAddType={addRoomType} onRemoveType={removeRoomType} />
                 <div className="grid grid-cols-7 gap-3">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Hotel</label>
@@ -1924,7 +1930,8 @@ const OwnerDashboard = () => {
                       onChange={(e) => {
                         const val = e.target.value
                         if (val.length > 300) return
-                        if (!/^[0-9,\s]*$/.test(val)) return
+                        // Allow digits, commas, and spaces only
+                        if (val !== "" && !/^[\d,\s]*$/.test(val)) return
                         // each individual number max 10 digits
                         const parts = val.split(',').map(s => s.trim()).filter(Boolean)
                         if (parts.some(p => p.length > 10)) return
@@ -2026,6 +2033,7 @@ const OwnerDashboard = () => {
                   </div>
                   <div className="col-span-4 flex items-center gap-3 pt-6">
                     <input
+                      ref={roomPhotoInputRef}
                       type="file"
                       multiple
                       accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp,image/svg+xml,application/pdf"
@@ -2097,8 +2105,29 @@ const OwnerDashboard = () => {
                         }
                         
                         if (nums.length > 0 && nums.length !== countVal) {
-                             toast({ title: "Mismatch", description: `You specified ${countVal} rooms but provided ${nums.length} room numbers.`, variant: "destructive" })
+                             setRoomMismatchError({ open: true, countVal, numsLength: nums.length })
                              return
+                        }
+
+                        // Check for duplicates within the entered list
+                        const numsSet = new Set(nums)
+                        if (numsSet.size !== nums.length) {
+                          const seen = new Set<string>()
+                          const dupes = nums.filter(n => { if (seen.has(n)) return true; seen.add(n); return false })
+                          toast({ title: "Duplicate room numbers", description: `Room number(s) ${[...new Set(dupes)].join(", ")} appear more than once.`, variant: "destructive" })
+                          return
+                        }
+
+                        // Check for duplicates against existing rooms in the same hotel
+                        const existingNums = new Set(
+                          rooms
+                            .filter(r => r.hotelId === roomForm.hotelId && r.roomNumber)
+                            .map(r => String(r.roomNumber).trim())
+                        )
+                        const conflicting = nums.filter(n => existingNums.has(n))
+                        if (conflicting.length > 0) {
+                          toast({ title: "Room number already exists", description: `Room number(s) ${conflicting.join(", ")} already exist in this hotel.`, variant: "destructive" })
+                          return
                         }
 
                         const photos = files.length
@@ -2137,6 +2166,19 @@ const OwnerDashboard = () => {
                           const payload: { hotelId:number; type:string; price:number; members:number; amenities:string[]; photos:string[]; availability:boolean; roomNumber?: string } = { ...payloadBase, roomNumber }
                           createRoom.mutate(payload)
                         }
+                        // Reset form after submitting
+                        setRoomForm({
+                          hotelId: 0,
+                          type: "Standard",
+                          price: "",
+                          members: "",
+                          amenities: "",
+                          availability: true,
+                          count: "",
+                          roomNumbers: "",
+                        })
+                        setRoomPhotoFiles([])
+                        if (roomPhotoInputRef.current) roomPhotoInputRef.current.value = ""
                       }}
                       disabled={!roomForm.hotelId || !roomForm.type}
                     >
@@ -2214,9 +2256,29 @@ const OwnerDashboard = () => {
                                 onChange={(e) => {
                                   const val = e.target.value
                                   if (val.length > 300) return
-                                  if (!/^[0-9,\s]*$/.test(val)) return
+                                  // Allow digits, commas, and spaces only
+                                  if (val !== "" && !/^[\d,\s]*$/.test(val)) return
                                   const parts = val.split(',').map(s => s.trim()).filter(Boolean)
                                   if (parts.some(p => p.length > 10)) return
+                                  // Only validate duplicates when user just added a comma (finished typing a number)
+                                  const prevVal = roomGroupEdit[g.key]?.roomNumbers ?? (g.roomNumbers || []).join(", ")
+                                  const isAdding = val.length > prevVal.length
+                                  if (isAdding && val.trimEnd().endsWith(',')) {
+                                    // Check duplicates within the typed list
+                                    const seen = new Set<string>()
+                                    const dupes = parts.filter(n => { if (seen.has(n)) return true; seen.add(n); return false })
+                                    if (dupes.length > 0) {
+                                      toast({ title: "Duplicate room numbers", description: `Room number(s) ${[...new Set(dupes)].join(", ")} already entered.`, variant: "destructive" })
+                                      return
+                                    }
+                                    // Check against other rooms in the same hotel (excluding current group)
+                                    const otherNums = new Set(rooms.filter(r => r.hotelId === g.hotelId && !g.ids.includes(r.id) && r.roomNumber).map(r => String(r.roomNumber).trim()))
+                                    const conflicts = parts.filter(n => otherNums.has(n))
+                                    if (conflicts.length > 0) {
+                                      toast({ title: "Room number already exists", description: `Room number(s) ${conflicts.join(", ")} already exist in this hotel.`, variant: "destructive" })
+                                      return
+                                    }
+                                  }
                                   setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), roomNumbers: val } })
                                 }}
                               />
@@ -2270,9 +2332,9 @@ const OwnerDashboard = () => {
                           </td>
                           <td className="p-3">
                             <div className="flex gap-2 flex-wrap">{(g.photos || []).map((p)=> (<img key={`${g.key}-${p}`} src={resolve(p)} alt="Room" className="h-10 w-10 object-cover rounded" />))}</div>
-                            <div className="mt-2 flex flex-col gap-1">
-                              <input type="file" multiple accept="image/*" onChange={(e)=> { const files = Array.from(e.target.files||[]).slice(0,10); setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: files }); if(files.length > 0) { setUploadInfo({ type:'photos', names: files.map(f=>f.name) }); } }} disabled={!roomGroupEditing[g.key]} />
-                              {roomGroupEditing[g.key] && (
+                            {roomGroupEditing[g.key] && (
+                              <div className="mt-2 flex flex-col gap-1">
+                                <input type="file" multiple accept="image/*" onChange={(e)=> { const files = Array.from(e.target.files||[]).slice(0,10); setRoomPhotosByGroup({ ...roomPhotosByGroup, [g.key]: files }); if(files.length > 0) { setUploadInfo({ type:'photos', names: files.map(f=>f.name) }); } }} />
                                 <Button size="sm" variant="outline" onClick={async () => {
                                   const files = roomPhotosByGroup[g.key] || [];
                                   if (!files.length) { toast({ title: "Please choose a file first", variant: "destructive" }); return; }
@@ -2282,8 +2344,8 @@ const OwnerDashboard = () => {
                                   setRoomPhotosByGroup(prev => { const next = { ...prev }; delete next[g.key]; return next; });
                                   toast({ title: "Photos saved" });
                                 }}>Save Photo</Button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2"><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${g.availability ? 'bg-primary/15 text-primary' : 'bg-muted text-foreground'}`}>{g.availability ? 'Available' : 'Unavailable'}</span><input type="checkbox" checked={roomGroupEdit[g.key]?.availability ?? g.availability} onChange={(e)=> setRoomGroupEdit({ ...roomGroupEdit, [g.key]: { ...(roomGroupEdit[g.key]||{}), availability: e.target.checked } })} disabled={!roomGroupEditing[g.key]} /></div>
@@ -2291,7 +2353,7 @@ const OwnerDashboard = () => {
                           <td className="p-3">
                             <div className="flex gap-2 justify-end">
                               <Button size="sm" variant="outline" onClick={()=>{ const next = !roomGroupEditing[g.key]; if (next) { setRoomGroupEdit(prev => ({ ...prev, [g.key]: { ...(prev[g.key] || {}), amenities: (g.amenities || []).join(', '), price: prev[g.key]?.price ?? String(g.price), members: prev[g.key]?.members ?? String(g.members) } })) } setRoomGroupEditing({ ...roomGroupEditing, [g.key]: next }); toast({ title: next ? 'Edit enabled' : 'Edit disabled', description: `Hotel • ${g.type}` }) }}>{roomGroupEditing[g.key] ? 'Stop Edit' : 'Edit'}</Button>
-                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const currentPrice = edits.price !== undefined ? edits.price : String(g.price); const currentMembers = edits.members !== undefined ? edits.members : String(g.members); const currentAmenities = edits.amenities !== undefined ? edits.amenities : (g.amenities || []).join(', '); const files = roomPhotosByGroup[g.key] || []; const currentPhotosCount = (g.photos || []).length + files.length; if (!String(currentPrice).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; } const priceNum = Number(currentPrice); if (isNaN(priceNum) || priceNum <= 0) { toast({ title: "Price must be greater than 0", variant: "destructive" }); return; } if (String(currentPrice).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (!String(currentMembers).trim()) { toast({ title: "Please enter members", variant: "destructive" }); return; } const membersNum = Number(currentMembers); if (isNaN(membersNum) || membersNum <= 0) { toast({ title: "Members must be greater than 0", variant: "destructive" }); return; } if (membersNum > 5) { toast({ title: "Maximum members is 5", variant: "destructive" }); return; } if (!currentAmenities.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; } if (!/^[a-zA-Z\s,]+$/.test(currentAmenities)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; } if (currentAmenities.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (currentPhotosCount === 0) { toast({ title: "image uploaded it was must fix it once", variant: "destructive" }); return; } const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); payload.amenities = currentAmenities.split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } } setRoomGroupEditing(prev => ({ ...prev, [g.key]: false })) }}>Update</Button>
+                              <Button size="sm" onClick={async ()=> { const edits = roomGroupEdit[g.key] || {}; const currentPrice = edits.price !== undefined ? edits.price : String(g.price); const currentMembers = edits.members !== undefined ? edits.members : String(g.members); const currentAmenities = edits.amenities !== undefined ? edits.amenities : (g.amenities || []).join(', '); const files = roomPhotosByGroup[g.key] || []; const currentPhotosCount = (g.photos || []).length + files.length; if (!String(currentPrice).trim()) { toast({ title: "Please enter the price", variant: "destructive" }); return; } const priceNum = Number(currentPrice); if (isNaN(priceNum) || priceNum <= 0) { toast({ title: "Price must be greater than 0", variant: "destructive" }); return; } if (String(currentPrice).length > 6 || priceNum > 999999) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (!String(currentMembers).trim()) { toast({ title: "Please enter members", variant: "destructive" }); return; } const membersNum = Number(currentMembers); if (isNaN(membersNum) || membersNum <= 0) { toast({ title: "Members must be greater than 0", variant: "destructive" }); return; } if (membersNum > 5) { toast({ title: "Maximum members is 5", variant: "destructive" }); return; } if (!currentAmenities.trim()) { toast({ title: "please enter the Amenities", variant: "destructive" }); return; } if (!/^[a-zA-Z\s,]+$/.test(currentAmenities)) { toast({ title: "invaid Amenities", variant: "destructive" }); return; } if (currentAmenities.length > 50) { toast({ title: "maximum limit exceeded", variant: "destructive" }); return; } if (currentPhotosCount === 0) { toast({ title: "image uploaded it was must fix it once", variant: "destructive" }); return; } const payload: { price?: number; members?: number; amenities?: string[]; availability?: boolean } = {}; if (edits.price !== undefined) payload.price = Number(edits.price); if (edits.members !== undefined) payload.members = Number(edits.members); payload.amenities = currentAmenities.split(',').map(s=>s.trim()).filter(Boolean); if (edits.availability !== undefined) payload.availability = !!edits.availability; for (const id of g.ids) { updateRoom.mutate({ id, ...payload }) } if (edits.blocked !== undefined) { for (const id of g.ids) { blockRoom.mutate({ id, blocked: !!edits.blocked }) } } if (edits.availableRooms !== undefined) { const target = Number(edits.availableRooms); const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; await adjustRoomCount(g.hotelId, g.type, target, base) } if (edits.roomNumbers !== undefined) { const list = String(edits.roomNumbers||'').split(',').map(s=>s.trim()).filter(Boolean); const availCount = edits.availableRooms !== undefined ? Number(edits.availableRooms) : g.ids.length; if (list.length > 0 && list.length !== availCount) { setRoomMismatchError({ open: true, countVal: availCount, numsLength: list.length }); return; } const seenNums = new Set<string>(); const dupeNums = list.filter(n => { if (seenNums.has(n)) return true; seenNums.add(n); return false }); if (dupeNums.length > 0) { toast({ title: "Duplicate room numbers", description: `Room number(s) ${[...new Set(dupeNums)].join(", ")} appear more than once.`, variant: "destructive" }); return; } const otherRoomNums = new Set(rooms.filter(r => r.hotelId === g.hotelId && !g.ids.includes(r.id) && r.roomNumber).map(r => String(r.roomNumber).trim())); const conflictNums = list.filter(n => otherRoomNums.has(n)); if (conflictNums.length > 0) { toast({ title: "Room number already exists", description: `Room number(s) ${conflictNums.join(", ")} already exist in this hotel.`, variant: "destructive" }); return; } const curCount = g.ids.length; if (list.length > curCount) { const base: Room = getRoomById(g.ids[0]) || { id:0, hotelId:g.hotelId, type:g.type, price:g.price, members:g.members, availability:g.availability, blocked:g.blocked, amenities:g.amenities, photos:g.photos }; const extras = list.slice(curCount); for (const rn of extras) { createRoom.mutate({ hotelId: g.hotelId, type: g.type, price: base.price, members: base.members, amenities: base.amenities || [], photos: base.photos || [], availability: base.availability, roomNumber: rn }) } } else if (list.length < curCount) { const idsSorted = g.ids.slice().sort((a,b)=> b-a); const toDelete = idsSorted.slice(0, curCount - list.length); for (const id of toDelete) { await apiDelete(`/api/owner/rooms/${id}`) } } const ids = g.ids.slice(0, Math.max(list.length, 0)); for (let i=0; i<ids.length; i++) { const rn = list[i] || ''; updateRoom.mutate({ id: ids[i], roomNumber: rn }) } qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } if (files.length) { const toDataUrl = (f: File)=> new Promise<string>((resolve,reject)=>{ const reader = new FileReader(); reader.onload = ()=> resolve(String(reader.result||'')); reader.onerror = reject; reader.readAsDataURL(f) }); const dataUrls = await Promise.all(files.map(toDataUrl)); for (const id of g.ids) { updateRoom.mutate({ id, photos: dataUrls }) } } setRoomGroupEditing(prev => ({ ...prev, [g.key]: false })) }}>Update</Button>
                               <Button size="sm" variant="outline" onClick={async ()=> { try { await qc.cancelQueries({ queryKey: ['owner','rooms', ownerId] }); const prev = qc.getQueryData<{ rooms: Room[] }>(['owner','rooms', ownerId]) || { rooms: [] }; const gone = new Set(g.ids); qc.setQueryData(['owner','rooms', ownerId], (data?: { rooms: Room[] }) => ({ rooms: (data?.rooms || []).filter(r => !gone.has(r.id)) })); await Promise.all(g.ids.map(id => apiDelete(`/api/owner/rooms/${id}`))); toast({ title: 'Rooms deleted', description: `${g.ids.length} item(s)` }); } catch { toast({ title: 'Delete failed', variant: 'destructive' }) } finally { qc.invalidateQueries({ queryKey: ['owner','rooms', ownerId] }) } }}>Delete</Button>
                             </div>
                           </td>
@@ -4084,6 +4146,19 @@ const OwnerDashboard = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setFileErrorOpen(false)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={roomMismatchError.open} onOpenChange={(open) => setRoomMismatchError(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Room Count Mismatch</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rooms Available ({roomMismatchError.countVal}) and Room Numbers ({roomMismatchError.numsLength}) must be equal. Please make sure the number of room numbers matches the rooms available count.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setRoomMismatchError(prev => ({ ...prev, open: false }))}>OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

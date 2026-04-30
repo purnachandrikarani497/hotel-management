@@ -152,7 +152,7 @@ const MessageInbox = () => {
               <CardContent>
                 <div className="rounded border overflow-hidden max-h-[320px] overflow-y-auto sm:max-h-none">
                   {(orderedThreads||[]).map(t => (
-                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer ${activeId===t.id? 'bg-card' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={() => { setActiveId(t.id); setTimeout(() => conversationRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }}>
+                    <div key={t.id} className={`p-3 border-t first:border-t-0 cursor-pointer transition-colors ${activeId===t.id ? 'bg-primary/10 border-l-4 border-l-primary' : ((role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0)) ? 'bg-accent/20' : 'bg-card')}`} onClick={() => { setActiveId(t.id); setTimeout(() => conversationRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }}>
                       <div className="flex items-center gap-3">
                         <img src={resolveImage(t.hotelImage)} alt={t.hotelName||`Hotel ${t.hotelId}`} className="h-10 w-10 rounded object-cover border" onError={(e)=>{ e.currentTarget.src='https://placehold.co/64x64?text=Hotel' }} />
                         <div className="flex-1">
@@ -162,8 +162,8 @@ const MessageInbox = () => {
                         {(() => { const c = role==='owner' ? (t.unreadForOwner||0) : (t.unreadForUser||0); return (c && activeId !== t.id) ? (<span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1">{c}</span>) : null })()}
                       </div>
                       {t.lastMessage && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {t.lastMessage.senderRole==='system' ? 'System' : t.lastMessage.senderRole}: {t.lastMessage.content}
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
+                          {t.lastMessage.senderRole==='system' ? 'System' : t.lastMessage.senderRole}: {String(t.lastMessage.content||'').replace(/\.\s*Please share your rating and feedback\.?/gi, '').trim()}
                         </div>
                       )}
                     </div>
