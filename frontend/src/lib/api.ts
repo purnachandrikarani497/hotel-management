@@ -5,7 +5,7 @@ const explicitBase = String(metaEnv?.VITE_API_URL || metaEnv?.VITE_API_BASE || m
 const isBrowser = typeof window !== 'undefined' && !!window.location;
 const host = isBrowser && window.location.hostname ? window.location.hostname : '';
 const isLocalHost = !host || /^localhost$|^127\.0\.0\.1$|\[::1\]$/i.test(host);
-const devDefault = 'http://localhost:3011';
+const devDefault = 'http://localhost:3000';
 const prodDefault = 'https://hotel-booking-backend.onrender.com';
 const base = explicitBase || (isLocalHost ? devDefault : prodDefault);
 try { console.info('[API] base:', base || '(same-origin)') } catch (_e) { void 0 }

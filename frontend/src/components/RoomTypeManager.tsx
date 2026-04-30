@@ -28,6 +28,10 @@ const RoomTypeManager: React.FC<Props> = ({ types, onAddType, onRemoveType }) =>
       toast({ title: "Create Room Type cannot be a single character", variant: "destructive" })
       return
     }
+    if (types.some(existing => existing.toLowerCase() === t.toLowerCase())) {
+      toast({ title: "Room type already exists", variant: "destructive" })
+      return
+    }
     onAddType(t)
     setNewType("")
   }

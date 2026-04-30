@@ -872,16 +872,13 @@ const HotelDetail = () => {
                         value={upiId} 
                         onChange={(e) => {
                           const val = e.target.value.replace(/\s/g, '')
-                          if (val.length > 50) return
+                          if (val.length > 50) {
+                            toast({ title: "UPI ID too long", description: "UPI ID cannot exceed 50 characters.", variant: "destructive" })
+                            return
+                          }
                           setUpiId(val)
                         }} 
                       />
-                      {upiId.length >= 50 && (
-                        <p className="text-xs text-red-500">UPI ID cannot exceed 50 characters</p>
-                      )}
-                      {upiId && upiId.length < 50 && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId) && (
-                        <p className="text-xs text-red-500">Invalid UPI ID format (e.g. name@bank)</p>
-                      )}
                     </div>
                   )}
 
@@ -917,11 +914,25 @@ const HotelDetail = () => {
                       Close
                     </Button>
                     <Button
-                      disabled={
-                        paymentMethod === "" ||
-                        (paymentMethod === "upi" && !/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId))
-                      }
                       onClick={() => {
+                        if (paymentMethod === "") {
+                          toast({ title: "Select payment method", description: "Please choose UPI or Pay Cash.", variant: "destructive" })
+                          return
+                        }
+                        if (paymentMethod === "upi") {
+                          if (!upiId.trim()) {
+                            toast({ title: "UPI ID required", description: "Please enter your UPI ID.", variant: "destructive" })
+                            return
+                          }
+                          if (upiId.length >= 50) {
+                            toast({ title: "UPI ID too long", description: "UPI ID cannot exceed 50 characters.", variant: "destructive" })
+                            return
+                          }
+                          if (!/^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+$/.test(upiId)) {
+                            toast({ title: "Invalid UPI ID", description: "Enter a valid UPI ID format (e.g. name@bank).", variant: "destructive" })
+                            return
+                          }
+                        }
                         const bid = reserve.data?.id;
                         if (bid) confirm.mutate(bid);
                       }}

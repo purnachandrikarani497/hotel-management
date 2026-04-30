@@ -214,9 +214,9 @@ const AdminDashboard = () => {
             <div className="container">
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="h-8 w-8" />
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{(() => { const f = String(feature||''); if (f==='users') return 'User Management'; if (f==='hotels') return 'Hotel Management'; if (f==='bookings') return 'Booking Management'; if (f==='settings') return 'About Us'; if (f==='contact') return 'Contact'; return 'Admin'; })()}</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{(() => { const f = String(feature||''); if (f==='users') return 'User Management'; if (f==='hotels') return 'Hotel Management'; if (f==='bookings') return 'Booking Management'; if (f==='settings') return 'About Us'; if (f==='contact') return 'Contact'; if (f==='terms') return 'Terms & Conditions'; return 'Admin'; })()}</h1>
               </div>
-              <p className="opacity-90">{(() => { const f = String(feature||''); if (f==='users') return 'Add owners, manage roles and statuses'; if (f==='hotels') return 'Approve, feature, or remove hotels'; if (f==='bookings') return 'Review bookings and update statuses'; if (f==='settings') return 'Edit platform story, mission and contact'; if (f==='contact') return 'Manage public contact information'; return 'Administration controls'; })()}</p>
+              <p className="opacity-90">{(() => { const f = String(feature||''); if (f==='users') return 'Add owners, manage roles and statuses'; if (f==='hotels') return 'Approve, feature, or remove hotels'; if (f==='bookings') return 'Review bookings and update statuses'; if (f==='settings') return 'Edit platform story, mission and contact'; if (f==='contact') return 'Manage public contact information'; if (f==='terms') return 'Platform terms and conditions'; return 'Administration controls'; })()}</p>
             </div>
           </section>
         )}
@@ -782,6 +782,43 @@ const AdminDashboard = () => {
           </Card>
         )}
 {/* Support Inbox removed */}
+
+        {feature === 'terms' && (
+          <Card className="rounded-2xl p-0 shadow-2xl bg-gradient-to-br from-white via-purple-50 to-pink-100 border-0">
+            <CardHeader><CardTitle>Terms &amp; Conditions</CardTitle></CardHeader>
+            <CardContent className="p-6 space-y-8 text-muted-foreground max-w-4xl">
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">1. Acceptance of Terms</h2>
+                <p>By accessing and using Sana Stayz, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">2. Booking Policy</h2>
+                <p>All bookings made through Sana Stayz are subject to availability and acceptance. We reserve the right to refuse any booking at our discretion.</p>
+                <ul className="list-disc pl-6 mt-2 space-y-2">
+                  <li>Users must be at least 18 years old to make a booking.</li>
+                  <li>Accurate information must be provided during the booking process.</li>
+                  <li>Confirmation emails will be sent for all successful bookings.</li>
+                </ul>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">3. Payment Terms</h2>
+                <p>Payment must be made in full at the time of booking unless otherwise specified. We accept major credit/debit cards and other specified payment methods.</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">4. User Responsibilities</h2>
+                <p>Users are responsible for maintaining the confidentiality of their account information and for all activities that occur under their account.</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">5. Limitation of Liability</h2>
+                <p>Sana Stayz shall not be liable for any direct, indirect, incidental, special, or consequential damages resulting from the use or inability to use our services.</p>
+              </section>
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-4">6. Changes to Terms</h2>
+                <p>We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
+              </section>
+            </CardContent>
+          </Card>
+        )}
       </div>
       </main>
       <Footer />
