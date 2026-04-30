@@ -139,7 +139,7 @@ async function create(req, res) {
   const id = await nextIdFor('Booking')
   const ownerActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
   const userActionToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomType: String(roomType || ''), roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: computedTotal, extraHours, extraCharges, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
+  await Booking.create({ id, userId: Number(userId) || null, hotelId: Number(hotelId), roomId: null, roomType: String(roomType || ''), roomNumber: '', checkIn, checkOut, guests: Number(guests), roomCount: roomsQty, total: 0, pendingTotal: computedTotal, extraHours, extraCharges, couponId: appliedCouponId, couponCode: appliedCouponCode, status: 'pending', paid: false, ownerActionToken, userActionToken })
   if (appliedCouponId) {
     try { await Coupon.updateOne({ id: Number(appliedCouponId) }, { $inc: { used: 1 } }) } catch {}
   }
@@ -244,6 +244,10 @@ async function confirm(req, res) {
   b.roomNumber = String(chosenRoomDoc?.roomNumber || '')
   b.status = 'confirmed'
   b.paid = true
+  // Set the actual total only on payment confirmation
+  if (b.pendingTotal != null && Number(b.pendingTotal) > 0) {
+    b.total = Number(b.pendingTotal)
+  }
   const { mode, upiId } = req.body || {}
   const m = String(mode || '').toLowerCase()
   b.paymentMode = m === 'cod' ? 'cod' : (m === 'upi' ? 'upi' : '')

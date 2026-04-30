@@ -12,6 +12,7 @@ const BookingSchema = new mongoose.Schema({
   guests: Number,
   roomCount: { type: Number, default: 1 },
   total: Number,
+  pendingTotal: { type: Number, default: 0 },
   couponId: { type: Number, default: null },
   couponCode: { type: String, default: '' },
   status: { type: String, default: 'pending' },
