@@ -29,6 +29,7 @@ const Hotels = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<string>("Rating")
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
   const qc = useQueryClient()
   const { data, isLoading, isError } = useQuery({
     queryKey: ["hotels", q],
@@ -216,7 +217,7 @@ const Hotels = () => {
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      placeholder="Hotel name" 
+                      placeholder="City" 
                       className="pl-9 h-11" 
                       value={q} 
                       onChange={(e) => {
@@ -265,21 +266,20 @@ const Hotels = () => {
                   </div>
                   <div className="space-y-2">
                     {[5, 4, 3].map((rating) => (
-                      <div key={rating} className="flex items-center space-x-2">
+                      <div key={rating} className="flex items-center space-x-2 cursor-pointer" onClick={() => {
+                        if (minRating === rating) setMinRating(null); else setMinRating(rating);
+                        scrollToTop();
+                      }}>
                         <Checkbox 
-                          id={`rating-${rating}`} 
                           checked={minRating === rating} 
                           onCheckedChange={(checked) => {
                             if (checked) setMinRating(rating);
                             else setMinRating(null);
-                          }} 
+                          }}
+                          onClick={e => e.stopPropagation()}
+                          onFocus={e => e.target.blur()}
                         />
-                        <label
-                          htmlFor={`rating-${rating}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          {rating}+ Stars
-                        </label>
+                        <span className="text-sm select-none">{rating}+ Stars</span>
                       </div>
                     ))}
                   </div>
@@ -290,17 +290,22 @@ const Hotels = () => {
                   <label className="text-sm font-medium mb-3 block">Property Type</label>
                   <div className="space-y-2">
                     {["Hotel", "Resort", "Villa", "Apartment"].map((type) => (
-                      <div key={type} className="flex items-center space-x-2">
-                        <Checkbox id={type} checked={selectedTypes.includes(type)} onCheckedChange={(checked)=>{
+                      <div key={type} className="flex items-center space-x-2 cursor-pointer" onClick={()=>{
+                        setSelectedTypes(prev=>{
+                          const set = new Set(prev)
+                          if (set.has(type)) set.delete(type); else set.add(type)
+                          return Array.from(set)
+                        })
+                        scrollToTop()
+                      }}>
+                        <Checkbox checked={selectedTypes.includes(type)} onCheckedChange={(checked)=>{
                           setSelectedTypes(prev=>{
                             const set = new Set(prev)
                             if (checked) set.add(type); else set.delete(type)
                             return Array.from(set)
                           })
-                        }} />
-                        <label htmlFor={type} className="text-sm cursor-pointer">
-                          {type}
-                        </label>
+                        }} onClick={e => e.stopPropagation()} onFocus={e => e.target.blur()} />
+                        <span className="text-sm select-none">{type}</span>
                       </div>
                     ))}
                   </div>
@@ -312,18 +317,25 @@ const Hotels = () => {
                   <div className="space-y-2">
                     {allAmenities.map(
                       (amenity) => (
-                        <div key={amenity} className="flex items-center space-x-2">
-                          <Checkbox id={amenity} checked={selectedAmenities.includes(amenity)} onCheckedChange={(checked)=>{
+                        <div key={amenity} className="flex items-center space-x-2 cursor-pointer" onClick={()=>{
+                          setSelectedAmenities(prev=>{
+                            const set = new Set(prev)
+                            if (set.has(amenity)) set.delete(amenity); else set.add(amenity)
+                            return Array.from(set)
+                          })
+                          scrollToTop()
+                        }}>
+                          <Checkbox checked={selectedAmenities.includes(amenity)} onCheckedChange={(checked)=>{
                             setSelectedAmenities(prev=>{
                               const set = new Set(prev)
                               if (checked) set.add(amenity); else set.delete(amenity)
                               return Array.from(set)
                             })
-                          }} />
-                          <label htmlFor={amenity} className="text-sm cursor-pointer flex items-center gap-2">
+                          }} onClick={e => e.stopPropagation()} onFocus={e => e.target.blur()} />
+                          <span className="text-sm flex items-center gap-2 select-none">
                             {getAmenityIcon(amenity)}
                             {amenity}
-                          </label>
+                          </span>
                         </div>
                       )
                     )}
