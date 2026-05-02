@@ -39,8 +39,8 @@ const UserDetails = () => {
     "Passport": "Letter + 7 digits",
     "Driving Licence": "8-20 alphanumeric",
     "Voter ID": "3 letters + 7 digits",
-    "PAN card (usually not accepted as primary ID)": "5 letters, 4 digits, 1 letter",
-    "PAN card": "5 letters, 4 digits, 1 letter", // handle both key variants just in case
+    "PAN card (usually not accepted as primary ID)": "5 letters, 4 digits, 1 letter (ABCDE1234F)",
+    "PAN card": "5 letters, 4 digits, 1 letter (ABCDE1234F)", // handle both key variants just in case
   }
 
   type Payload = Partial<User> & { idDocImage?: string }
