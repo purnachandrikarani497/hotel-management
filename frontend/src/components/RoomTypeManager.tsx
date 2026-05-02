@@ -28,6 +28,10 @@ const RoomTypeManager: React.FC<Props> = ({ types, onAddType, onRemoveType }) =>
       toast({ title: "Create Room Type cannot be a single character", variant: "destructive" })
       return
     }
+    if (types.some(existing => existing.toLowerCase() === t.toLowerCase())) {
+      toast({ title: "Room type already exists", variant: "destructive" })
+      return
+    }
     onAddType(t)
     setNewType("")
   }
@@ -59,10 +63,15 @@ const RoomTypeManager: React.FC<Props> = ({ types, onAddType, onRemoveType }) =>
       <div className="mt-3 text-xs text-muted-foreground">Available Types</div>
       <div className="mt-2 flex gap-2 flex-wrap">
         {Array.from(new Set(types)).map(t => (
-          <div key={t} className="px-2 py-1 bg-secondary rounded text-xs flex items-center gap-2">
+          <div key={t} className="px-2 py-1 bg-secondary rounded text-xs flex items-center gap-1">
             <span>{t}</span>
             {onRemoveType && (
-              <Button size="sm" variant="outline" className="h-6" onClick={()=>onRemoveType(t)}>Remove</Button>
+              <button
+                type="button"
+                className="ml-1 text-muted-foreground hover:text-destructive leading-none"
+                onClick={() => onRemoveType(t)}
+                aria-label={`Remove ${t}`}
+              >×</button>
             )}
           </div>
         ))}

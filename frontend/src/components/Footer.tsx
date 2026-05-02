@@ -58,8 +58,8 @@ const Footer = () => {
               <div className="absolute -bottom-1 left-0 w-12 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
             </h4>
             <ul className="space-y-3">
-              <li><Link to={isAdminDashboard ? "/dashboard/admin/settings" : "/about"} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
-              <li><Link to="/terms" className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">📜 Terms & Conditions</Link></li>
+              <li><Link to={isAdminDashboard ? "/dashboard/admin/settings" : "/about"} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">✨ About Us</Link></li>
+              <li><Link to={isAdminDashboard ? "/dashboard/admin/terms" : isOwnerDashboard ? "/dashboard/owner/terms" : "/terms"} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-gray-600 hover:text-purple-600 transition-colors hover:translate-x-2 transform duration-300 flex items-center">📜 Terms & Conditions</Link></li>
             </ul>
           </div>
 
